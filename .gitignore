@@ -1,0 +1,28 @@
+# Virtual environment
+venv/
+env/
+
+# Data and models (too large for GitHub)
+data/
+models/*.pt
+models/*.npy
+
+# But DO keep the visualization outputs
+!models/*.png
+!models/*.csv
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Environment variables
+.env
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
