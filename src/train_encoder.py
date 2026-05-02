@@ -1,163 +1,230 @@
-import numpy as np
-import torch
-from torch.utils.data import DataLoader
-from sklearn.mixture import GaussianMixture
-import matplotlib.pyplot as plt
-import umap
+import argparse
 import os
 
-from dataset import WindowDataset, load_feature_matrix, normalize, WINDOW_SIZE
-from encoder import TemporalEncoder, NTXentLoss
+import duckdb
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import torch
+from sklearn.mixture import GaussianMixture
+from torch.utils.data import ConcatDataset, DataLoader
 
-# ── Config ────────────────────────────────────────────────────────────────────
-SYMBOL      = "BTCUSDT"
-N_EPOCHS    = 30
-BATCH_SIZE  = 128
-LR          = 3e-4
-LATENT_DIM  = 16
-N_REGIMES   = 4          # number of market regimes to discover
-DEVICE      = "cuda" if torch.cuda.is_available() else "cpu"
-SAVE_DIR    = "../models"
+from config import (
+    DB_PATH,
+    LATENT_DIM,
+    N_FEATURES,
+    N_REGIMES,
+    SAVE_DIR,
+    STRIDE,
+    SYMBOLS,
+    WINDOW_SIZE,
+)
+from dataset import WindowDataset, load_feature_matrix
+from encoder import NTXentLoss, TemporalEncoder
+
+
+BATCH_SIZE = 128
+LR = 3e-4
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+RANDOM_STATE = 42
 os.makedirs(SAVE_DIR, exist_ok=True)
 
-print(f"Training on: {DEVICE}")
+
+def load_raw_matrices(symbols: list[str]) -> dict[str, np.ndarray]:
+    matrices = {}
+    for symbol in symbols:
+        x_raw = load_feature_matrix(symbol)
+        if len(x_raw) <= WINDOW_SIZE + 1:
+            print(f"NOTE: {symbol} has too few rows for encoder windows; skipping.")
+            continue
+        matrices[symbol] = x_raw
+        print(f"  {symbol}: {x_raw.shape}")
+    if not matrices:
+        raise RuntimeError("No feature matrices loaded. Run features.py first.")
+    return matrices
 
 
-# ── 1. Load + normalize features ─────────────────────────────────────────────
-print("Loading features...")
-X_raw = load_feature_matrix(SYMBOL)
-X, mean, std = normalize(X_raw)
-print(f"Feature matrix: {X.shape}")  # (17460, 22)
+def fit_shared_scaler(matrices: dict[str, np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
+    combined = np.vstack(list(matrices.values()))
+    mean = combined.mean(axis=0)
+    std = combined.std(axis=0) + 1e-8
+    np.save(os.path.join(SAVE_DIR, "norm_mean.npy"), mean)
+    np.save(os.path.join(SAVE_DIR, "norm_std.npy"), std)
+    return mean, std
 
 
-# ── 2. Dataset + DataLoader ───────────────────────────────────────────────────
-dataset    = WindowDataset(X, window=WINDOW_SIZE)
-dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
-print(f"Dataset: {len(dataset):,} windows | {len(dataloader)} batches/epoch")
+def normalize_matrices(
+    matrices: dict[str, np.ndarray],
+    mean: np.ndarray,
+    std: np.ndarray,
+) -> dict[str, np.ndarray]:
+    return {symbol: (x_raw - mean) / std for symbol, x_raw in matrices.items()}
 
 
-# ── 3. Model + optimizer ──────────────────────────────────────────────────────
-model     = TemporalEncoder(n_features=X.shape[1], latent_dim=LATENT_DIM).to(DEVICE)
-criterion = NTXentLoss(temperature=0.07)
-optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=1e-4)
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=N_EPOCHS)
-
-total_params = sum(p.numel() for p in model.parameters())
-print(f"Model parameters: {total_params:,}")
-
-
-# ── 4. Training loop ──────────────────────────────────────────────────────────
-print("\nTraining encoder...")
-loss_history = []
-
-for epoch in range(1, N_EPOCHS + 1):
-    model.train()
-    epoch_loss = 0.0
-
-    for anchor, positive in dataloader:
-        anchor   = anchor.to(DEVICE)
-        positive = positive.to(DEVICE)
-
-        z_anchor   = model(anchor)
-        z_positive = model(positive)
-
-        loss = criterion(z_anchor, z_positive)
-
-        optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        optimizer.step()
-
-        epoch_loss += loss.item()
-
-    scheduler.step()
-    avg_loss = epoch_loss / len(dataloader)
-    loss_history.append(avg_loss)
-
-    if epoch % 5 == 0 or epoch == 1:
-        print(f"  Epoch {epoch:3d}/{N_EPOCHS} | Loss: {avg_loss:.4f} | LR: {scheduler.get_last_lr()[0]:.6f}")
-
-# Save model
-torch.save(model.state_dict(), f"{SAVE_DIR}/encoder.pt")
-print(f"\nModel saved to {SAVE_DIR}/encoder.pt")
+def load_feature_times(symbol: str) -> pd.DataFrame:
+    con = duckdb.connect(DB_PATH, read_only=True)
+    times = con.execute(
+        """
+        SELECT open_time FROM features
+        WHERE symbol = ?
+        ORDER BY open_time
+        """,
+        [symbol],
+    ).df()
+    con.close()
+    times["open_time"] = pd.to_datetime(times["open_time"])
+    return times
 
 
-# ── 5. Extract all embeddings ─────────────────────────────────────────────────
-print("\nExtracting embeddings for all windows...")
-model.eval()
-all_embeddings = []
-
-with torch.no_grad():
-    for i in range(0, len(X) - WINDOW_SIZE, 8):   # stride 8 for speed
-        window = torch.tensor(
-            X[i : i + WINDOW_SIZE], dtype=torch.float32
-        ).unsqueeze(0).to(DEVICE)
-        z = model(window)
-        all_embeddings.append(z.cpu().numpy())
-
-embeddings = np.vstack(all_embeddings)
-np.save(f"{SAVE_DIR}/embeddings.npy", embeddings)
-print(f"Embeddings shape: {embeddings.shape}")
+def build_dataloader(normalized: dict[str, np.ndarray]) -> DataLoader:
+    datasets = [WindowDataset(x, window=WINDOW_SIZE) for x in normalized.values()]
+    dataset = ConcatDataset(datasets)
+    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+    print(f"Dataset: {len(dataset):,} windows | {len(dataloader)} batches/epoch")
+    return dataloader
 
 
-# ── 6. GMM clustering → regime labels ────────────────────────────────────────
-print(f"\nFitting GMM with K={N_REGIMES} regimes...")
-gmm = GaussianMixture(
-    n_components=N_REGIMES,
-    covariance_type="full",
-    n_init=5,
-    random_state=42,
-)
-gmm.fit(embeddings)
-labels      = gmm.predict(embeddings)
-posteriors  = gmm.predict_proba(embeddings)  # shape (N, 4) — regime probabilities
+def train_model(dataloader: DataLoader, epochs: int) -> tuple[TemporalEncoder, list[float]]:
+    model = TemporalEncoder(n_features=N_FEATURES, latent_dim=LATENT_DIM).to(DEVICE)
+    criterion = NTXentLoss(temperature=0.07)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
-np.save(f"{SAVE_DIR}/labels.npy", labels)
-np.save(f"{SAVE_DIR}/posteriors.npy", posteriors)
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Model parameters: {total_params:,}")
+    print("\nTraining encoder...")
 
-print(f"Regime distribution:")
-for k in range(N_REGIMES):
-    pct = (labels == k).mean() * 100
-    print(f"  Regime {k}: {pct:.1f}% of windows")
+    loss_history = []
+    for epoch in range(1, epochs + 1):
+        model.train()
+        epoch_loss = 0.0
+
+        for anchor, positive in dataloader:
+            anchor = anchor.to(DEVICE)
+            positive = positive.to(DEVICE)
+
+            loss = criterion(model(anchor), model(positive))
+            optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+            epoch_loss += loss.item()
+
+        scheduler.step()
+        avg_loss = epoch_loss / len(dataloader)
+        loss_history.append(avg_loss)
+        if epoch % 5 == 0 or epoch == 1:
+            print(
+                f"  Epoch {epoch:3d}/{epochs} | "
+                f"Loss: {avg_loss:.4f} | "
+                f"LR: {scheduler.get_last_lr()[0]:.6f}"
+            )
+
+    torch.save(model.state_dict(), os.path.join(SAVE_DIR, "encoder.pt"))
+    print(f"\nModel saved to {os.path.join(SAVE_DIR, 'encoder.pt')}")
+    return model, loss_history
 
 
-# ── 7. UMAP visualization ─────────────────────────────────────────────────────
-print("\nRunning UMAP projection...")
-reducer   = umap.UMAP(n_components=2, random_state=42, n_neighbors=30)
-embedding_2d = reducer.fit_transform(embeddings)
+def extract_sparse_embeddings(
+    model: TemporalEncoder,
+    normalized: dict[str, np.ndarray],
+) -> tuple[np.ndarray, pd.DataFrame]:
+    print(f"\nExtracting sparse embeddings (stride={STRIDE})...")
+    model.eval()
+    all_embeddings = []
+    rows = []
 
-colors = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B"]
-fig, ax = plt.subplots(figsize=(10, 8))
+    with torch.no_grad():
+        for symbol, x in normalized.items():
+            times = load_feature_times(symbol)
+            for start_idx in range(0, len(x) - WINDOW_SIZE, STRIDE):
+                feat_idx = start_idx + WINDOW_SIZE - 1
+                window = torch.tensor(
+                    x[start_idx : start_idx + WINDOW_SIZE], dtype=torch.float32
+                ).unsqueeze(0).to(DEVICE)
+                z = model(window)
+                all_embeddings.append(z.cpu().numpy())
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "start_idx": start_idx,
+                        "feat_idx": feat_idx,
+                        "open_time": times["open_time"].iloc[feat_idx],
+                    }
+                )
 
-for k in range(N_REGIMES):
-    mask = labels == k
-    ax.scatter(
-        embedding_2d[mask, 0],
-        embedding_2d[mask, 1],
-        c=colors[k], label=f"Regime {k}",
-        alpha=0.5, s=8,
+    embeddings = np.vstack(all_embeddings)
+    meta = pd.DataFrame(rows)
+    np.save(os.path.join(SAVE_DIR, "embeddings.npy"), embeddings)
+    print(f"Embeddings shape: {embeddings.shape}")
+    return embeddings, meta
+
+
+def save_sparse_regimes(embeddings: np.ndarray, meta: pd.DataFrame) -> None:
+    print(f"\nFitting GMM with K={N_REGIMES} regimes...")
+    gmm = GaussianMixture(
+        n_components=N_REGIMES,
+        covariance_type="full",
+        n_init=5,
+        random_state=RANDOM_STATE,
     )
+    gmm.fit(embeddings)
+    labels = gmm.predict(embeddings)
+    posteriors = gmm.predict_proba(embeddings)
 
-ax.set_title(f"UMAP Projection of Learned Regime Embeddings — {SYMBOL}", fontsize=13)
-ax.legend(markerscale=3)
-ax.set_xlabel("UMAP 1")
-ax.set_ylabel("UMAP 2")
-plt.tight_layout()
-plt.savefig(f"{SAVE_DIR}/umap_regimes.png", dpi=150)
-plt.show()
-print(f"UMAP plot saved to {SAVE_DIR}/umap_regimes.png")
+    meta = meta.reset_index(drop=True).copy()
+    meta.insert(0, "embedding_idx", np.arange(len(meta), dtype=int))
+    meta["regime"] = labels.astype(int)
+    for k in range(N_REGIMES):
+        meta[f"post_{k}"] = posteriors[:, k]
+
+    np.save(os.path.join(SAVE_DIR, "labels.npy"), labels)
+    np.save(os.path.join(SAVE_DIR, "posteriors.npy"), posteriors)
+    meta.to_csv(os.path.join(SAVE_DIR, "regime_posteriors.csv"), index=False)
+    print(f"Saved sparse regime posteriors: {len(meta):,} rows")
+
+    print("Regime distribution:")
+    for k in range(N_REGIMES):
+        pct = (labels == k).mean() * 100
+        print(f"  Regime {k}: {pct:.1f}% of windows")
 
 
-# ── 8. Loss curve ─────────────────────────────────────────────────────────────
-fig2, ax2 = plt.subplots(figsize=(8, 4))
-ax2.plot(loss_history, color="#3B82F6", linewidth=2)
-ax2.set_title("Contrastive Training Loss")
-ax2.set_xlabel("Epoch")
-ax2.set_ylabel("NT-Xent Loss")
-ax2.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig(f"{SAVE_DIR}/loss_curve.png", dpi=150)
-plt.show()
-print("Loss curve saved.")
+def save_loss_curve(loss_history: list[float]) -> None:
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.plot(loss_history, color="#3B82F6", linewidth=2)
+    ax.set_title("Contrastive Training Loss (NT-Xent)")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join(SAVE_DIR, "loss_curve.png"), dpi=150)
+    plt.close(fig)
 
-print("\n✓ Phase 2 complete. Ready for Phase 3 — regime-conditioned alpha models.")
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Train contrastive temporal regime encoder.")
+    parser.add_argument("--symbols", nargs="*", default=SYMBOLS)
+    parser.add_argument("--epochs", type=int, default=30)
+    args = parser.parse_args()
+
+    print(f"Training on: {DEVICE}")
+    print(f"Symbols: {', '.join(args.symbols)}")
+    print(f"Sparse artifact stride: {STRIDE}; visualize_regimes.py exports dense stride-1 regimes.")
+
+    print("\nLoading features...")
+    matrices = load_raw_matrices(args.symbols)
+    mean, std = fit_shared_scaler(matrices)
+    normalized = normalize_matrices(matrices, mean, std)
+
+    dataloader = build_dataloader(normalized)
+    model, loss_history = train_model(dataloader, args.epochs)
+    embeddings, meta = extract_sparse_embeddings(model, normalized)
+    save_sparse_regimes(embeddings, meta)
+    save_loss_curve(loss_history)
+
+    print("\nOK: Phase 2 training complete.")
+    print("Run visualize_regimes.py next to overwrite sparse regimes with dense stride-1 assignments.")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,15 +1,27 @@
 # Virtual environment
 venv/
 env/
+.pip-cache/
+.tmp/
 
-# Data and models (too large for GitHub)
+# Data and model weights (too large for GitHub)
 data/
 models/*.pt
 models/*.npy
 
-# But DO keep the visualization outputs
+# Row-level generated artifacts are reproducible and too bulky for GitHub.
+models/*.csv
+
+# Keep only curated summary CSV artifacts for the dashboard/report.
+!models/experiment_results.csv
+!models/strategy_comparison.csv
+!models/regime_benchmark_summary.csv
+!models/per_regime_stats.csv
+!models/target_distribution.csv
+!models/target_quality.csv
+
+# Keep visualization outputs.
 !models/*.png
-!models/*.csv
 
 # Python cache
 __pycache__/
@@ -19,6 +31,9 @@ __pycache__/
 
 # Environment variables
 .env
+
+# Accidental secondary dependency freeze; root requirements.txt is canonical.
+src/requirements.txt
 
 # VS Code
 .vscode/
