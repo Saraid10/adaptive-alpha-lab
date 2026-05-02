@@ -1,283 +1,461 @@
+import argparse
+import os
+import warnings
+from dataclasses import dataclass
+
+import duckdb
+import lightgbm as lgb
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import duckdb
-import torch
-import lightgbm as lgb
-from sklearn.metrics import accuracy_score
-import shap
-import matplotlib.pyplot as plt
-import warnings
-import os
-warnings.filterwarnings("ignore")
+from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
-from config import DB_PATH
-from dataset import load_feature_matrix, normalize, WINDOW_SIZE
-from encoder import TemporalEncoder
-
-SYMBOL    = "BTCUSDT"
-SAVE_DIR  = "../models"
-N_REGIMES = 4
-DEVICE    = "cuda" if torch.cuda.is_available() else "cpu"
-CONFIDENCE_THRESHOLD = 0.65   # only train on high-confidence regime windows
-
-FEATURE_COLS = [
-    "ret_1h", "ret_5h", "ret_15h", "ret_60h",
-    "vol_5h", "vol_20h", "vol_of_vol",
-    "amihud", "volume_zscore", "ret_autocorr",
-    "spread_proxy", "ofi_proxy", "rsi_14", "gk_vol",
-    "skewness", "kurtosis", "macd_signal",
-    "bband_pct_b", "atr_14", "close_vs_vwap",
-    "log_vol_trend", "ret_dispersion"
-]
-
-os.makedirs(SAVE_DIR, exist_ok=True)
+from config import DB_PATH, FEATURE_COLS, SAVE_DIR, SYMBOLS
 
 
-# ── 1. Load features + prices from DB ────────────────────────────────────────
-print("Loading data...")
-con = duckdb.connect(DB_PATH, read_only=True)
+warnings.filterwarnings("ignore", message="X does not have valid feature names")
 
-feat_df = con.execute(f"""
-    SELECT open_time, {', '.join(FEATURE_COLS)}
-    FROM features
-    WHERE symbol = ?
-    ORDER BY open_time
-""", [SYMBOL]).df()
-
-price_df = con.execute("""
-    SELECT open_time, close
-    FROM ohlcv
-    WHERE symbol = ?
-    ORDER BY open_time
-""", [SYMBOL]).df()
-
-con.close()
-
-feat_df["open_time"]  = pd.to_datetime(feat_df["open_time"])
-price_df["open_time"] = pd.to_datetime(price_df["open_time"])
-
-# Merge features + prices
-df = feat_df.merge(price_df, on="open_time", how="inner")
-
-# Target: next-bar return (forward 1h return)
-df["target_return"] = df["close"].pct_change(1).shift(-1)
-df["target_sign"]   = (df["target_return"] > 0).astype(int)  # 1=up, 0=down
-df = df.dropna().reset_index(drop=True)
-print(f"Dataset: {len(df):,} rows")
+PRIMARY_TARGET = "tb_label_8h"
+PRIMARY_RETURN = "forward_return_8h"
+HORIZON_HOURS = 8
+INITIAL_TRAIN = 24 * 30 * 6
+STEP_SIZE = 24 * 30
+EMBARGO = 24 * 5
+SCORE_THRESHOLD = 0.05
+TC_PER_TRADE = 0.001
+RANDOM_STATE = 42
+REGIME_METHODS = ["contrastive", "hmm", "kmeans", "vol_bucket"]
+LABEL_TO_CLASS = {-1: 0, 0: 1, 1: 2}
+CLASS_TO_LABEL = {v: k for k, v in LABEL_TO_CLASS.items()}
+POST_COLS = [f"post_{k}" for k in range(4)]
 
 
-# ── 2. Load regime posteriors ─────────────────────────────────────────────────
-print("Loading regime posteriors...")
-posteriors = np.load(f"{SAVE_DIR}/posteriors.npy")   # shape (N_windows, 4)
-labels     = np.load(f"{SAVE_DIR}/labels.npy")
-
-# posteriors were extracted with stride=4 — align to feature df
-# Each posterior at index i corresponds to feature row i*4 + WINDOW_SIZE
-stride = 4
-regime_rows = []
-for i in range(len(posteriors)):
-    feat_idx = i * stride + WINDOW_SIZE - 1
-    if feat_idx < len(df):
-        row = {"feat_idx": feat_idx}
-        for k in range(N_REGIMES):
-            row[f"post_{k}"] = posteriors[i, k]
-        row["regime"] = labels[i]
-        regime_rows.append(row)
-
-regime_df = pd.DataFrame(regime_rows).set_index("feat_idx")
-print(f"Regime posteriors aligned: {len(regime_df):,} rows")
+@dataclass
+class PredictionSet:
+    method: str
+    regime_method: str
+    frame: pd.DataFrame
 
 
-# ── 3. Walk-forward validation ────────────────────────────────────────────────
-print("\nRunning walk-forward validation...")
+def model_params() -> dict:
+    return {
+        "objective": "multiclass",
+        "num_class": 3,
+        "n_estimators": 250,
+        "learning_rate": 0.04,
+        "max_depth": 4,
+        "num_leaves": 15,
+        "min_child_samples": 25,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "random_state": RANDOM_STATE,
+        "verbose": -1,
+    }
 
-# 6-month expanding window: train on months 1-6, predict month 7, roll forward
-HOURS_PER_MONTH = 24 * 30
-INITIAL_TRAIN   = HOURS_PER_MONTH * 6    # 6 months initial training
-STEP_SIZE       = HOURS_PER_MONTH        # roll 1 month at a time
 
-all_predictions = []   # collect out-of-sample predictions
-
-fold = 0
-train_end = INITIAL_TRAIN
-
-while train_end + STEP_SIZE < len(df):
-    test_start = train_end
-    test_end   = min(train_end + STEP_SIZE, len(df) - 1)
-
-    fold += 1
-    print(f"  Fold {fold}: train [0:{train_end}] | test [{test_start}:{test_end}]")
-
-    # Get indices that have regime labels
-    train_idx = [i for i in regime_df.index if i < train_end]
-    test_idx  = [i for i in regime_df.index if test_start <= i < test_end]
-
-    if len(train_idx) < 100 or len(test_idx) < 10:
-        train_end += STEP_SIZE
-        continue
-
-    # Train one LightGBM model per regime
-    fold_preds = []
-
-    for k in range(N_REGIMES):
-        # High-confidence training samples for this regime
-        regime_train_idx = [
-            i for i in train_idx
-            if regime_df.loc[i, f"post_{k}"] >= CONFIDENCE_THRESHOLD
-        ]
-
-        if len(regime_train_idx) < 30:
+def load_model_frame(symbols: list[str]) -> pd.DataFrame:
+    con = duckdb.connect(DB_PATH, read_only=True)
+    frames = []
+    for symbol in symbols:
+        df = con.execute(
+            f"""
+            SELECT
+                f.open_time,
+                f.symbol,
+                {", ".join("f." + c for c in FEATURE_COLS)},
+                t.{PRIMARY_TARGET} AS target_label,
+                t.{PRIMARY_RETURN} AS target_return
+            FROM features f
+            JOIN targets t
+              ON f.symbol = t.symbol
+             AND f.open_time = t.open_time
+            WHERE f.symbol = ?
+            ORDER BY f.open_time
+            """,
+            [symbol],
+        ).df()
+        if df.empty:
+            print(f"NOTE: no alpha modeling rows for {symbol}; skipping.")
             continue
+        df["open_time"] = pd.to_datetime(df["open_time"])
+        df = df.reset_index(drop=True)
+        df["feat_idx"] = df.index.astype(int)
+        frames.append(df)
+    con.close()
 
-        X_train = df.loc[regime_train_idx, FEATURE_COLS].values
-        y_train = df.loc[regime_train_idx, "target_sign"].values
+    if not frames:
+        raise RuntimeError("No alpha modeling rows. Run targets.py first.")
+    df = pd.concat(frames, ignore_index=True).sort_values(["symbol", "open_time"]).reset_index(drop=True)
+    df["target_class"] = df["target_label"].map(LABEL_TO_CLASS).astype(int)
+    return df
 
-        # Test: ALL test windows, weighted by regime posterior
-        X_test = df.loc[test_idx, FEATURE_COLS].values
 
-        model_k = lgb.LGBMClassifier(
-            n_estimators=200,
-            learning_rate=0.05,
-            max_depth=4,
-            num_leaves=15,
-            min_child_samples=20,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            random_state=42,
-            verbose=-1,
+def load_assignments(symbols: list[str]) -> pd.DataFrame:
+    path = os.path.join(SAVE_DIR, "regime_assignments.csv")
+    if not os.path.exists(path):
+        raise RuntimeError("regime_assignments.csv missing. Run baselines.py first.")
+
+    assignments = pd.read_csv(path)
+    assignments["open_time"] = pd.to_datetime(assignments["open_time"])
+    assignments["feat_idx"] = assignments["feat_idx"].astype(int)
+    assignments = assignments[assignments["symbol"].isin(symbols)].copy()
+
+    missing = sorted(set(REGIME_METHODS) - set(assignments["method"].unique()))
+    if missing:
+        raise RuntimeError(f"Missing regime methods in regime_assignments.csv: {missing}")
+    return assignments
+
+
+def restrict_to_common_universe(
+    df: pd.DataFrame,
+    assignments: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    method_counts = (
+        assignments[["symbol", "feat_idx", "method"]]
+        .drop_duplicates()
+        .groupby(["symbol", "feat_idx"])["method"]
+        .nunique()
+        .reset_index(name="n_methods")
+    )
+    common_keys = method_counts[method_counts["n_methods"] == len(REGIME_METHODS)][
+        ["symbol", "feat_idx"]
+    ]
+    if common_keys.empty:
+        raise RuntimeError("No common symbol/feat_idx universe across all regime methods.")
+
+    original_rows = len(df)
+    df = df.merge(common_keys, on=["symbol", "feat_idx"], how="inner")
+    df = df.sort_values(["symbol", "open_time"]).reset_index(drop=True)
+    df["row_id"] = np.arange(len(df), dtype=int)
+
+    assignments = assignments.merge(common_keys, on=["symbol", "feat_idx"], how="inner")
+    assignments = assignments.merge(df[["symbol", "feat_idx", "row_id"]], on=["symbol", "feat_idx"], how="inner")
+    assignments = assignments.sort_values(["method", "symbol", "feat_idx"]).reset_index(drop=True)
+
+    coverage = len(df) / original_rows
+    if coverage < 0.90:
+        raise RuntimeError(
+            f"Common benchmark universe kept only {coverage:.1%} of rows. "
+            "Rerun visualize_regimes.py to create dense contrastive assignments."
         )
-        model_k.fit(X_train, y_train)
+    print(f"Common benchmark universe: {len(df):,}/{original_rows:,} rows ({coverage:.1%})")
+    return df, assignments
 
-        # Probability of up-move from regime k's model
-        prob_up = model_k.predict_proba(X_test)[:, 1]
 
-        for j, idx in enumerate(test_idx):
-            fold_preds.append({
-                "feat_idx": idx,
-                "regime":   k,
-                "prob_up":  prob_up[j],
-                "weight":   regime_df.loc[idx, f"post_{k}"],
-            })
+def fold_ranges(df: pd.DataFrame) -> list[tuple[int, int, int]]:
+    max_common_feat_idx = int(df.groupby("symbol")["feat_idx"].max().min())
+    folds = []
+    train_end = INITIAL_TRAIN
+    while train_end + EMBARGO + STEP_SIZE <= max_common_feat_idx:
+        test_start = train_end + EMBARGO
+        test_end = min(test_start + STEP_SIZE, max_common_feat_idx + 1)
+        folds.append((train_end, test_start, test_end))
+        train_end += STEP_SIZE
+    return folds
 
-    if fold_preds:
-        fold_df = pd.DataFrame(fold_preds)
-        # Ensemble: weighted average of all regime models
-        ensemble = (
-            fold_df.groupby("feat_idx")
-            .apply(lambda x: (x["prob_up"] * x["weight"]).sum() / x["weight"].sum())
-            .reset_index()
+
+def row_ids_for_fold(df: pd.DataFrame, train_end: int, test_start: int, test_end: int) -> tuple[list[int], list[int]]:
+    train = df[df["feat_idx"] < train_end]["row_id"].astype(int).tolist()
+    test = df[(df["feat_idx"] >= test_start) & (df["feat_idx"] < test_end)]["row_id"].astype(int).tolist()
+    return train, test
+
+
+def fit_lgbm(x_train: np.ndarray, y_train: np.ndarray):
+    if len(np.unique(y_train)) < 2:
+        return None
+    model = lgb.LGBMClassifier(**model_params())
+    model.fit(x_train, y_train)
+    return model
+
+
+def aligned_proba(model, x_test: np.ndarray) -> np.ndarray:
+    raw = model.predict_proba(x_test)
+    out = np.zeros((len(x_test), 3), dtype=float)
+    for i, cls in enumerate(model.classes_):
+        out[:, int(cls)] = raw[:, i]
+    row_sum = out.sum(axis=1, keepdims=True)
+    return np.divide(out, row_sum, out=np.zeros_like(out), where=row_sum != 0)
+
+
+def signal_from_probs(probs: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    score = probs[:, LABEL_TO_CLASS[1]] - probs[:, LABEL_TO_CLASS[-1]]
+    neutral_prob = probs[:, LABEL_TO_CLASS[0]]
+    best_class = np.argmax(probs, axis=1)
+
+    signal = np.zeros(len(probs), dtype=int)
+    signal[(score > SCORE_THRESHOLD) & (best_class != LABEL_TO_CLASS[0])] = 1
+    signal[(score < -SCORE_THRESHOLD) & (best_class != LABEL_TO_CLASS[0])] = -1
+
+    pred_label = np.array([CLASS_TO_LABEL[int(cls)] for cls in best_class], dtype=int)
+    pred_label[neutral_prob == probs.max(axis=1)] = 0
+    pred_label[np.abs(score) < SCORE_THRESHOLD] = 0
+    return score, pred_label, signal
+
+
+def apply_transaction_costs(signal: pd.Series, returns: pd.Series) -> pd.Series:
+    trades = signal.diff().abs().fillna(signal.abs()) / 2.0
+    return signal.shift(1).fillna(0) * returns - trades * TC_PER_TRADE
+
+
+def add_net_returns(pred: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    for _, group in pred.sort_values(["symbol", "open_time"]).groupby("symbol", sort=False):
+        group = group.copy()
+        group["net_return"] = apply_transaction_costs(group["signal"], group["target_return"])
+        rows.append(group)
+    return pd.concat(rows, ignore_index=True).sort_values(["open_time", "symbol"]).reset_index(drop=True)
+
+
+def portfolio_net_returns(pred: pd.DataFrame) -> pd.Series:
+    pred = add_net_returns(pred)
+    return pred.groupby("open_time")["net_return"].mean().sort_index()
+
+
+def build_prediction_frame(
+    df_by_row: pd.DataFrame,
+    row_ids: list[int],
+    probs: np.ndarray,
+    method: str,
+    regime_method: str,
+    fold: int,
+) -> pd.DataFrame:
+    score, pred_label, signal = signal_from_probs(probs)
+    out = df_by_row.loc[
+        row_ids,
+        ["row_id", "symbol", "feat_idx", "open_time", "target_label", "target_return"],
+    ].copy()
+    out["method"] = method
+    out["regime_method"] = regime_method
+    out["target"] = PRIMARY_TARGET
+    out["horizon"] = f"{HORIZON_HOURS}h"
+    out["fold"] = fold
+    out["prob_down"] = probs[:, LABEL_TO_CLASS[-1]]
+    out["prob_neutral"] = probs[:, LABEL_TO_CLASS[0]]
+    out["prob_up"] = probs[:, LABEL_TO_CLASS[1]]
+    out["score"] = score
+    out["pred_label"] = pred_label
+    out["signal"] = signal
+    return out
+
+
+def run_global_model(df_by_row: pd.DataFrame, folds: list[tuple[int, int, int]]) -> PredictionSet:
+    predictions = []
+    for fold, (train_end, test_start, test_end) in enumerate(folds, start=1):
+        train_ids, test_ids = row_ids_for_fold(df_by_row, train_end, test_start, test_end)
+        if not train_ids or not test_ids:
+            continue
+        model = fit_lgbm(
+            df_by_row.loc[train_ids, FEATURE_COLS].values,
+            df_by_row.loc[train_ids, "target_class"].values,
         )
-        ensemble.columns = ["feat_idx", "ensemble_prob"]
-        ensemble["pred_sign"]     = (ensemble["ensemble_prob"] > 0.5).astype(int)
-        ensemble["actual_sign"]   = df.loc[ensemble["feat_idx"].values, "target_sign"].values
-        ensemble["actual_return"] = df.loc[ensemble["feat_idx"].values, "target_return"].values
-        all_predictions.append(ensemble)
+        if model is None:
+            continue
+        probs = aligned_proba(model, df_by_row.loc[test_ids, FEATURE_COLS].values)
+        predictions.append(build_prediction_frame(df_by_row, test_ids, probs, "global_lgbm", "none", fold))
 
-    train_end += STEP_SIZE
+    return PredictionSet("global_lgbm", "none", pd.concat(predictions, ignore_index=True))
 
-# ── 4. Aggregate all OOS predictions ─────────────────────────────────────────
-print("\nAggregating out-of-sample predictions...")
-oos_df = pd.concat(all_predictions, ignore_index=True)
-oos_df = oos_df.merge(
-    df[["open_time"]].reset_index().rename(columns={"index": "feat_idx"}),
-    on="feat_idx", how="left"
-)
 
-# ── 5. Performance metrics ────────────────────────────────────────────────────
-print("\n── Out-of-Sample Performance ─────────────────────────")
+def train_regime_models(
+    df_by_row: pd.DataFrame,
+    assignment_df: pd.DataFrame,
+    train_ids: list[int],
+) -> dict[int, object]:
+    models = {}
+    train_assign = assignment_df[assignment_df["row_id"].isin(train_ids)]
 
-# Direction accuracy
-acc = accuracy_score(oos_df["actual_sign"], oos_df["pred_sign"])
-print(f"Direction accuracy:  {acc*100:.2f}%  (baseline = 50%)")
+    for regime, group in train_assign.groupby("regime"):
+        row_ids = group["row_id"].astype(int).tolist()
+        if len(row_ids) < 40:
+            continue
+        model = fit_lgbm(
+            df_by_row.loc[row_ids, FEATURE_COLS].values,
+            df_by_row.loc[row_ids, "target_class"].values,
+        )
+        if model is not None:
+            models[int(regime)] = model
+    return models
 
-# Information coefficient
-ic = oos_df["ensemble_prob"].corr(oos_df["actual_return"])
-print(f"Information coefficient (IC): {ic:.4f}  (>0.02 is good for hourly)")
 
-# Signal: go long when prob_up > 0.5, short otherwise
-oos_df["signal"] = np.where(oos_df["ensemble_prob"] > 0.5, 1, -1)
-oos_df["strat_return"] = oos_df["signal"] * oos_df["actual_return"]
+def predict_regime_models(
+    df_by_row: pd.DataFrame,
+    assignment_df: pd.DataFrame,
+    models: dict[int, object],
+    test_ids: list[int],
+    method: str,
+    fold: int,
+) -> pd.DataFrame | None:
+    test_assign = assignment_df[assignment_df["row_id"].isin(test_ids)].copy()
+    if test_assign.empty or not models:
+        return None
 
-# Transaction cost: 10bps per trade (5bps spread each side)
-oos_df["trade"]       = oos_df["signal"].diff().abs() / 2
-oos_df["tc"]          = oos_df["trade"] * 0.001
-oos_df["net_return"]  = oos_df["strat_return"] - oos_df["tc"]
+    test_assign = test_assign.sort_values(["symbol", "feat_idx"])
+    row_ids = test_assign["row_id"].astype(int).tolist()
+    x_test = df_by_row.loc[row_ids, FEATURE_COLS].values
+    combined = np.zeros((len(row_ids), 3), dtype=float)
+    weight_sum = np.zeros((len(row_ids), 1), dtype=float)
 
-sharpe = oos_df["net_return"].mean() / (oos_df["net_return"].std() + 1e-8) * np.sqrt(8760)
-print(f"Annualized Sharpe (TC-adjusted): {sharpe:.3f}")
+    for regime, model in models.items():
+        probs = aligned_proba(model, x_test)
+        col = f"post_{regime}"
+        if col in test_assign.columns:
+            weights = test_assign[col].to_numpy(dtype=float).reshape(-1, 1)
+        else:
+            weights = (test_assign["regime"].to_numpy(dtype=int) == regime).astype(float).reshape(-1, 1)
+        combined += probs * weights
+        weight_sum += weights
 
-# Max drawdown
-cum = (1 + oos_df["net_return"]).cumprod()
-roll_max = cum.cummax()
-drawdown = (cum - roll_max) / roll_max
-max_dd = drawdown.min()
-print(f"Max drawdown: {max_dd*100:.2f}%")
+    combined = np.divide(
+        combined,
+        weight_sum,
+        out=np.full_like(combined, 1.0 / 3.0),
+        where=weight_sum != 0,
+    )
+    return build_prediction_frame(df_by_row, row_ids, combined, f"regime_lgbm_{method}", method, fold)
 
-# ── 6. Equity curve ───────────────────────────────────────────────────────────
-fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=False)
 
-# Strategy vs buy-and-hold
-ax1 = axes[0]
-strat_cum  = (1 + oos_df["net_return"]).cumprod()
-bh_returns = oos_df["actual_return"]
-bh_cum     = (1 + bh_returns).cumprod()
+def run_regime_model(
+    df_by_row: pd.DataFrame,
+    assignments: pd.DataFrame,
+    method: str,
+    folds: list[tuple[int, int, int]],
+) -> PredictionSet:
+    method_assign = assignments[assignments["method"] == method].copy()
+    predictions = []
 
-ax1.plot(strat_cum.values,  label="Adaptive Alpha Engine", color="#3B82F6", linewidth=1.5)
-ax1.plot(bh_cum.values,     label="Buy & Hold BTC",        color="#94A3B8", linewidth=1, alpha=0.7)
-ax1.set_title("Equity Curve — Out-of-Sample (TC-adjusted)", fontsize=12)
-ax1.set_ylabel("Portfolio Value (starting=1)")
-ax1.legend(); ax1.grid(True, alpha=0.3)
+    for fold, (train_end, test_start, test_end) in enumerate(folds, start=1):
+        train_ids, test_ids = row_ids_for_fold(df_by_row, train_end, test_start, test_end)
+        if not train_ids or not test_ids:
+            continue
+        models = train_regime_models(df_by_row, method_assign, train_ids)
+        pred = predict_regime_models(df_by_row, method_assign, models, test_ids, method, fold)
+        if pred is not None:
+            predictions.append(pred)
 
-# Drawdown
-ax2 = axes[1]
-ax2.fill_between(range(len(drawdown)), drawdown.values, 0, color="#EF4444", alpha=0.4)
-ax2.set_title("Drawdown", fontsize=12)
-ax2.set_ylabel("Drawdown %")
-ax2.grid(True, alpha=0.3)
+    frame = pd.concat(predictions, ignore_index=True) if predictions else pd.DataFrame()
+    return PredictionSet(f"regime_lgbm_{method}", method, frame)
 
-# Rolling IC (30-bar)
-ax3 = axes[2]
-rolling_ic = (
-    oos_df["ensemble_prob"]
-    .rolling(200)
-    .corr(oos_df["actual_return"])
-)
-ax3.plot(rolling_ic.values, color="#10B981", linewidth=1)
-ax3.axhline(0, color="black", linewidth=0.5, linestyle="--")
-ax3.set_title("Rolling IC (200-bar window) — Signal Decay Check", fontsize=12)
-ax3.set_ylabel("IC")
-ax3.grid(True, alpha=0.3)
 
-plt.tight_layout()
-plt.savefig(f"{SAVE_DIR}/equity_curve.png", dpi=150)
-plt.show()
+def summarize_predictions(pred: pd.DataFrame, method: str, regime_method: str, symbol_scope: str) -> dict:
+    if pred.empty:
+        return {
+            "method": method,
+            "target": PRIMARY_TARGET,
+            "horizon": f"{HORIZON_HOURS}h",
+            "regime_method": regime_method,
+            "symbol_scope": symbol_scope,
+            "IC": np.nan,
+            "accuracy": np.nan,
+            "balanced_accuracy": np.nan,
+            "Sharpe": np.nan,
+            "drawdown": np.nan,
+            "turnover": np.nan,
+            "total_return": np.nan,
+            "n_trades": 0,
+            "n_test_rows": 0,
+        }
 
-# ── 7. Per-regime performance ─────────────────────────────────────────────────
-print("\n── Per-Regime Performance ────────────────────────────")
-oos_df["regime"] = df.loc[
-    oos_df["feat_idx"].values, "ret_1h"   # placeholder index align
-].values
+    pred = add_net_returns(pred)
+    portfolio_returns = portfolio_net_returns(pred)
+    cumulative = (1.0 + portfolio_returns).cumprod()
+    drawdown = (cumulative - cumulative.cummax()) / cumulative.cummax()
+    annualize = np.sqrt(8760 / HORIZON_HOURS)
+    trades = pred.groupby("symbol")["signal"].diff().abs().fillna(pred["signal"].abs()) / 2.0
+    turnover = trades.mean()
+    ic = pred["score"].corr(pred["target_return"])
 
-# Load regime labels aligned to oos predictions
-regime_labels_aligned = []
-for idx in oos_df["feat_idx"].values:
-    if idx in regime_df.index:
-        regime_labels_aligned.append(regime_df.loc[idx, "regime"])
-    else:
-        regime_labels_aligned.append(-1)
+    return {
+        "method": method,
+        "target": PRIMARY_TARGET,
+        "horizon": f"{HORIZON_HOURS}h",
+        "regime_method": regime_method,
+        "symbol_scope": symbol_scope,
+        "IC": float(ic) if pd.notna(ic) else np.nan,
+        "accuracy": float(accuracy_score(pred["target_label"], pred["pred_label"])),
+        "balanced_accuracy": float(balanced_accuracy_score(pred["target_label"], pred["pred_label"])),
+        "Sharpe": float(portfolio_returns.mean() / (portfolio_returns.std() + 1e-8) * annualize),
+        "drawdown": float(drawdown.min()),
+        "turnover": float(turnover),
+        "total_return": float(cumulative.iloc[-1] - 1.0),
+        "n_trades": int((trades > 0).sum()),
+        "n_test_rows": int(len(pred)),
+    }
 
-oos_df["regime_label"] = regime_labels_aligned
 
-for k in range(N_REGIMES):
-    r = oos_df[oos_df["regime_label"] == k]
-    if len(r) < 10:
-        continue
-    r_sharpe = r["net_return"].mean() / (r["net_return"].std() + 1e-8) * np.sqrt(8760)
-    r_acc    = accuracy_score(r["actual_sign"], r["pred_sign"])
-    print(f"  Regime {k}: {len(r):4d} samples | "
-          f"accuracy {r_acc*100:.1f}% | Sharpe {r_sharpe:.3f}")
+def validate_test_coverage(results: pd.DataFrame) -> None:
+    counts = results.set_index("method")["n_test_rows"]
+    expected = int(counts.max())
+    low = counts[counts < expected]
+    if not low.empty:
+        raise RuntimeError(
+            "Alpha methods have different test coverage: "
+            + ", ".join(f"{method}={int(rows)}" for method, rows in low.items())
+            + f"; expected {expected}. Check regime assignment coverage."
+        )
 
-np.save(f"{SAVE_DIR}/oos_predictions.npy", oos_df.values)
-oos_df.to_csv(f"{SAVE_DIR}/oos_predictions.csv", index=False)
-print(f"\n✓ Phase 3 complete. OOS predictions saved.")
-print("Ready for Phase 4 — backtesting + risk engine.")
+
+def save_equity_plot(predictions: pd.DataFrame) -> None:
+    if predictions.empty:
+        return
+    fig, axes = plt.subplots(2, 1, figsize=(14, 8), sharex=False)
+    for method, group in predictions.groupby("method"):
+        curve = (1.0 + portfolio_net_returns(group)).cumprod()
+        axes[0].plot(curve.values, label=method, linewidth=1.2)
+    axes[0].axhline(1.0, color="black", linewidth=0.6, linestyle="--")
+    axes[0].set_title("Adaptive Alpha Lab - Experiment Equity Curves")
+    axes[0].set_ylabel("Portfolio value")
+    axes[0].legend(fontsize=8)
+    axes[0].grid(True, alpha=0.25)
+
+    global_rows = predictions[predictions["method"] == "global_lgbm"].sort_values(["open_time", "symbol"])
+    if not global_rows.empty:
+        rolling_ic = global_rows["score"].rolling(200).corr(global_rows["target_return"])
+        axes[1].plot(rolling_ic.values, color="#10B981", linewidth=1.0)
+    axes[1].axhline(0, color="black", linewidth=0.6, linestyle="--")
+    axes[1].set_title("Rolling IC - Global Baseline")
+    axes[1].set_ylabel("IC")
+    axes[1].grid(True, alpha=0.25)
+    plt.tight_layout()
+    plt.savefig(os.path.join(SAVE_DIR, "equity_curve.png"), dpi=150)
+    plt.close(fig)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run purged alpha model benchmarks.")
+    parser.add_argument("--symbols", nargs="*", default=SYMBOLS)
+    args = parser.parse_args()
+
+    symbol_scope = "+".join(args.symbols)
+    df = load_model_frame(args.symbols)
+    assignments = load_assignments(args.symbols)
+    df, assignments = restrict_to_common_universe(df, assignments)
+    df_by_row = df.set_index("row_id", drop=False)
+    folds = fold_ranges(df)
+    if not folds:
+        raise RuntimeError("Not enough rows for walk-forward validation.")
+
+    print(f"Rows: {len(df):,} | symbols: {symbol_scope} | folds: {len(folds)} | embargo: {EMBARGO} bars")
+
+    outputs = [run_global_model(df_by_row, folds)]
+    for method in REGIME_METHODS:
+        outputs.append(run_regime_model(df_by_row, assignments, method, folds))
+
+    predictions = pd.concat([o.frame for o in outputs if not o.frame.empty], ignore_index=True)
+    predictions = predictions.sort_values(["method", "open_time", "symbol"]).reset_index(drop=True)
+    predictions.to_csv(os.path.join(SAVE_DIR, "alpha_oos_predictions.csv"), index=False)
+    predictions.to_csv(os.path.join(SAVE_DIR, "oos_predictions.csv"), index=False)
+
+    summaries = [summarize_predictions(o.frame, o.method, o.regime_method, symbol_scope) for o in outputs]
+    results = pd.DataFrame(summaries)
+    validate_test_coverage(results)
+    results.to_csv(os.path.join(SAVE_DIR, "experiment_results.csv"), index=False)
+    results.to_csv(os.path.join(SAVE_DIR, "strategy_comparison.csv"), index=False)
+    save_equity_plot(predictions)
+
+    print("\nExperiment results:")
+    print(results.to_string(index=False))
+    print("\nOK: alpha benchmark artifacts saved.")
+
+
+if __name__ == "__main__":
+    main()
