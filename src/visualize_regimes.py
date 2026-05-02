@@ -1,156 +1,265 @@
-import numpy as np
-import torch
+import argparse
+import os
+
 import duckdb
-import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+import numpy as np
+import pandas as pd
+import torch
 import umap
-from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
+from sklearn.mixture import GaussianMixture
 
-from dataset import load_feature_matrix, normalize, WINDOW_SIZE
+from config import DB_PATH, LATENT_DIM, N_FEATURES, N_REGIMES, SAVE_DIR, SYMBOLS, WINDOW_SIZE
+from dataset import load_feature_matrix, normalize
 from encoder import TemporalEncoder
-from config import DB_PATH
 
-SYMBOL   = "BTCUSDT"
-SAVE_DIR = "../models"
-DEVICE   = "cuda" if torch.cuda.is_available() else "cpu"
-N_REGIMES = 4
 
-# ── 1. Load model + features ──────────────────────────────────────────────────
-print("Loading encoder...")
-model = TemporalEncoder(n_features=22, latent_dim=16)
-model.load_state_dict(torch.load(f"{SAVE_DIR}/encoder.pt", map_location=DEVICE))
-model.eval()
+DENSE_STRIDE = 1
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+RANDOM_STATE = 42
 
-X_raw = load_feature_matrix(SYMBOL)
-X, _, _ = normalize(X_raw)
 
-# ── 2. Extract embeddings with stride=1 (dense) ───────────────────────────────
-print("Extracting dense embeddings (stride=1)...")
-embeddings = []
-timestamps = []
+def normalize_for_encoder(x_raw: np.ndarray) -> np.ndarray:
+    mean_path = os.path.join(SAVE_DIR, "norm_mean.npy")
+    std_path = os.path.join(SAVE_DIR, "norm_std.npy")
+    if os.path.exists(mean_path) and os.path.exists(std_path):
+        mean = np.load(mean_path)
+        std = np.load(std_path)
+        if len(mean) == x_raw.shape[1] and len(std) == x_raw.shape[1]:
+            return (x_raw - mean) / (std + 1e-8)
+    x, _, _ = normalize(x_raw)
+    return x
 
-# Load timestamps from DB
-con = duckdb.connect(DB_PATH, read_only=True)
-times = con.execute("""
-    SELECT open_time FROM features
-    WHERE symbol = ? ORDER BY open_time
-""", [SYMBOL]).df()
-con.close()
-times["open_time"] = pd.to_datetime(times["open_time"])
 
-with torch.no_grad():
-    for i in range(0, len(X) - WINDOW_SIZE, 4):   # stride=4, much denser
-        window = torch.tensor(
-            X[i : i + WINDOW_SIZE], dtype=torch.float32
-        ).unsqueeze(0)
-        z = model(window)
-        embeddings.append(z.cpu().numpy())
-        timestamps.append(times["open_time"].iloc[i + WINDOW_SIZE - 1])
+def load_times_and_prices(symbol: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    con = duckdb.connect(DB_PATH, read_only=True)
+    times = con.execute(
+        """
+        SELECT open_time FROM features
+        WHERE symbol = ? ORDER BY open_time
+        """,
+        [symbol],
+    ).df()
+    price_df = con.execute(
+        """
+        SELECT open_time, close FROM ohlcv
+        WHERE symbol = ? ORDER BY open_time
+        """,
+        [symbol],
+    ).df()
+    con.close()
+    times["open_time"] = pd.to_datetime(times["open_time"])
+    price_df["open_time"] = pd.to_datetime(price_df["open_time"])
+    return times, price_df
 
-embeddings = np.vstack(embeddings)
-timestamps = pd.DatetimeIndex(timestamps)
-print(f"Embeddings: {embeddings.shape}")
 
-# ── 3. Re-fit GMM ─────────────────────────────────────────────────────────────
-print("Fitting GMM...")
-gmm = GaussianMixture(n_components=N_REGIMES, covariance_type="full",
-                      n_init=10, random_state=42)
-gmm.fit(embeddings)
-labels     = gmm.predict(embeddings)
-posteriors = gmm.predict_proba(embeddings)
+def extract_symbol_embeddings(
+    model: TemporalEncoder,
+    symbol: str,
+) -> tuple[np.ndarray, pd.DataFrame, pd.DataFrame]:
+    x_raw = load_feature_matrix(symbol)
+    x = normalize_for_encoder(x_raw)
+    times, price_df = load_times_and_prices(symbol)
 
-# Silhouette score — measures cluster separation (higher = better, max=1)
-sil = silhouette_score(embeddings, labels, sample_size=2000)
-print(f"Silhouette score: {sil:.4f}  (baseline HMM typically ~0.15)")
+    embeddings = []
+    rows = []
+    print(f"Extracting dense embeddings for {symbol} (stride={DENSE_STRIDE})...")
+    with torch.no_grad():
+        for start_idx in range(0, len(x) - WINDOW_SIZE, DENSE_STRIDE):
+            feat_idx = start_idx + WINDOW_SIZE - 1
+            window = torch.tensor(
+                x[start_idx : start_idx + WINDOW_SIZE], dtype=torch.float32
+            ).unsqueeze(0).to(DEVICE)
+            z = model(window)
+            embeddings.append(z.cpu().numpy())
+            rows.append(
+                {
+                    "symbol": symbol,
+                    "start_idx": start_idx,
+                    "feat_idx": feat_idx,
+                    "open_time": times["open_time"].iloc[feat_idx],
+                }
+            )
 
-# ── 4. UMAP with better settings ──────────────────────────────────────────────
-print("Running UMAP...")
-reducer = umap.UMAP(
-    n_components=2,
-    n_neighbors=50,      # larger = more global structure preserved
-    min_dist=0.1,        # tighter clusters
-    random_state=42,
-)
-emb2d = reducer.fit_transform(embeddings)
+    if not embeddings:
+        raise RuntimeError(f"No embeddings extracted for {symbol}.")
+    return np.vstack(embeddings), pd.DataFrame(rows), price_df
 
-# ── 5. Plot 1: UMAP colored by regime ────────────────────────────────────────
-colors = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B"]
-labels_named = {0: "Regime 0", 1: "Regime 1", 2: "Regime 2", 3: "Regime 3"}
 
-fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+def save_regime_artifacts(embeddings: np.ndarray, meta: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+    print("Fitting GMM on dense multi-symbol embeddings...")
+    print("NOTE: This overwrites embeddings.npy, labels.npy, posteriors.npy, and regime_posteriors.csv.")
+    print("Always run visualize_regimes.py before baselines.py and alpha_models.py.")
 
-# Left: colored by regime
-ax = axes[0]
-for k in range(N_REGIMES):
-    mask = labels == k
-    ax.scatter(emb2d[mask, 0], emb2d[mask, 1],
-               c=colors[k], label=f"Regime {k} ({mask.mean()*100:.0f}%)",
-               alpha=0.5, s=6)
-ax.set_title(f"UMAP — Regime Labels\nSilhouette: {sil:.3f}", fontsize=12)
-ax.legend(markerscale=3, fontsize=9)
-ax.set_xlabel("UMAP 1"); ax.set_ylabel("UMAP 2")
+    gmm = GaussianMixture(
+        n_components=N_REGIMES,
+        covariance_type="full",
+        n_init=10,
+        random_state=RANDOM_STATE,
+    )
+    gmm.fit(embeddings)
+    labels = gmm.predict(embeddings)
+    posteriors = gmm.predict_proba(embeddings)
 
-# Right: colored by regime certainty (max posterior)
-ax2 = axes[1]
-certainty = posteriors.max(axis=1)
-sc = ax2.scatter(emb2d[:, 0], emb2d[:, 1],
-                 c=certainty, cmap="RdYlGn", alpha=0.5, s=6,
-                 vmin=0.4, vmax=1.0)
-plt.colorbar(sc, ax=ax2, label="Regime certainty")
-ax2.set_title("UMAP — Regime Certainty\n(green=confident, red=uncertain)", fontsize=12)
-ax2.set_xlabel("UMAP 1"); ax2.set_ylabel("UMAP 2")
+    meta = meta.reset_index(drop=True).copy()
+    meta.insert(0, "embedding_idx", np.arange(len(meta), dtype=int))
+    meta["regime"] = labels.astype(int)
+    for k in range(N_REGIMES):
+        meta[f"post_{k}"] = posteriors[:, k]
 
-plt.suptitle(f"Adaptive Alpha Engine — Learned Regime Structure ({SYMBOL})", fontsize=13)
-plt.tight_layout()
-plt.savefig(f"{SAVE_DIR}/umap_improved.png", dpi=150)
-plt.show()
+    np.save(os.path.join(SAVE_DIR, "embeddings.npy"), embeddings)
+    np.save(os.path.join(SAVE_DIR, "labels.npy"), labels)
+    np.save(os.path.join(SAVE_DIR, "posteriors.npy"), posteriors)
+    meta.to_csv(os.path.join(SAVE_DIR, "regime_posteriors.csv"), index=False)
+    print(f"Saved aligned dense regime posteriors: {len(meta):,} rows")
+    return labels, posteriors
 
-# ── 6. Plot 2: Regime timeline overlaid on price ──────────────────────────────
-print("Plotting regime timeline...")
-con = duckdb.connect(DB_PATH, read_only=True)
-price_df = con.execute("""
-    SELECT open_time, close FROM ohlcv
-    WHERE symbol = ? ORDER BY open_time
-""", [SYMBOL]).df()
-con.close()
-price_df["open_time"] = pd.to_datetime(price_df["open_time"])
 
-fig2, (ax3, ax4) = plt.subplots(2, 1, figsize=(16, 8), sharex=False)
+def safe_silhouette(embeddings: np.ndarray, labels: np.ndarray) -> float:
+    if len(np.unique(labels)) < 2:
+        return float("nan")
+    return float(
+        silhouette_score(
+            embeddings,
+            labels,
+            sample_size=min(2000, len(labels)),
+            random_state=RANDOM_STATE,
+        )
+    )
 
-# Top: BTC price
-ax3.plot(price_df["open_time"], price_df["close"],
-         color="#1e293b", linewidth=0.6, alpha=0.9)
-ax3.set_ylabel("BTC Price (USDT)", fontsize=10)
-ax3.set_title("BTC Price", fontsize=11)
-ax3.grid(True, alpha=0.2)
 
-# Bottom: regime over time (colored bands)
-for k in range(N_REGIMES):
-    mask = labels == k
-    ax4.scatter(timestamps[mask], np.ones(mask.sum()) * k,
-                c=colors[k], s=3, alpha=0.6, label=f"Regime {k}")
+def save_umap_plot(embeddings: np.ndarray, labels: np.ndarray, posteriors: np.ndarray, sil: float) -> None:
+    print("Running UMAP...")
+    reducer = umap.UMAP(
+        n_components=2,
+        n_neighbors=50,
+        min_dist=0.1,
+        random_state=RANDOM_STATE,
+    )
+    emb2d = reducer.fit_transform(embeddings)
+    colors = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B"]
 
-ax4.set_ylabel("Detected Regime", fontsize=10)
-ax4.set_title("Regime Timeline", fontsize=11)
-ax4.set_yticks(range(N_REGIMES))
-ax4.legend(markerscale=4, fontsize=9, loc="upper right")
-ax4.grid(True, alpha=0.2)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+    ax = axes[0]
+    for k in range(N_REGIMES):
+        mask = labels == k
+        ax.scatter(
+            emb2d[mask, 0],
+            emb2d[mask, 1],
+            c=colors[k],
+            label=f"Regime {k} ({mask.mean()*100:.0f}%)",
+            alpha=0.5,
+            s=5,
+        )
+    ax.set_title(f"UMAP - Dense Regime Labels\nSilhouette: {sil:.3f}", fontsize=12)
+    ax.legend(markerscale=3, fontsize=9)
+    ax.set_xlabel("UMAP 1")
+    ax.set_ylabel("UMAP 2")
 
-plt.tight_layout()
-plt.savefig(f"{SAVE_DIR}/regime_timeline.png", dpi=150)
-plt.show()
+    certainty = posteriors.max(axis=1)
+    ax2 = axes[1]
+    sc = ax2.scatter(
+        emb2d[:, 0],
+        emb2d[:, 1],
+        c=certainty,
+        cmap="RdYlGn",
+        alpha=0.5,
+        s=5,
+        vmin=0.4,
+        vmax=1.0,
+    )
+    plt.colorbar(sc, ax=ax2, label="Regime certainty")
+    ax2.set_title("UMAP - Regime Certainty\n(green=confident, red=uncertain)", fontsize=12)
+    ax2.set_xlabel("UMAP 1")
+    ax2.set_ylabel("UMAP 2")
 
-# ── 7. Regime statistics ──────────────────────────────────────────────────────
-print("\n── Regime Statistics ─────────────────────────────────")
-for k in range(N_REGIMES):
-    mask = labels == k
-    avg_certainty = posteriors[mask, k].mean()
-    print(f"Regime {k}: {mask.sum():4d} windows | "
-          f"{mask.mean()*100:.1f}% | "
-          f"avg certainty: {avg_certainty:.3f}")
+    plt.suptitle("Adaptive Alpha Lab - Dense Learned Regime Structure", fontsize=13)
+    plt.tight_layout()
+    plt.savefig(os.path.join(SAVE_DIR, "umap_improved.png"), dpi=150)
+    plt.close(fig)
 
-print(f"\nSilhouette score: {sil:.4f}")
-print("(>0.20 = good separation for financial data)")
-print("\n✓ Visualizations saved. Ready for Phase 3.")
+
+def save_timeline_plot(
+    primary_symbol: str,
+    price_df: pd.DataFrame,
+    meta: pd.DataFrame,
+    labels: np.ndarray,
+) -> None:
+    colors = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B"]
+    plot_meta = meta.copy()
+    plot_meta["regime"] = labels.astype(int)
+    plot_meta = plot_meta[plot_meta["symbol"] == primary_symbol].copy()
+    plot_meta["open_time"] = pd.to_datetime(plot_meta["open_time"])
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 8), sharex=False)
+    ax1.plot(price_df["open_time"], price_df["close"], color="#1e293b", linewidth=0.6)
+    ax1.set_ylabel(f"{primary_symbol} price")
+    ax1.set_title(f"{primary_symbol} Price - Hourly")
+    ax1.grid(True, alpha=0.2)
+
+    for k in range(N_REGIMES):
+        mask = plot_meta["regime"] == k
+        ax2.scatter(
+            plot_meta.loc[mask, "open_time"],
+            np.ones(mask.sum()) * k,
+            c=colors[k],
+            s=2,
+            alpha=0.55,
+            label=f"Regime {k}",
+        )
+    ax2.set_ylabel("Detected regime")
+    ax2.set_title(f"Regime Timeline - {primary_symbol}")
+    ax2.set_yticks(range(N_REGIMES))
+    ax2.legend(markerscale=4, fontsize=9, loc="upper right")
+    ax2.grid(True, alpha=0.2)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(SAVE_DIR, "regime_timeline.png"), dpi=150)
+    plt.close(fig)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Create dense contrastive regime artifacts.")
+    parser.add_argument("--symbols", nargs="*", default=SYMBOLS)
+    parser.add_argument("--primary-symbol", default="BTCUSDT")
+    args = parser.parse_args()
+
+    print("Loading encoder...")
+    model = TemporalEncoder(n_features=N_FEATURES, latent_dim=LATENT_DIM).to(DEVICE)
+    model.load_state_dict(torch.load(os.path.join(SAVE_DIR, "encoder.pt"), map_location=DEVICE))
+    model.eval()
+
+    all_embeddings = []
+    all_meta = []
+    price_by_symbol = {}
+    for symbol in args.symbols:
+        embeddings, meta, price_df = extract_symbol_embeddings(model, symbol)
+        all_embeddings.append(embeddings)
+        all_meta.append(meta)
+        price_by_symbol[symbol] = price_df
+
+    embeddings = np.vstack(all_embeddings)
+    meta = pd.concat(all_meta, ignore_index=True)
+    labels, posteriors = save_regime_artifacts(embeddings, meta)
+
+    sil = safe_silhouette(embeddings, labels)
+    print(f"Silhouette score: {sil:.4f}")
+    save_umap_plot(embeddings, labels, posteriors, sil)
+
+    primary_symbol = args.primary_symbol if args.primary_symbol in price_by_symbol else args.symbols[0]
+    save_timeline_plot(primary_symbol, price_by_symbol[primary_symbol], meta, labels)
+
+    print("\n-- Regime Statistics ---------------------------------")
+    for k in range(N_REGIMES):
+        mask = labels == k
+        avg_certainty = posteriors[mask, k].mean() if mask.any() else np.nan
+        print(
+            f"  Regime {k}: {mask.sum():5d} windows | "
+            f"{mask.mean()*100:5.1f}% | avg certainty: {avg_certainty:.3f}"
+        )
+    print("OK: Dense visualizations and regime posteriors saved.")
+
+
+if __name__ == "__main__":
+    main()

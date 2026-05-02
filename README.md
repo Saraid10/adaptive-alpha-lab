@@ -1,130 +1,143 @@
-# Adaptive Alpha Engine
+# Adaptive Alpha Lab
 
-> A learned market regime detection system that discovers latent market states from raw financial data without hand-labeling, and trains regime-conditioned alpha models with walk-forward validation.
+> A research-grade quant ML benchmark platform that tests whether learned market regimes improve alpha modeling versus global baselines and classical regime methods, using proper financial labels, purged walk-forward validation, and transaction-cost-aware evaluation.
 
-## What This Project Does
+## Research Question
 
-Financial markets behave differently across time. A momentum strategy that works in a trending bull market bleeds in a mean-reverting environment. Standard solutions use Hidden Markov Models with hand-crafted features — but this forces you to decide what a regime is before looking at the data.
+Does learning market regimes from raw financial time-series features improve alpha-model IC, drawdown, and Sharpe compared with:
 
-This project learns regime structure directly from 18 engineered microstructure features using a Temporal Fusion Transformer trained with contrastive objectives. The encoder outputs a probability distribution over regimes at every timestep — enabling uncertainty-weighted position sizing that reduces exposure during regime transitions.
+- a global model with no regime awareness
+- Gaussian HMM regimes
+- KMeans regimes
+- volatility-bucket regimes
+
+The project is intentionally framed as a research benchmark, not a live trading bot. Honest weak or mixed results are part of the contribution.
 
 ## Architecture
 
-```
-Raw OHLCV (Binance API)
-        ↓
-Feature Pipeline (18 microstructure features → DuckDB)
-        ↓
-Temporal Encoder (TFT + NT-Xent contrastive loss)
-        ↓
-GMM Clustering → Regime Posteriors (K=4)
-        ↓
-Regime-Conditioned LightGBM Alpha Models
-        ↓
-Walk-Forward Backtester (TC-adjusted Sharpe)
+```text
+Binance OHLCV
+    -> DuckDB feature store
+    -> 22 engineered market/microstructure features
+    -> Multi-horizon financial labels and triple-barrier targets
+    -> Contrastive temporal regime encoder + classical baselines
+    -> Global and regime-conditioned LightGBM models
+    -> Purged walk-forward validation with transaction costs
+    -> Research dashboard and report artifacts
 ```
 
-## Key Results
+## Current Capabilities
 
-| Metric | Value |
+- Incremental Binance OHLCV ingestion for BTCUSDT and ETHUSDT.
+- DuckDB feature store with 22 engineered features.
+- Contrastive Transformer-style temporal encoder trained with NT-Xent loss.
+- GMM regime posteriors and UMAP/timeline visualizations.
+- Multi-horizon targets: 4h, 8h, and 24h.
+- Triple-barrier labels with neutral class.
+- Regime baselines: contrastive, Gaussian HMM, KMeans, volatility buckets.
+- Global LightGBM baseline and regime-conditioned LightGBM models.
+- 5-day embargoed walk-forward validation.
+- Transaction-cost-aware experiment result table.
+- Streamlit dashboard shell and research note.
+
+## Run Order
+
+Recommended local environment:
+
+```powershell
+py -3.11 -m venv env
+.\env\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+```powershell
+python src/check.py
+python src/targets.py --symbols BTCUSDT ETHUSDT
+python src/train_encoder.py --symbols BTCUSDT ETHUSDT
+python src/visualize_regimes.py --symbols BTCUSDT ETHUSDT
+python src/baselines.py --symbols BTCUSDT ETHUSDT
+python src/alpha_models.py --symbols BTCUSDT ETHUSDT
+python src/backtest.py
+python -m compileall src dashboard.py
+```
+
+Optional dashboard:
+
+```powershell
+streamlit run dashboard.py
+```
+
+If Streamlit is not installed, run:
+
+```powershell
+pip install -r requirements.txt
+```
+
+## Key Artifacts
+
+| Artifact | Purpose |
 |---|---|
-| Encoder training loss (epoch 1 to 30) | 0.38 to 0.078 |
-| Average regime certainty | greater than 0.75 |
-| Early out-of-sample IC | approximately 0.10 |
-| Regimes discovered | 4 (unsupervised) |
-| Training data | 17,460 hourly bars for BTCUSDT and ETHUSDT |
-
-## Regime Visualizations
-
-### UMAP — Learned Regime Structure
-![UMAP Regime Structure](models/umap_improved.png)
-
-### Regime Timeline Overlaid on BTC Price
-![Regime Timeline](models/regime_timeline.png)
-
-### Out-of-Sample Equity Curve
-![Equity Curve](models/equity_curve.png)
-
-## Tech Stack
-
-| Area | Tools |
-|---|---|
-| Deep Learning | PyTorch, Temporal Fusion Transformer, NT-Xent Contrastive Loss |
-| Quantitative Finance | Walk-forward validation, Signal decay analysis, Transaction cost modeling |
-| Machine Learning | LightGBM, GMM clustering, SHAP explainability |
-| Data | Binance API, DuckDB, 18 engineered microstructure features |
-| Visualization | UMAP, Matplotlib, Seaborn |
+| `models/target_distribution.csv` | Label balance across horizons and label types |
+| `models/target_quality.csv` | Missing-row, horizon-loss, and neutral-class checks |
+| `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
+| `models/regime_benchmark_summary.csv` | Regime-level comparison table |
+| `models/per_regime_stats.csv` | Volatility, return, liquidity, and IC diagnostics by regime |
+| `models/experiment_results.csv` | Master model comparison table |
+| `models/alpha_oos_predictions.csv` | Out-of-sample model predictions |
+| `models/phase4_dashboard.png` | Static research backtest dashboard |
+| `reports/adaptive_alpha_lab_report.md` | Research note |
 
 ## Project Structure
 
-```
+```text
 adaptive-alpha-engine/
+├── dashboard.py
+├── reports/
+│   └── adaptive_alpha_lab_report.md
 ├── src/
-│   ├── config.py              # Configuration and paths
-│   ├── ingestion.py           # Binance API data pipeline
-│   ├── features.py            # 18 microstructure feature engineering
-│   ├── dataset.py             # PyTorch sliding window dataset
-│   ├── encoder.py             # TFT encoder + NT-Xent loss
-│   ├── train_encoder.py       # Contrastive training loop
-│   ├── visualize_regimes.py   # UMAP + regime timeline plots
-│   └── alpha_models.py        # Walk-forward alpha models
-├── models/
-│   ├── umap_improved.png
-│   ├── regime_timeline.png
-│   └── equity_curve.png
-├── requirements.txt
-└── README.md
+│   ├── ingestion.py
+│   ├── features.py
+│   ├── targets.py
+│   ├── dataset.py
+│   ├── encoder.py
+│   ├── train_encoder.py
+│   ├── visualize_regimes.py
+│   ├── baselines.py
+│   ├── alpha_models.py
+│   ├── backtest.py
+│   └── check.py
+└── models/
+    └── generated research artifacts
 ```
 
-## Quickstart
+## Methodology Notes
 
-```bash
-# 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/adaptive-alpha-engine.git
-cd adaptive-alpha-engine
+The primary target is `tb_label_8h`, an 8-hour triple-barrier label with classes `-1`, `0`, and `+1`. The alpha score is `P(+1) - P(-1)`. A prediction becomes a trade only when the neutral class is not dominant and the absolute score exceeds the threshold.
 
-# 2. Create and activate virtual environment
-python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # Mac/Linux
+The validation scheme uses expanding walk-forward folds with a 5-day embargo gap between train and test windows. This reduces leakage from overlapping financial labels and makes the model comparison more defensible.
 
-# 3. Install dependencies
-pip install -r requirements.txt
+Dense contrastive regime inference uses stride 1 after the encoder window warmup, so the learned-regime method is compared on the same BTC+ETH row universe as HMM-style, KMeans, and volatility-bucket baselines.
 
-# 4. Run Phase 1 — data ingestion and feature engineering
-cd src
-python ingestion.py
-python features.py
+## Latest Benchmark Snapshot
 
-# 5. Run Phase 2 — train encoder and visualize regimes
-python train_encoder.py
-python visualize_regimes.py
+Latest run: BTCUSDT + ETHUSDT, `tb_label_8h`, 25,920 out-of-sample rows per method.
 
-# 6. Run Phase 3 — alpha models with walk-forward validation
-python alpha_models.py
-```
+| Method | IC | Sharpe | Drawdown | Note |
+|---|---:|---:|---:|---|
+| global_lgbm | 0.0024 | -0.506 | -0.688 | no-regime baseline |
+| regime_lgbm_contrastive | -0.0165 | -0.902 | -0.909 | learned-regime benchmark |
+| regime_lgbm_hmm | 0.0079 | -0.182 | -0.829 | best IC and Sharpe; true hmmlearn HMM |
+| regime_lgbm_kmeans | -0.0013 | -1.180 | -0.920 | classical clustering baseline |
+| regime_lgbm_vol_bucket | -0.0030 | -0.988 | -0.896 | simple volatility baseline |
 
-## Phase Breakdown
+The current result is intentionally presented as research evidence, not a profitable trading claim. The true HMM baseline is strongest in this run, while learned contrastive regimes remain an important benchmark for testing whether representation learning can beat classical regime discovery.
 
-### Phase 1 — Data Infrastructure and Feature Engineering
+## Current Status
 
-Pulls 2 years of hourly OHLCV data for BTCUSDT and ETHUSDT from the Binance public API with no authentication required. Computes 18 engineered microstructure features including multi-horizon returns at 1, 5, 15, and 60 bar horizons, realized volatility at 5 and 20 bar windows, volatility of volatility, Amihud illiquidity ratio, volume Z-score, return autocorrelation, bid-ask spread proxy, order flow imbalance proxy, RSI, Garman-Klass volatility, rolling skewness and kurtosis, MACD signal, Bollinger percent B, ATR, close vs VWAP, log volume trend, and return dispersion. All data stored in DuckDB with time-partitioned tables for fast retrieval during training.
+The codebase now produces the full benchmark artifact set. The next important work is not live trading; it is improving the learned-regime encoder, adding feature importance analysis, and running threshold/turnover studies.
 
-### Phase 2 — Temporal Encoder and Regime Discovery
+## Resume Bullets
 
-A Temporal Fusion Transformer is trained with NT-Xent contrastive loss on rolling 60-bar windows of the feature matrix. Adjacent windows are treated as positive pairs — the model learns that nearby market states should be close in latent space. All other items in the batch serve as negatives. GMM clustering on the learned embeddings discovers 4 latent market regimes without any hand-labeling, outputting a full posterior probability distribution over regimes at every timestep rather than a hard label. Training loss converges cleanly from 0.38 to 0.078 over 30 epochs. Regime distribution across the 4 states is 27%, 26%, 23%, and 24% — healthy with no mode collapse. UMAP visualization and a regime timeline show how detected states evolve across the full 2-year BTC price history.
-
-### Phase 3 — Regime-Conditioned Alpha Models
-
-A separate LightGBM classifier is trained per discovered regime using only high-confidence windows where the regime posterior exceeds 0.65. Predictions from all regime models are combined as a posterior-weighted ensemble — when the model is uncertain about which regime is active, all regime models contribute proportionally. Walk-forward validation with 6-month expanding windows ensures zero lookahead bias. Performance is evaluated by direction accuracy, information coefficient, and transaction-cost-adjusted Sharpe broken down per regime. Rolling IC analysis tracks signal decay over time. Early out-of-sample IC of approximately 0.10 confirms a genuine tradeable signal, with measured alpha decay motivating the online retraining design in Phase 4.
-
-## Research Insight
-
-The encoder successfully identifies tradeable alpha with IC approximately 0.10 in early out-of-sample periods. Rolling IC analysis reveals signal half-life decay over time — consistent with known alpha decay dynamics in cryptocurrency markets. This is not a failure but a research finding: the signal is real and measurable, and its decay characteristics are themselves informative about market microstructure. This motivates the online retraining and uncertainty-weighted risk management design in Phase 4.
-
-## Coming Soon
-
-- Phase 4: Full backtesting engine with uncertainty-weighted position sizing and per-regime risk management
-- Phase 5: FastAPI live paper trading service deployed on Binance testnet
-- Phase 6: Interactive research dashboard with regime explorer and signal decay plots
-- Research note: 2-page PDF benchmarking TFT encoder vs VAE vs Gaussian HMM baseline
+- Built Adaptive Alpha Lab, a quant ML benchmark platform using DuckDB, PyTorch, LightGBM, and purged walk-forward validation to test whether learned market regimes improve alpha modeling under transaction costs.
+- Benchmarked contrastive temporal regimes against HMM-style, KMeans, and volatility-bucket baselines using transition matrices, regime duration, per-regime diagnostics, IC, drawdown, and turnover.
+- Implemented multi-horizon financial labels, 8-hour triple-barrier targets, posterior-weighted regime-conditioned models, and transaction-cost-aware out-of-sample evaluation.
