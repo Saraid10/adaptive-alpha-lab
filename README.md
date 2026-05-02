@@ -2,6 +2,8 @@
 
 > A research-grade quant ML benchmark platform that tests whether learned market regimes improve alpha modeling versus global baselines and classical regime methods, using proper financial labels, purged walk-forward validation, and transaction-cost-aware evaluation.
 
+**Live Demo:** [adaptive-alpha-engine.streamlit.app](https://adaptive-alpha-engine.streamlit.app/)
+
 ## Research Question
 
 Does learning market regimes from raw financial time-series features improve alpha-model IC, drawdown, and Sharpe compared with:
@@ -47,7 +49,7 @@ Recommended local environment:
 ```powershell
 py -3.11 -m venv env
 .\env\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-research.txt
 ```
 
 ```powershell
@@ -64,13 +66,15 @@ python -m compileall src dashboard.py
 Optional dashboard:
 
 ```powershell
-streamlit run dashboard.py
+python -m streamlit run streamlit_app.py
 ```
 
-If Streamlit is not installed, run:
+For Streamlit Cloud deployment, the root `requirements.txt` is intentionally minimal and installs only dashboard dependencies.
+
+If local research dependencies are not installed, run:
 
 ```powershell
-pip install -r requirements.txt
+python -m pip install -r requirements-research.txt
 ```
 
 ## Key Artifacts
