@@ -136,8 +136,3 @@ The current result is intentionally presented as research evidence, not a profit
 
 The codebase now produces the full benchmark artifact set. The next important work is not live trading; it is improving the learned-regime encoder, adding feature importance analysis, and running threshold/turnover studies.
 
-## Resume Bullets
-
-- Built Adaptive Alpha Lab, a quant ML benchmark platform using DuckDB, PyTorch, LightGBM, and purged walk-forward validation to test whether learned market regimes improve alpha modeling under transaction costs.
-- Benchmarked contrastive temporal regimes against HMM-style, KMeans, and volatility-bucket baselines using transition matrices, regime duration, per-regime diagnostics, IC, drawdown, and turnover.
-- Implemented multi-horizon financial labels, 8-hour triple-barrier targets, posterior-weighted regime-conditioned models, and transaction-cost-aware out-of-sample evaluation.
