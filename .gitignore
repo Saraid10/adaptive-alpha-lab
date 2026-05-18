@@ -16,6 +16,7 @@ models/*.csv
 !models/experiment_results.csv
 !models/strategy_comparison.csv
 !models/regime_benchmark_summary.csv
+!models/regime_stability_summary.csv
 !models/per_regime_stats.csv
 !models/target_distribution.csv
 !models/target_quality.csv

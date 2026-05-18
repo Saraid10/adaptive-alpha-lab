@@ -4,6 +4,12 @@
 
 **Live Demo:** [adaptive-alpha-engine.streamlit.app](https://adaptive-alpha-engine.streamlit.app/)
 
+## Key Finding
+
+The strongest current result is not that learned regimes beat every baseline. They do not. The true Gaussian HMM baseline outperforms dense contrastive-GMM regimes on IC and Sharpe in the latest BTC+ETH run.
+
+That makes the project more interesting: the stability diagnostics show that persistence alone is not enough. Contrastive-GMM regimes are smoother and longer-lived, but the HMM states are more alpha-relevant out of sample. The next research hypothesis is to combine both ideas with a contrastive-HMM hybrid: learned embeddings for representation, HMM state dynamics for temporal structure.
+
 ## Research Question
 
 Does learning market regimes from raw financial time-series features improve alpha-model IC, drawdown, and Sharpe compared with:
@@ -37,6 +43,7 @@ Binance OHLCV
 - Multi-horizon targets: 4h, 8h, and 24h.
 - Triple-barrier labels with neutral class.
 - Regime baselines: contrastive, Gaussian HMM, KMeans, volatility buckets.
+- Regime stability diagnostics: switch rate, duration, transition entropy, and stable-vs-transition IC.
 - Global LightGBM baseline and regime-conditioned LightGBM models.
 - 5-day embargoed walk-forward validation.
 - Transaction-cost-aware experiment result table.
@@ -59,8 +66,9 @@ python src/train_encoder.py --symbols BTCUSDT ETHUSDT
 python src/visualize_regimes.py --symbols BTCUSDT ETHUSDT
 python src/baselines.py --symbols BTCUSDT ETHUSDT
 python src/alpha_models.py --symbols BTCUSDT ETHUSDT
+python src/regime_stability.py --symbols BTCUSDT ETHUSDT
 python src/backtest.py
-python -m compileall src dashboard.py
+python -m compileall src dashboard.py streamlit_app.py
 ```
 
 Optional dashboard:
@@ -85,17 +93,20 @@ python -m pip install -r requirements-research.txt
 | `models/target_quality.csv` | Missing-row, horizon-loss, and neutral-class checks |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
+| `models/regime_stability_summary.csv` | Persistence, switch-rate, confidence, and stable-vs-transition IC diagnostics |
 | `models/per_regime_stats.csv` | Volatility, return, liquidity, and IC diagnostics by regime |
 | `models/experiment_results.csv` | Master model comparison table |
 | `models/alpha_oos_predictions.csv` | Out-of-sample model predictions |
+| `models/regime_stability.png` | Stability and transition-period IC dashboard panel |
 | `models/phase4_dashboard.png` | Static research backtest dashboard |
 | `reports/adaptive_alpha_lab_report.md` | Research note |
 
 ## Project Structure
 
 ```text
-adaptive-alpha-engine/
+adaptive-alpha-lab/
 ├── dashboard.py
+├── streamlit_app.py
 ├── reports/
 │   └── adaptive_alpha_lab_report.md
 ├── src/
@@ -107,6 +118,7 @@ adaptive-alpha-engine/
 │   ├── train_encoder.py
 │   ├── visualize_regimes.py
 │   ├── baselines.py
+│   ├── regime_stability.py
 │   ├── alpha_models.py
 │   ├── backtest.py
 │   └── check.py
@@ -136,7 +148,9 @@ Latest run: BTCUSDT + ETHUSDT, `tb_label_8h`, 25,920 out-of-sample rows per meth
 
 The current result is intentionally presented as research evidence, not a profitable trading claim. The true HMM baseline is strongest in this run, while learned contrastive regimes remain an important benchmark for testing whether representation learning can beat classical regime discovery.
 
+The main interpretation is that dense contrastive inference fixed the earlier coverage problem, but unconstrained GMM clustering over high-density embeddings appears misaligned with the alpha target. The HMM has shorter regimes than contrastive-GMM, but its state dynamics currently produce the best downstream IC and Sharpe. This suggests useful temporal state structure matters more than embedding capacity or persistence alone.
+
 ## Current Status
 
-The codebase now produces the full benchmark artifact set. The next important work is not live trading; it is improving the learned-regime encoder, adding feature importance analysis, and running threshold/turnover studies.
+The codebase now produces the full benchmark artifact set and a Streamlit research dashboard. The next important work is not live trading; it is measuring regime stability more deeply, testing a contrastive-HMM hybrid, adding a validation audit, and running robustness studies.
 
