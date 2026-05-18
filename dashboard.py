@@ -27,9 +27,17 @@ def main() -> None:
         "Regime-aware quant ML benchmark platform with financial labels, "
         "baselines, purged validation, and transaction-cost-aware evaluation."
     )
+    st.info(
+        "Key finding: in the current BTC+ETH benchmark, the true Gaussian HMM "
+        "beats dense contrastive-GMM regimes on IC and Sharpe. The stability "
+        "diagnostics show that persistence alone is not enough; the useful "
+        "state structure from the HMM is more alpha-relevant than embedding "
+        "capacity by itself."
+    )
 
     results = read_csv("experiment_results.csv")
     regime_summary = read_csv("regime_benchmark_summary.csv")
+    regime_stability = read_csv("regime_stability_summary.csv")
     per_regime = read_csv("per_regime_stats.csv")
     target_dist = read_csv("target_distribution.csv")
     target_quality = read_csv("target_quality.csv")
@@ -64,6 +72,12 @@ def main() -> None:
         st.info("Run python src/baselines.py to generate regime benchmark artifacts.")
     else:
         st.dataframe(regime_summary, width="stretch")
+        if not regime_stability.empty:
+            st.subheader("Regime Stability Diagnostics")
+            st.dataframe(regime_stability, width="stretch")
+            stability_img = MODELS_DIR / "regime_stability.png"
+            if stability_img.exists():
+                st.image(str(stability_img), width="stretch")
         st.subheader("Per-Regime Statistics")
         st.dataframe(per_regime, width="stretch")
         st.subheader("Transition Matrices")

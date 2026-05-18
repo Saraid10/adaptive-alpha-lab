@@ -31,6 +31,19 @@ The benchmark compares four regime methods on a common BTC+ETH universe:
 
 The contrastive method now uses dense stride-1 inference for every valid feature row after the 60-bar encoder window. This fixes the earlier sparse-coverage issue and makes downstream alpha comparisons fair.
 
+## Regime Stability Diagnostics
+
+Phase 10 adds explicit stability diagnostics to separate regime persistence from downstream usefulness. This matters because a regime method can look visually smooth while still being weak for alpha conditioning.
+
+| Method | Switches / 1k Bars | Avg Duration | Transition Diagonal | Stable IC | Transition IC |
+|---|---:|---:|---:|---:|---:|
+| contrastive | 32.72 | 30.51 | 0.967 | -0.0200 | 0.0482 |
+| hmm | 143.24 | 6.98 | 0.857 | 0.0098 | 0.0020 |
+| kmeans | 246.60 | 4.05 | 0.753 | 0.0083 | -0.0137 |
+| vol_bucket | 95.71 | 10.44 | 0.904 | 0.0001 | -0.0168 |
+
+The important finding is not simply that more stable regimes are better. Contrastive-GMM produces the longest-lived regimes, but those regimes have negative IC during stable periods. The HMM switches more frequently, yet its stable-period IC is the strongest among the tested regime-aware methods. This suggests that alpha-relevant state structure matters more than persistence alone.
+
 ## Validation Setup
 
 Alpha models use expanding walk-forward validation with:
@@ -59,7 +72,7 @@ All methods are evaluated on 25,920 out-of-sample rows. This equal test coverage
 
 The real Gaussian HMM baseline produces the strongest IC in this run, improving from 0.0024 for the global baseline to 0.0079. It also has the least negative Sharpe among the tested methods, although drawdown remains large and total return remains negative after transaction costs.
 
-The honest conclusion is mixed: regime awareness changes ranking behavior and risk characteristics, but the current learned contrastive regimes do not beat the classical HMM baseline on the primary out-of-sample alpha metrics. This is still a useful research result because it separates representation learning, regime diagnostics, and deployable alpha instead of overclaiming profitability.
+The honest conclusion is mixed: regime awareness changes ranking behavior and risk characteristics, but the current learned contrastive regimes do not beat the classical HMM baseline on the primary out-of-sample alpha metrics. The new stability diagnostics make this more precise: contrastive regimes are persistent but not alpha-aligned, while HMM regimes are less persistent but more useful during stable periods. This is still a useful research result because it separates representation learning, regime diagnostics, and deployable alpha instead of overclaiming profitability.
 
 ## Limitations
 
@@ -70,7 +83,8 @@ The honest conclusion is mixed: regime awareness changes ranking behavior and ri
 
 ## Next Steps
 
-1. Improve the contrastive encoder objective and compare it against the current HMM winner.
-2. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
-3. Tune score thresholds to separate predictive IC from executable turnover.
-4. Add a short dashboard demo recording and final resume bullets.
+1. Test a contrastive-HMM hybrid that fits an HMM on learned embeddings.
+2. Add a validation audit that explicitly checks embargo gaps and feature/target leakage.
+3. Run robustness checks across thresholds, costs, horizons, and symbol splits.
+4. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
+5. Tune score thresholds to separate predictive IC from executable turnover.
