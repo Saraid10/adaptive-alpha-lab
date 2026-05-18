@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
-from config import DB_PATH, FEATURE_COLS, SAVE_DIR, SYMBOLS
+from config import DB_PATH, FEATURE_COLS, N_REGIMES, SAVE_DIR, SYMBOLS
 
 
 warnings.filterwarnings("ignore", message="X does not have valid feature names")
@@ -24,10 +24,10 @@ EMBARGO = 24 * 5
 SCORE_THRESHOLD = 0.05
 TC_PER_TRADE = 0.001
 RANDOM_STATE = 42
-REGIME_METHODS = ["contrastive", "hmm", "kmeans", "vol_bucket"]
+REGIME_METHODS = ["contrastive", "contrastive_hmm", "hmm", "kmeans", "vol_bucket"]
 LABEL_TO_CLASS = {-1: 0, 0: 1, 1: 2}
 CLASS_TO_LABEL = {v: k for k, v in LABEL_TO_CLASS.items()}
-POST_COLS = [f"post_{k}" for k in range(4)]
+POST_COLS = [f"post_{k}" for k in range(N_REGIMES)]
 
 
 @dataclass

@@ -28,11 +28,10 @@ def main() -> None:
         "baselines, purged validation, and transaction-cost-aware evaluation."
     )
     st.info(
-        "Key finding: in the current BTC+ETH benchmark, the true Gaussian HMM "
-        "beats dense contrastive-GMM regimes on IC and Sharpe. The stability "
-        "diagnostics show that persistence alone is not enough; the useful "
-        "state structure from the HMM is more alpha-relevant than embedding "
-        "capacity by itself."
+        "Key finding: contrastive-HMM improves the learned-regime path, "
+        "but the raw-feature Gaussian HMM still leads on IC and Sharpe. "
+        "The current evidence says HMM-style temporal state structure helps "
+        "learned embeddings, while representation capacity alone is not enough."
     )
 
     results = read_csv("experiment_results.csv")
@@ -81,8 +80,9 @@ def main() -> None:
         st.subheader("Per-Regime Statistics")
         st.dataframe(per_regime, width="stretch")
         st.subheader("Transition Matrices")
-        matrix_cols = st.columns(4)
-        for col, method in zip(matrix_cols, ["contrastive", "hmm", "kmeans", "vol_bucket"]):
+        matrix_methods = ["contrastive", "contrastive_hmm", "hmm", "kmeans", "vol_bucket"]
+        matrix_cols = st.columns(len(matrix_methods))
+        for col, method in zip(matrix_cols, matrix_methods):
             path = MODELS_DIR / f"transition_matrix_{method}.png"
             with col:
                 st.caption(method)
