@@ -6,9 +6,9 @@
 
 ## Key Finding
 
-The strongest current result is not that learned regimes beat every baseline. They do not. The true Gaussian HMM baseline outperforms dense contrastive-GMM regimes on IC and Sharpe in the latest BTC+ETH run.
+The strongest current result is not that learned regimes beat every baseline. They do not. The true Gaussian HMM baseline remains the best IC and Sharpe method in the latest BTC+ETH run.
 
-That makes the project more interesting: the stability diagnostics show that persistence alone is not enough. Contrastive-GMM regimes are smoother and longer-lived, but the HMM states are more alpha-relevant out of sample. The next research hypothesis is to combine both ideas with a contrastive-HMM hybrid: learned embeddings for representation, HMM state dynamics for temporal structure.
+Phase 11 tested the natural research response: fit an HMM on learned contrastive embeddings. The contrastive-HMM hybrid improves the learned-regime path from `IC=-0.0165` to `IC=0.0035` and from `Sharpe=-0.902` to `Sharpe=-0.382`, but it still does not beat the raw-feature HMM. That is the current project insight: HMM-style temporal state structure helps learned embeddings, but representation learning alone is not yet enough.
 
 ## Research Question
 
@@ -16,6 +16,7 @@ Does learning market regimes from raw financial time-series features improve alp
 
 - a global model with no regime awareness
 - Gaussian HMM regimes
+- contrastive-HMM hybrid regimes
 - KMeans regimes
 - volatility-bucket regimes
 
@@ -28,7 +29,7 @@ Binance OHLCV
     -> DuckDB feature store
     -> 22 engineered market/microstructure features
     -> Multi-horizon financial labels and triple-barrier targets
-    -> Contrastive temporal regime encoder + classical baselines
+    -> Contrastive temporal regime encoder + contrastive-HMM hybrid + classical baselines
     -> Global and regime-conditioned LightGBM models
     -> Purged walk-forward validation with transaction costs
     -> Research dashboard and report artifacts
@@ -43,6 +44,7 @@ Binance OHLCV
 - Multi-horizon targets: 4h, 8h, and 24h.
 - Triple-barrier labels with neutral class.
 - Regime baselines: contrastive, Gaussian HMM, KMeans, volatility buckets.
+- Contrastive-HMM hybrid regimes fitted on learned embeddings.
 - Regime stability diagnostics: switch rate, duration, transition entropy, and stable-vs-transition IC.
 - Global LightGBM baseline and regime-conditioned LightGBM models.
 - 5-day embargoed walk-forward validation.
@@ -142,15 +144,16 @@ Latest run: BTCUSDT + ETHUSDT, `tb_label_8h`, 25,920 out-of-sample rows per meth
 |---|---:|---:|---:|---|
 | global_lgbm | 0.0024 | -0.506 | -0.688 | no-regime baseline |
 | regime_lgbm_contrastive | -0.0165 | -0.902 | -0.909 | learned-regime benchmark |
-| regime_lgbm_hmm | 0.0079 | -0.182 | -0.829 | best IC and Sharpe; true hmmlearn HMM |
+| regime_lgbm_contrastive_hmm | 0.0035 | -0.382 | -0.852 | learned embeddings with HMM state dynamics |
+| regime_lgbm_hmm | 0.0051 | -0.229 | -0.825 | best IC and Sharpe; true hmmlearn HMM |
 | regime_lgbm_kmeans | -0.0013 | -1.180 | -0.920 | classical clustering baseline |
 | regime_lgbm_vol_bucket | -0.0030 | -0.988 | -0.896 | simple volatility baseline |
 
-The current result is intentionally presented as research evidence, not a profitable trading claim. The true HMM baseline is strongest in this run, while learned contrastive regimes remain an important benchmark for testing whether representation learning can beat classical regime discovery.
+The current result is intentionally presented as research evidence, not a profitable trading claim. The true HMM baseline is strongest in this run, while the contrastive-HMM hybrid shows that adding temporal state dynamics substantially improves the learned-regime approach.
 
-The main interpretation is that dense contrastive inference fixed the earlier coverage problem, but unconstrained GMM clustering over high-density embeddings appears misaligned with the alpha target. The HMM has shorter regimes than contrastive-GMM, but its state dynamics currently produce the best downstream IC and Sharpe. This suggests useful temporal state structure matters more than embedding capacity or persistence alone.
+The main interpretation is that dense contrastive inference fixed the earlier coverage problem, but unconstrained GMM clustering over high-density embeddings appears misaligned with the alpha target. HMM smoothing on embeddings repairs much of that weakness, but raw-feature HMM still produces the best downstream IC and Sharpe. This suggests useful temporal state structure matters more than embedding capacity or persistence alone.
 
 ## Current Status
 
-The codebase now produces the full benchmark artifact set and a Streamlit research dashboard. The next important work is not live trading; it is measuring regime stability more deeply, testing a contrastive-HMM hybrid, adding a validation audit, and running robustness studies.
+The codebase now produces the full benchmark artifact set and a Streamlit research dashboard. The next important work is not live trading; it is adding a validation audit, running robustness studies, and testing whether better learned embeddings can close the remaining gap against the raw-feature HMM.
 

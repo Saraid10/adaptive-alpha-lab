@@ -25,11 +25,14 @@ The benchmark compares four regime methods on a common BTC+ETH universe:
 | Method | Implementation | Rows | Silhouette | Avg Duration |
 |---|---|---:|---:|---:|
 | contrastive | contrastive encoder + GMM | 34,754 | 0.0959 | 30.51 |
+| contrastive_hmm | contrastive embeddings + HMM | 34,754 | 0.1016 | 42.18 |
 | hmm | hmmlearn Gaussian HMM | 34,754 | 0.0790 | 6.98 |
 | kmeans | sklearn KMeans | 34,754 | 0.0967 | 4.05 |
 | vol_bucket | realized-volatility quantiles | 34,754 | -0.0393 | 10.44 |
 
 The contrastive method now uses dense stride-1 inference for every valid feature row after the 60-bar encoder window. This fixes the earlier sparse-coverage issue and makes downstream alpha comparisons fair.
+
+Phase 11 adds a contrastive-HMM hybrid. Instead of clustering learned embeddings with GMM only, it fits a Gaussian HMM directly on the learned contrastive embedding sequence. This tests whether the weakness in contrastive regimes comes from representation learning itself or from the lack of temporal state dynamics in the assignment layer.
 
 ## Regime Stability Diagnostics
 
@@ -38,11 +41,12 @@ Phase 10 adds explicit stability diagnostics to separate regime persistence from
 | Method | Switches / 1k Bars | Avg Duration | Transition Diagonal | Stable IC | Transition IC |
 |---|---:|---:|---:|---:|---:|
 | contrastive | 32.72 | 30.51 | 0.967 | -0.0200 | 0.0482 |
-| hmm | 143.24 | 6.98 | 0.857 | 0.0098 | 0.0020 |
+| contrastive_hmm | 23.65 | 42.18 | 0.976 | 0.0033 | 0.0100 |
+| hmm | 143.24 | 6.98 | 0.857 | 0.0084 | -0.0061 |
 | kmeans | 246.60 | 4.05 | 0.753 | 0.0083 | -0.0137 |
 | vol_bucket | 95.71 | 10.44 | 0.904 | 0.0001 | -0.0168 |
 
-The important finding is not simply that more stable regimes are better. Contrastive-GMM produces the longest-lived regimes, but those regimes have negative IC during stable periods. The HMM switches more frequently, yet its stable-period IC is the strongest among the tested regime-aware methods. This suggests that alpha-relevant state structure matters more than persistence alone.
+The important finding is not simply that more stable regimes are better. Contrastive-HMM produces the longest-lived regimes and repairs the negative stable-period IC seen in contrastive-GMM. However, the raw-feature HMM still has the strongest stable-period IC. This suggests that HMM-style temporal structure helps learned embeddings, but the current embedding space is still not as alpha-aligned as the simpler raw-feature HMM state space.
 
 ## Validation Setup
 
@@ -62,7 +66,8 @@ The global baseline trains one LightGBM model across both symbols. Regime-aware 
 |---|---:|---:|---:|---:|---:|---:|---:|
 | global_lgbm | 0.0024 | 0.5736 | 0.3625 | -0.506 | -0.688 | 0.050 | -0.557 |
 | regime_lgbm_contrastive | -0.0165 | 0.5616 | 0.3724 | -0.902 | -0.909 | 0.077 | -0.855 |
-| regime_lgbm_hmm | 0.0079 | 0.5608 | 0.3742 | -0.182 | -0.829 | 0.085 | -0.403 |
+| regime_lgbm_contrastive_hmm | 0.0035 | 0.5585 | 0.3720 | -0.382 | -0.852 | 0.079 | -0.588 |
+| regime_lgbm_hmm | 0.0051 | 0.5622 | 0.3727 | -0.229 | -0.825 | 0.081 | -0.446 |
 | regime_lgbm_kmeans | -0.0013 | 0.5647 | 0.3670 | -1.180 | -0.920 | 0.079 | -0.912 |
 | regime_lgbm_vol_bucket | -0.0030 | 0.5566 | 0.3670 | -0.988 | -0.896 | 0.083 | -0.872 |
 
@@ -70,9 +75,11 @@ All methods are evaluated on 25,920 out-of-sample rows. This equal test coverage
 
 ## Results Interpretation
 
-The real Gaussian HMM baseline produces the strongest IC in this run, improving from 0.0024 for the global baseline to 0.0079. It also has the least negative Sharpe among the tested methods, although drawdown remains large and total return remains negative after transaction costs.
+The real Gaussian HMM baseline produces the strongest IC in this run, improving from 0.0024 for the global baseline to 0.0051. It also has the least negative Sharpe among the tested methods, although drawdown remains large and total return remains negative after transaction costs.
 
-The honest conclusion is mixed: regime awareness changes ranking behavior and risk characteristics, but the current learned contrastive regimes do not beat the classical HMM baseline on the primary out-of-sample alpha metrics. The new stability diagnostics make this more precise: contrastive regimes are persistent but not alpha-aligned, while HMM regimes are less persistent but more useful during stable periods. This is still a useful research result because it separates representation learning, regime diagnostics, and deployable alpha instead of overclaiming profitability.
+The honest conclusion is mixed but stronger than before. The contrastive-HMM hybrid improves the learned-regime path substantially: IC moves from -0.0165 to 0.0035, and Sharpe improves from -0.902 to -0.382. That validates the Phase 11 hypothesis that temporal state dynamics help learned embeddings. However, the raw-feature HMM still beats the hybrid on IC and Sharpe, so the current learned representation is not yet superior to the simpler classical state model.
+
+This is still a useful research result because it separates representation learning, regime diagnostics, and deployable alpha instead of overclaiming profitability. The project now has a clear scientific progression: dense contrastive regimes underperform, stability diagnostics identify the assignment-layer weakness, and contrastive-HMM partially fixes it.
 
 ## Limitations
 
@@ -83,8 +90,8 @@ The honest conclusion is mixed: regime awareness changes ranking behavior and ri
 
 ## Next Steps
 
-1. Test a contrastive-HMM hybrid that fits an HMM on learned embeddings.
-2. Add a validation audit that explicitly checks embargo gaps and feature/target leakage.
-3. Run robustness checks across thresholds, costs, horizons, and symbol splits.
+1. Add a validation audit that explicitly checks embargo gaps and feature/target leakage.
+2. Run robustness checks across thresholds, costs, horizons, and symbol splits.
+3. Improve the learned encoder objective and retest the contrastive-HMM hybrid.
 4. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
 5. Tune score thresholds to separate predictive IC from executable turnover.

@@ -10,7 +10,7 @@ from config import N_REGIMES, SAVE_DIR, SYMBOLS
 
 PRIMARY_TARGET = "tb_label_8h"
 POST_COLS = [f"post_{i}" for i in range(N_REGIMES)]
-METHOD_ORDER = ["contrastive", "hmm", "kmeans", "vol_bucket"]
+METHOD_ORDER = ["contrastive", "contrastive_hmm", "hmm", "kmeans", "vol_bucket"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -224,7 +224,7 @@ def plot_stability(summary: pd.DataFrame, output_path: Path) -> None:
 
     fig, axes = plt.subplots(2, 2, figsize=(13, 8))
     methods = aggregate["method"].astype(str).to_list()
-    colors = ["#4C78A8", "#59A14F", "#F28E2B", "#B07AA1"]
+    colors = ["#4C78A8", "#00A6A6", "#59A14F", "#F28E2B", "#B07AA1"]
 
     axes[0, 0].bar(methods, aggregate["avg_regime_duration"], color=colors)
     axes[0, 0].set_title("Average Regime Duration")

@@ -19,6 +19,7 @@ HMM_FEATURES = ["ret_1h", "vol_20h", "volume_zscore", "spread_proxy", "rsi_14"]
 RANDOM_STATE = 42
 POST_COLS = [f"post_{k}" for k in range(N_REGIMES)]
 ASSIGNMENT_COLS = ["method", "symbol", "open_time", "feat_idx", "regime"] + POST_COLS
+METHOD_ORDER = ["contrastive", "contrastive_hmm", "hmm", "kmeans", "vol_bucket"]
 
 
 @dataclass
@@ -75,6 +76,15 @@ def one_hot_posts(labels: np.ndarray) -> pd.DataFrame:
     return pd.DataFrame({f"post_{k}": (labels == k).astype(float) for k in range(N_REGIMES)})
 
 
+def probability_posts(probs: np.ndarray) -> pd.DataFrame:
+    posts = np.zeros((len(probs), N_REGIMES), dtype=float)
+    cols = min(probs.shape[1], N_REGIMES)
+    posts[:, :cols] = probs[:, :cols]
+    row_sum = posts.sum(axis=1, keepdims=True)
+    posts = np.divide(posts, row_sum, out=np.full_like(posts, 1.0 / N_REGIMES), where=row_sum != 0)
+    return pd.DataFrame({f"post_{k}": posts[:, k] for k in range(N_REGIMES)})
+
+
 def load_contrastive(df: pd.DataFrame) -> RegimeOutput:
     path = os.path.join(SAVE_DIR, "regime_posteriors.csv")
     if not os.path.exists(path):
@@ -110,6 +120,50 @@ def load_contrastive(df: pd.DataFrame) -> RegimeOutput:
     )
 
 
+def fit_contrastive_hmm(contrastive: RegimeOutput) -> RegimeOutput:
+    assignments = contrastive.assignments.sort_values(["symbol", "open_time"]).reset_index(drop=True)
+    x = StandardScaler().fit_transform(contrastive.feature_matrix)
+    lengths = assignments.groupby("symbol", sort=False).size().astype(int).tolist()
+    implementation = "contrastive_embedding_hmm"
+
+    try:
+        from hmmlearn.hmm import GaussianHMM
+
+        model = GaussianHMM(
+            n_components=N_REGIMES,
+            covariance_type="diag",
+            n_iter=250,
+            random_state=RANDOM_STATE,
+            min_covar=1e-4,
+        )
+        model.fit(x, lengths)
+        labels = model.predict(x, lengths).astype(int)
+        posts = probability_posts(model.predict_proba(x, lengths))
+    except Exception as exc:
+        implementation = "contrastive_embedding_gmm_fallback"
+        print(f"NOTE: contrastive-HMM failed ({exc}). Using embedding GaussianMixture fallback.")
+        model = GaussianMixture(
+            n_components=N_REGIMES,
+            covariance_type="full",
+            n_init=10,
+            random_state=RANDOM_STATE,
+        )
+        labels = model.fit_predict(x).astype(int)
+        posts = probability_posts(model.predict_proba(x))
+
+    hybrid = assignments[["symbol", "open_time", "feat_idx"]].copy()
+    hybrid["method"] = "contrastive_hmm"
+    hybrid["regime"] = labels
+    hybrid = pd.concat([hybrid, posts], axis=1)
+    return RegimeOutput(
+        "contrastive_hmm",
+        hybrid[ASSIGNMENT_COLS],
+        x,
+        labels,
+        implementation,
+    )
+
+
 def fit_hmm_like(df: pd.DataFrame) -> RegimeOutput:
     df = df.sort_values(["symbol", "open_time"]).reset_index(drop=True)
     x = scaled_matrix(df, HMM_FEATURES)
@@ -127,6 +181,7 @@ def fit_hmm_like(df: pd.DataFrame) -> RegimeOutput:
         )
         model.fit(x, lengths)
         labels = model.predict(x, lengths)
+        posts = probability_posts(model.predict_proba(x, lengths))
     except Exception as exc:
         implementation = "gmm_fallback"
         print(f"NOTE: hmmlearn unavailable or failed ({exc}). Using GaussianMixture fallback.")
@@ -137,11 +192,12 @@ def fit_hmm_like(df: pd.DataFrame) -> RegimeOutput:
             random_state=RANDOM_STATE,
         )
         labels = model.fit_predict(x)
+        posts = probability_posts(model.predict_proba(x))
 
     assignments = df[["symbol", "open_time", "feat_idx"]].copy()
     assignments["method"] = "hmm"
     assignments["regime"] = labels.astype(int)
-    assignments = pd.concat([assignments, one_hot_posts(labels)], axis=1)
+    assignments = pd.concat([assignments, posts], axis=1)
     return RegimeOutput("hmm", assignments[ASSIGNMENT_COLS], x, labels, implementation)
 
 
@@ -331,8 +387,10 @@ def main() -> None:
     args = parser.parse_args()
 
     df = load_research_frame(args.symbols)
+    contrastive = load_contrastive(df)
     outputs = [
-        load_contrastive(df),
+        contrastive,
+        fit_contrastive_hmm(contrastive),
         fit_hmm_like(df),
         fit_kmeans(df),
         fit_vol_buckets(df),
@@ -346,6 +404,8 @@ def main() -> None:
     assignments.to_csv(os.path.join(SAVE_DIR, "regime_assignments.csv"), index=False)
 
     summary = pd.DataFrame([summarize_method(o) for o in outputs])
+    summary["method"] = pd.Categorical(summary["method"], METHOD_ORDER, ordered=True)
+    summary = summary.sort_values("method").astype({"method": str})
     summary.to_csv(os.path.join(SAVE_DIR, "regime_benchmark_summary.csv"), index=False)
 
     stats = per_regime_stats(df, assignments)
