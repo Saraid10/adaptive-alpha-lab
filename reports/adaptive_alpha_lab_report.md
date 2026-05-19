@@ -20,7 +20,7 @@ The final target table contains 34,872 rows across BTCUSDT and ETHUSDT. For the 
 
 ## Regime Methods
 
-The benchmark compares four regime methods on a common BTC+ETH universe:
+The benchmark compares five regime methods on a common BTC+ETH universe:
 
 | Method | Implementation | Rows | Silhouette | Avg Duration |
 |---|---|---:|---:|---:|
@@ -60,6 +60,22 @@ Alpha models use expanding walk-forward validation with:
 
 The global baseline trains one LightGBM model across both symbols. Regime-aware models train separate LightGBM classifiers per regime and combine predictions through posterior weights where available. The alpha score is `P(+1) - P(-1)`, and trades are taken only when the neutral class is not dominant and the score clears the threshold.
 
+## Validation Audit
+
+Phase 12 adds an explicit validation audit so the benchmark can be evaluated as research evidence rather than a collection of backtest claims. The audit checks database tables, feature/target schema, finite joined rows, target horizon tail loss, common benchmark coverage, fold separation, embargo spacing, label-horizon purging, row-level prediction alignment, duplicate predictions, and consistency between `alpha_oos_predictions.csv` and `experiment_results.csv`.
+
+The audit result is:
+
+| Status | Count | Interpretation |
+|---|---:|---|
+| PASS | 17 | All critical data, fold, target, coverage, and prediction-alignment checks passed |
+| WARN | 1 | Regime assignments are currently offline/global artifacts |
+| FAIL | 0 | No critical validation failure was detected |
+
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows.
+
+The warning is methodological rather than a code failure: current regime labels are generated as offline/global artifacts before alpha-model validation. This is acceptable for descriptive regime analysis and current benchmark exploration, but a peer-reviewed predictive claim should add Phase 13 fold-local regime refitting, where regime models are fitted using only training history inside each walk-forward fold.
+
 ## Model Comparison
 
 | Method | IC | Accuracy | Balanced Accuracy | Sharpe | Drawdown | Turnover | Total Return |
@@ -85,13 +101,14 @@ This is still a useful research result because it separates representation learn
 
 - Hourly OHLCV is a noisy signal source.
 - The current contrastive encoder is not a true Temporal Fusion Transformer.
+- Regime assignments are currently offline/global artifacts; fold-local regime refitting is the next paper-grade validation upgrade.
 - Backtest returns are research diagnostics, not deployable trading evidence.
 - The project intentionally excludes live trading, RL, online retraining, and order-book data in this phase.
 
 ## Next Steps
 
-1. Add a validation audit that explicitly checks embargo gaps and feature/target leakage.
+1. Implement fold-local regime refitting so predictive regime labels are fitted only on training history.
 2. Run robustness checks across thresholds, costs, horizons, and symbol splits.
-3. Improve the learned encoder objective and retest the contrastive-HMM hybrid.
-4. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
-5. Tune score thresholds to separate predictive IC from executable turnover.
+3. Add block-bootstrap confidence intervals for IC and paired method differences.
+4. Improve the learned encoder objective and retest the contrastive-HMM hybrid.
+5. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.

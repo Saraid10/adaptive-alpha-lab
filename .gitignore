@@ -18,6 +18,8 @@ models/*.csv
 !models/regime_benchmark_summary.csv
 !models/regime_stability_summary.csv
 !models/per_regime_stats.csv
+!models/validation_audit.csv
+!models/fold_audit.csv
 !models/target_distribution.csv
 !models/target_quality.csv
 

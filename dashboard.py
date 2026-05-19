@@ -38,6 +38,8 @@ def main() -> None:
     regime_summary = read_csv("regime_benchmark_summary.csv")
     regime_stability = read_csv("regime_stability_summary.csv")
     per_regime = read_csv("per_regime_stats.csv")
+    validation_audit = read_csv("validation_audit.csv")
+    fold_audit = read_csv("fold_audit.csv")
     target_dist = read_csv("target_distribution.csv")
     target_quality = read_csv("target_quality.csv")
 
@@ -53,6 +55,22 @@ def main() -> None:
         c2.metric("Best Sharpe", f"{results['Sharpe'].max():.3f}")
         c3.metric("Lowest Drawdown", f"{best_dd['drawdown']:.2%}", best_dd["method"])
         c4.metric("Methods Tested", len(results))
+
+    st.header("Validation Audit")
+    if validation_audit.empty:
+        st.info("Run python src/validation_audit.py to generate validation_audit.csv.")
+    else:
+        pass_count = int((validation_audit["status"] == "PASS").sum())
+        warn_count = int((validation_audit["status"] == "WARN").sum())
+        fail_count = int((validation_audit["status"] == "FAIL").sum())
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Passed Checks", pass_count)
+        c2.metric("Warnings", warn_count)
+        c3.metric("Failures", fail_count)
+        st.dataframe(validation_audit, width="stretch")
+        if not fold_audit.empty:
+            st.subheader("Fold Audit")
+            st.dataframe(fold_audit, width="stretch")
 
     st.header("Targets")
     if target_dist.empty:
