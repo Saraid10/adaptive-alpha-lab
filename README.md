@@ -48,6 +48,7 @@ Binance OHLCV
 - Regime stability diagnostics: switch rate, duration, transition entropy, and stable-vs-transition IC.
 - Global LightGBM baseline and regime-conditioned LightGBM models.
 - 5-day embargoed walk-forward validation.
+- Validation audit for fold separation, target horizon leakage, coverage parity, and prediction alignment.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -69,6 +70,7 @@ python src/visualize_regimes.py --symbols BTCUSDT ETHUSDT
 python src/baselines.py --symbols BTCUSDT ETHUSDT
 python src/alpha_models.py --symbols BTCUSDT ETHUSDT
 python src/regime_stability.py --symbols BTCUSDT ETHUSDT
+python src/validation_audit.py --symbols BTCUSDT ETHUSDT
 python src/backtest.py
 python -m compileall src dashboard.py streamlit_app.py
 ```
@@ -99,6 +101,8 @@ python -m pip install -r requirements-research.txt
 | `models/per_regime_stats.csv` | Volatility, return, liquidity, and IC diagnostics by regime |
 | `models/experiment_results.csv` | Master model comparison table |
 | `models/alpha_oos_predictions.csv` | Out-of-sample model predictions |
+| `models/validation_audit.csv` | Leakage, embargo, fold, coverage, and prediction-alignment audit |
+| `models/fold_audit.csv` | Fold-level train/test boundary and embargo checks |
 | `models/regime_stability.png` | Stability and transition-period IC dashboard panel |
 | `models/phase4_dashboard.png` | Static research backtest dashboard |
 | `reports/adaptive_alpha_lab_report.md` | Research note |
@@ -121,6 +125,7 @@ adaptive-alpha-lab/
 │   ├── visualize_regimes.py
 │   ├── baselines.py
 │   ├── regime_stability.py
+│   ├── validation_audit.py
 │   ├── alpha_models.py
 │   ├── backtest.py
 │   └── check.py
@@ -133,6 +138,10 @@ adaptive-alpha-lab/
 The primary target is `tb_label_8h`, an 8-hour triple-barrier label with classes `-1`, `0`, and `+1`. The alpha score is `P(+1) - P(-1)`. A prediction becomes a trade only when the neutral class is not dominant and the absolute score exceeds the threshold.
 
 The validation scheme uses expanding walk-forward folds with a 5-day embargo gap between train and test windows. This reduces leakage from overlapping financial labels and makes the model comparison more defensible.
+
+Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, and experiment-result row counts.
+
+The audit also records one methodological warning: regime assignments are currently offline/global artifacts. Alpha model train/test folds are embargoed, but paper-grade predictive regime claims require Phase 13 fold-local regime refitting.
 
 Dense contrastive regime inference uses stride 1 after the encoder window warmup, so the learned-regime method is compared on the same BTC+ETH row universe as HMM-style, KMeans, and volatility-bucket baselines.
 
@@ -155,5 +164,5 @@ The main interpretation is that dense contrastive inference fixed the earlier co
 
 ## Current Status
 
-The codebase now produces the full benchmark artifact set and a Streamlit research dashboard. The next important work is not live trading; it is adding a validation audit, running robustness studies, and testing whether better learned embeddings can close the remaining gap against the raw-feature HMM.
+The codebase now produces the full benchmark artifact set, a validation audit, and a Streamlit research dashboard. The next important work is not live trading; it is fold-local regime refitting, robustness studies, and testing whether better learned embeddings can close the remaining gap against the raw-feature HMM.
 
