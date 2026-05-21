@@ -68,13 +68,73 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 17 | All critical data, fold, target, coverage, and prediction-alignment checks passed |
-| WARN | 1 | Regime assignments are currently offline/global artifacts |
+| PASS | 20 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, and stress-grid checks passed |
+| WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, and that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells.
 
-The warning is methodological rather than a code failure: current regime labels are generated as offline/global artifacts before alpha-model validation. This is acceptable for descriptive regime analysis and current benchmark exploration, but a peer-reviewed predictive claim should add Phase 13 fold-local regime refitting, where regime models are fitted using only training history inside each walk-forward fold.
+The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
+
+## Fold-Local Regime Refit Benchmark
+
+Phase 13 adds a stricter predictive benchmark. For each walk-forward fold, regime assignment models are refit using training-history rows only and are then applied to the test window. HMM-based methods use an online filtering pass for test assignments, initialized from the training sequence and advanced through the embargo gap. This avoids using a single full-sample regime assignment file for predictive alpha claims.
+
+The contrastive methods still use frozen embeddings from the existing contrastive encoder, so this phase does not yet claim fully fold-local encoder training. The assignment layer on top of those embeddings, however, is fit fold-locally.
+
+| Method | IC | Accuracy | Balanced Accuracy | Sharpe | Drawdown | Turnover | Total Return |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| global_lgbm | 0.0024 | 0.5736 | 0.3625 | -0.506 | -0.688 | 0.050 | -0.557 |
+| regime_lgbm_contrastive | -0.0110 | 0.5623 | 0.3708 | -0.834 | -0.926 | 0.074 | -0.823 |
+| regime_lgbm_contrastive_hmm | -0.0026 | 0.5623 | 0.3730 | -0.548 | -0.778 | 0.077 | -0.685 |
+| regime_lgbm_hmm | 0.0051 | 0.5623 | 0.3698 | -0.340 | -0.710 | 0.079 | -0.536 |
+| regime_lgbm_kmeans | 0.0072 | 0.5672 | 0.3704 | -0.728 | -0.860 | 0.081 | -0.797 |
+| regime_lgbm_vol_bucket | -0.0020 | 0.5570 | 0.3679 | -0.820 | -0.854 | 0.083 | -0.820 |
+
+The stricter benchmark changes the interpretation. Fold-local KMeans has the strongest IC, while raw-feature HMM has the strongest Sharpe and drawdown profile among regime-aware methods. Contrastive-HMM remains better than contrastive-GMM, but it no longer looks as strong as it did in the offline/global assignment benchmark. This is important evidence: some of the apparent offline benefit of learned regimes weakens when the assignment layer is refit inside each fold.
+
+## Phase 14A Robustness Matrix
+
+Phase 14A tests whether the fold-local result is stable across assets and horizons. The same benchmark is repeated across BTC-only, ETH-only, and BTC+ETH scopes at 4-hour, 8-hour, and 24-hour triple-barrier horizons. Regime assignment models are still refit inside each fold; the matrix changes the target horizon and symbol scope, not the validation discipline.
+
+| Scope | Target | Best IC Method | Best IC | Best Sharpe Method | Best Sharpe | Lowest Drawdown Method | Lowest Drawdown |
+|---|---|---|---:|---|---:|---|---:|
+| BTCUSDT | tb_label_4h | regime_lgbm_hmm | 0.0016 | regime_lgbm_hmm | -0.993 | regime_lgbm_contrastive | -0.755 |
+| BTCUSDT | tb_label_8h | regime_lgbm_kmeans | -0.0034 | regime_lgbm_contrastive | -0.546 | regime_lgbm_contrastive | -0.812 |
+| BTCUSDT | tb_label_24h | regime_lgbm_kmeans | 0.0175 | regime_lgbm_contrastive_hmm | -0.211 | regime_lgbm_kmeans | -0.990 |
+| ETHUSDT | tb_label_4h | regime_lgbm_vol_bucket | 0.0208 | regime_lgbm_vol_bucket | 0.315 | regime_lgbm_vol_bucket | -0.449 |
+| ETHUSDT | tb_label_8h | global_lgbm | 0.0095 | regime_lgbm_contrastive | -0.201 | regime_lgbm_hmm | -0.874 |
+| ETHUSDT | tb_label_24h | global_lgbm | 0.0348 | global_lgbm | 0.354 | regime_lgbm_vol_bucket | -0.987 |
+| BTCUSDT+ETHUSDT | tb_label_4h | regime_lgbm_vol_bucket | 0.0103 | regime_lgbm_hmm | -0.205 | regime_lgbm_hmm | -0.436 |
+| BTCUSDT+ETHUSDT | tb_label_8h | regime_lgbm_kmeans | 0.0072 | regime_lgbm_hmm | -0.340 | global_lgbm | -0.688 |
+| BTCUSDT+ETHUSDT | tb_label_24h | regime_lgbm_contrastive_hmm | 0.0311 | regime_lgbm_vol_bucket | 0.321 | regime_lgbm_vol_bucket | -0.915 |
+
+The robustness matrix weakens any simple claim that one regime method is universally best. KMeans wins IC most often, HMM wins Sharpe most often, and volatility buckets win drawdown most often. The contrastive-HMM hybrid wins the BTC+ETH 24-hour IC cell, which is useful but not enough to claim learned regimes dominate globally.
+
+The research conclusion becomes more precise: regime conditioning can help, but the choice of regime model is metric-, horizon-, and asset-dependent. This is a stronger and more honest result than a single headline Sharpe because it shows where each method is fragile.
+
+## Phase 14B Stress Robustness
+
+Phase 14B tests whether the fold-local `tb_label_8h` conclusion survives practical trading assumptions. Instead of retraining models, it re-scores the same out-of-sample prediction file across transaction costs, signal thresholds, and market-period slices.
+
+| Stress Dimension | Values |
+|---|---|
+| Signal threshold | 0.03, 0.05, 0.07, 0.10 |
+| Transaction cost | 5 bps, 10 bps, 20 bps |
+| Market period | all, bull, sideways, bear |
+
+Bull, sideways, and bear periods are defined from rolling 30-day returns in the feature store. This creates 48 stress cells and 288 method/cell rows.
+
+| Metric | Most Frequent Winner | Wins |
+|---|---|---:|
+| Signal IC | regime_lgbm_hmm | 24 |
+| Sharpe | regime_lgbm_hmm | 22 |
+| Drawdown | global_lgbm | 24 |
+| Total return | regime_lgbm_hmm | 18 |
+
+The stress grid strengthens the HMM interpretation. Raw-feature HMM wins the most signal-IC, Sharpe, and total-return cells across cost, threshold, and market-period settings. The global model is the most defensive drawdown winner, which is expected because fewer regime-conditioned switches can reduce downside under higher costs. Contrastive-HMM remains useful in sideways regimes, but it is not the dominant learned-regime method.
+
+The important result is not that a strategy is profitable. The important result is that the relative conclusion is stress-tested: HMM-style temporal state structure is the most robust regime-aware layer in the current implementation, while learned embeddings still need a stronger objective or stricter fold-local representation training to dominate.
 
 ## Model Comparison
 
@@ -101,14 +161,16 @@ This is still a useful research result because it separates representation learn
 
 - Hourly OHLCV is a noisy signal source.
 - The current contrastive encoder is not a true Temporal Fusion Transformer.
-- Regime assignments are currently offline/global artifacts; fold-local regime refitting is the next paper-grade validation upgrade.
+- The contrastive encoder is still trained as an offline/frozen representation; a future paper-grade upgrade is fold-local encoder retraining.
+- Offline/global regime results and fold-local regime results should be interpreted separately.
+- Phase 14B stress testing re-scores existing predictions; it does not retrain models under each cost or threshold assumption.
 - Backtest returns are research diagnostics, not deployable trading evidence.
 - The project intentionally excludes live trading, RL, online retraining, and order-book data in this phase.
 
 ## Next Steps
 
-1. Implement fold-local regime refitting so predictive regime labels are fitted only on training history.
-2. Run robustness checks across thresholds, costs, horizons, and symbol splits.
-3. Add block-bootstrap confidence intervals for IC and paired method differences.
-4. Improve the learned encoder objective and retest the contrastive-HMM hybrid.
-5. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
+1. Add block-bootstrap confidence intervals for IC and paired method differences.
+2. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
+3. Improve the learned encoder objective and retest the contrastive-HMM hybrid.
+4. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
+5. Add multiple-testing controls before making any strong performance claim.
