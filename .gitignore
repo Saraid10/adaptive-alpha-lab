@@ -20,6 +20,15 @@ models/*.csv
 !models/per_regime_stats.csv
 !models/validation_audit.csv
 !models/fold_audit.csv
+!models/walkforward_experiment_results.csv
+!models/walkforward_regime_summary.csv
+!models/walkforward_comparison.csv
+!models/robustness_results.csv
+!models/robustness_summary.csv
+!models/robustness_wins.csv
+!models/robustness_stress_results.csv
+!models/robustness_stress_summary.csv
+!models/robustness_stress_wins.csv
 !models/target_distribution.csv
 !models/target_quality.csv
 

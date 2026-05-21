@@ -294,7 +294,7 @@ def audit_common_universe(rows: list[AuditRecord], symbols: list[str]) -> tuple[
         "regime_discovery_protocol",
         WARN,
         "methodological",
-        "Current regime_assignments.csv is an offline/global artifact. Alpha model train/test folds are embargoed, but paper-grade predictive regime claims require Phase 13 fold-local regime refitting.",
+        "Legacy regime_assignments.csv is an offline/global artifact. Use walkforward_experiment_results.csv for fold-local predictive regime claims.",
         rows_checked=len(assignments),
         rows_failed=0,
     )
@@ -446,6 +446,185 @@ def audit_predictions(rows: list[AuditRecord], fold_audit: pd.DataFrame) -> None
         )
 
 
+def audit_walkforward_artifacts(rows: list[AuditRecord]) -> None:
+    results_path = Path(SAVE_DIR) / "walkforward_experiment_results.csv"
+    comparison_path = Path(SAVE_DIR) / "walkforward_comparison.csv"
+    summary_path = Path(SAVE_DIR) / "walkforward_regime_summary.csv"
+
+    if not results_path.exists():
+        record(
+            rows,
+            "fold_local_regime_refit_artifacts",
+            WARN,
+            "artifact",
+            "walkforward_experiment_results.csv is missing; run walkforward_regimes.py for Phase 13 strict regime-refit results.",
+        )
+        return
+
+    results = pd.read_csv(results_path)
+    required_methods = ["global_lgbm"] + [f"regime_lgbm_{method}" for method in REGIME_METHODS]
+    missing = sorted(set(required_methods) - set(results["method"]))
+    row_counts = results.set_index("method")["n_test_rows"]
+    unequal = int(row_counts.nunique() > 1)
+    missing_files = [str(path.name) for path in [comparison_path, summary_path] if not path.exists()]
+    failures = len(missing) + unequal + len(missing_files)
+
+    detail = (
+        "Fold-local rows by method: "
+        + ", ".join(f"{method}={int(rows)}" for method, rows in row_counts.items())
+    )
+    if missing:
+        detail += f"; missing_methods={missing}"
+    if missing_files:
+        detail += f"; missing_artifacts={missing_files}"
+
+    record(
+        rows,
+        "fold_local_regime_refit_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        detail,
+        rows_checked=len(required_methods),
+        rows_failed=failures,
+    )
+
+
+def audit_robustness_artifacts(rows: list[AuditRecord]) -> None:
+    results_path = Path(SAVE_DIR) / "robustness_results.csv"
+    summary_path = Path(SAVE_DIR) / "robustness_summary.csv"
+    wins_path = Path(SAVE_DIR) / "robustness_wins.csv"
+
+    if not results_path.exists():
+        record(
+            rows,
+            "robustness_matrix_artifacts",
+            WARN,
+            "artifact",
+            "robustness_results.csv is missing; run robustness.py for Phase 14A horizon/symbol robustness results.",
+        )
+        return
+
+    results = pd.read_csv(results_path)
+    summary = pd.read_csv(summary_path) if summary_path.exists() else pd.DataFrame()
+    required_methods = ["global_lgbm"] + [f"regime_lgbm_{method}" for method in REGIME_METHODS]
+    expected_cells = 9
+    expected_rows = expected_cells * len(required_methods)
+    missing_files = [str(path.name) for path in [summary_path, wins_path] if not path.exists()]
+    missing_cols = sorted(
+        {"symbol_scope", "target", "horizon", "method", "IC", "Sharpe", "drawdown", "n_test_rows"}
+        - set(results.columns)
+    )
+
+    failures = len(missing_files) + len(missing_cols)
+    detail_parts = [f"robustness rows={len(results)}, expected={expected_rows}"]
+
+    if len(results) != expected_rows:
+        failures += 1
+        detail_parts.append("unexpected_result_row_count")
+
+    if not missing_cols:
+        cell_counts = results.groupby(["symbol_scope", "target", "horizon"])["method"].nunique()
+        incomplete_cells = int((cell_counts != len(required_methods)).sum())
+        failures += incomplete_cells
+        detail_parts.append(f"grid_cells={len(cell_counts)}")
+        if incomplete_cells:
+            detail_parts.append(f"incomplete_cells={incomplete_cells}")
+
+    if not summary.empty:
+        detail_parts.append(f"summary_cells={len(summary)}")
+        if len(summary) != expected_cells:
+            failures += 1
+            detail_parts.append("unexpected_summary_cell_count")
+
+    if missing_files:
+        detail_parts.append(f"missing_artifacts={missing_files}")
+    if missing_cols:
+        detail_parts.append(f"missing_columns={missing_cols}")
+
+    record(
+        rows,
+        "robustness_matrix_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=expected_rows,
+        rows_failed=failures,
+    )
+
+
+def audit_robustness_stress_artifacts(rows: list[AuditRecord]) -> None:
+    results_path = Path(SAVE_DIR) / "robustness_stress_results.csv"
+    summary_path = Path(SAVE_DIR) / "robustness_stress_summary.csv"
+    wins_path = Path(SAVE_DIR) / "robustness_stress_wins.csv"
+
+    if not results_path.exists():
+        record(
+            rows,
+            "robustness_stress_artifacts",
+            WARN,
+            "artifact",
+            "robustness_stress_results.csv is missing; run robustness_stress.py for Phase 14B cost/threshold/period stress results.",
+        )
+        return
+
+    results = pd.read_csv(results_path)
+    summary = pd.read_csv(summary_path) if summary_path.exists() else pd.DataFrame()
+    required_methods = ["global_lgbm"] + [f"regime_lgbm_{method}" for method in REGIME_METHODS]
+    expected_cells = 4 * 3 * 4
+    expected_rows = expected_cells * len(required_methods)
+    missing_files = [str(path.name) for path in [summary_path, wins_path] if not path.exists()]
+    missing_cols = sorted(
+        {
+            "market_period",
+            "threshold",
+            "transaction_cost_bps",
+            "method",
+            "signal_IC",
+            "Sharpe",
+            "drawdown",
+            "total_return",
+            "n_test_rows",
+        }
+        - set(results.columns)
+    )
+
+    failures = len(missing_files) + len(missing_cols)
+    detail_parts = [f"stress rows={len(results)}, expected={expected_rows}"]
+
+    if len(results) != expected_rows:
+        failures += 1
+        detail_parts.append("unexpected_result_row_count")
+
+    if not missing_cols:
+        cell_counts = results.groupby(["market_period", "threshold", "transaction_cost_bps"])["method"].nunique()
+        incomplete_cells = int((cell_counts != len(required_methods)).sum())
+        failures += incomplete_cells
+        detail_parts.append(f"stress_cells={len(cell_counts)}")
+        if incomplete_cells:
+            detail_parts.append(f"incomplete_cells={incomplete_cells}")
+
+    if not summary.empty:
+        detail_parts.append(f"summary_cells={len(summary)}")
+        if len(summary) != expected_cells:
+            failures += 1
+            detail_parts.append("unexpected_summary_cell_count")
+
+    if missing_files:
+        detail_parts.append(f"missing_artifacts={missing_files}")
+    if missing_cols:
+        detail_parts.append(f"missing_columns={missing_cols}")
+
+    record(
+        rows,
+        "robustness_stress_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=expected_rows,
+        rows_failed=failures,
+    )
+
+
 def write_outputs(rows: list[AuditRecord], fold_audit: pd.DataFrame) -> pd.DataFrame:
     out_dir = Path(SAVE_DIR)
     out_dir.mkdir(exist_ok=True)
@@ -473,6 +652,9 @@ def main() -> None:
     df, _, folds = audit_common_universe(rows, args.symbols)
     fold_audit = audit_folds(rows, df, folds)
     audit_predictions(rows, fold_audit)
+    audit_walkforward_artifacts(rows)
+    audit_robustness_artifacts(rows)
+    audit_robustness_stress_artifacts(rows)
     audit = write_outputs(rows, fold_audit)
 
     print("\nValidation audit summary:")
