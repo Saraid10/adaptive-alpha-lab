@@ -29,6 +29,13 @@ models/*.csv
 !models/robustness_stress_results.csv
 !models/robustness_stress_summary.csv
 !models/robustness_stress_wins.csv
+!models/statistical_fold_metrics.csv
+!models/statistical_method_summary.csv
+!models/statistical_pairwise_tests.csv
+!models/statistical_test_summary.csv
+!models/statistical_multiple_testing.csv
+!models/statistical_claims.csv
+!models/statistical_sharpe_diagnostics.csv
 !models/target_distribution.csv
 !models/target_quality.csv
 

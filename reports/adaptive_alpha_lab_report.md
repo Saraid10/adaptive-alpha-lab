@@ -68,11 +68,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 21 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, and run-registry checks passed |
+| PASS | 22 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A statistical artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -151,6 +151,27 @@ The stress grid strengthens the HMM interpretation. Raw-feature HMM wins the mos
 
 The important result is not that a strategy is profitable. The important result is that the relative conclusion is stress-tested: HMM-style temporal state structure is the most robust regime-aware layer in the current implementation, while learned embeddings still need a stronger objective or stricter fold-local representation training to dominate.
 
+## Phase 15A/15B Statistical Rigor
+
+Phase 15A tests whether the fold-local method differences are statistically reliable. The primary unit for IC and Sharpe significance is the walk-forward fold, not individual rows, because adjacent hourly labels overlap and row-level samples are not independent. For calibration-oriented forecast quality, the phase also runs a Newey-West DM-style test on per-row multiclass negative log-likelihood.
+
+Phase 15B then applies multiple-testing controls. It uses Benjamini-Hochberg false-discovery-rate correction and Holm family-wise correction so that a single attractive raw p-value is not treated as a publishable claim after many method/metric comparisons.
+
+| Method | Mean Fold IC | 95% CI Low | 95% CI High | Positive IC Folds | Mean Fold Sharpe |
+|---|---:|---:|---:|---:|---:|
+| regime_lgbm_hmm | 0.0058 | -0.0135 | 0.0247 | 11 | -0.561 |
+| regime_lgbm_kmeans | 0.0035 | -0.0205 | 0.0276 | 8 | -0.720 |
+| regime_lgbm_vol_bucket | 0.0004 | -0.0223 | 0.0234 | 10 | -0.818 |
+| global_lgbm | -0.0005 | -0.0207 | 0.0209 | 9 | -0.583 |
+| regime_lgbm_contrastive_hmm | -0.0063 | -0.0305 | 0.0196 | 7 | -0.908 |
+| regime_lgbm_contrastive | -0.0147 | -0.0373 | 0.0095 | 7 | -0.990 |
+
+The confidence intervals are wide and mostly overlap zero. That means the project should not claim that the current HMM or KMeans edge is statistically decisive from IC alone. The strongest fold-level result is instead a negative finding: contrastive-GMM is worse than raw-feature HMM on IC (`mean difference = -0.0205`, paired fold `p = 0.035`). After Phase 15B correction, this becomes `raw_only_suggestive` rather than a hard corrected claim (`BH q = 0.347` within the IC family; Holm-adjusted p = 0.347). Most other IC and Sharpe differences are not significant at the 5% level.
+
+The row-level DM-style negative-log-likelihood tests show that the global model is often better calibrated than the regime-conditioned models. This does not contradict the IC result; it separates directional/ranking usefulness from probability calibration. For a paper, this is valuable because it prevents overclaiming: the regime methods may improve some alpha diagnostics, but their probability estimates are not automatically better calibrated.
+
+Probabilistic Sharpe Ratio diagnostics are also negative in the honest sense: all methods have PSR below 0.5 for `SR > 0`, with raw-feature HMM highest at about 0.121. This reinforces that the project should be framed as a regime-learning benchmark and research artifact, not as a profitable trading system.
+
 ## Model Comparison
 
 | Method | IC | Accuracy | Balanced Accuracy | Sharpe | Drawdown | Turnover | Total Return |
@@ -170,7 +191,7 @@ The real Gaussian HMM baseline produces the strongest IC in this run, improving 
 
 The honest conclusion is mixed but stronger than before. The contrastive-HMM hybrid improves the learned-regime path substantially: IC moves from -0.0165 to 0.0035, and Sharpe improves from -0.902 to -0.382. That validates the Phase 11 hypothesis that temporal state dynamics help learned embeddings. However, the raw-feature HMM still beats the hybrid on IC and Sharpe, so the current learned representation is not yet superior to the simpler classical state model.
 
-This is still a useful research result because it separates representation learning, regime diagnostics, and deployable alpha instead of overclaiming profitability. The project now has a clear scientific progression: dense contrastive regimes underperform, stability diagnostics identify the assignment-layer weakness, and contrastive-HMM partially fixes it.
+This is still a useful research result because it separates representation learning, regime diagnostics, statistical reliability, and deployable alpha instead of overclaiming profitability. The project now has a clear scientific progression: dense contrastive regimes underperform, stability diagnostics identify the assignment-layer weakness, contrastive-HMM partially fixes it, and Phase 15A shows which differences are statistically reliable versus merely suggestive.
 
 ## Limitations
 
@@ -180,13 +201,14 @@ This is still a useful research result because it separates representation learn
 - Offline/global regime results and fold-local regime results should be interpreted separately.
 - HMM states are not ground truth market regimes. They are a classical proxy/reference state sequence used for comparison and weak supervision.
 - Phase 14B stress testing re-scores existing predictions; it does not retrain models under each cost or threshold assumption.
+- Several method differences are not statistically significant at the 5% level under fold-level tests, and the strongest IC finding does not survive multiple-testing correction.
 - Backtest returns are research diagnostics, not deployable trading evidence.
 - The project intentionally excludes live trading, RL, online retraining, and order-book data in this phase.
 
 ## Next Steps
 
-1. Add block-bootstrap confidence intervals for IC and paired method differences.
+1. Add direct regime-quality metrics such as NMI/ARI against reference state sequences while clearly noting that HMM is not ground truth.
 2. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
 3. Improve the learned encoder objective and retest the contrastive-HMM hybrid.
 4. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
-5. Add multiple-testing controls before making any strong performance claim.
+5. Add multiple-testing controls before making any strong performance claim from larger ablation grids.

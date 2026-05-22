@@ -142,7 +142,7 @@ random_state=42
 | Embargo | 5 days, 120 hourly bars |
 | Primary label horizon purge | 8 bars |
 | Main OOS rows | 25,920 per method |
-| Critical audit status | 20 PASS, 1 methodological WARN, 0 FAIL |
+| Critical audit status | 22 PASS, 1 methodological WARN, 0 FAIL |
 
 The current methodological warning is that the legacy `regime_assignments.csv` artifact is offline/global. Predictive regime claims should use the fold-local Phase 13 artifacts.
 
@@ -152,8 +152,31 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 |---|---|
 | Phase 14A | BTC-only, ETH-only, BTC+ETH across 4h, 8h, 24h |
 | Phase 14B | Thresholds 0.03, 0.05, 0.07, 0.10; costs 5, 10, 20 bps; all/bull/sideways/bear periods |
+| Phase 15A | Fold-level bootstrap confidence intervals, paired tests, and DM-style NLL forecast-loss checks |
+| Phase 15B | Benjamini-Hochberg/Holm corrections, corrected claim status, and Probabilistic Sharpe diagnostics |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
+
+## Statistical Testing
+
+Phase 15A uses `models/walkforward_alpha_oos_predictions.csv` as the prediction source and writes:
+
+```text
+models/statistical_fold_metrics.csv
+models/statistical_method_summary.csv
+models/statistical_pairwise_tests.csv
+models/statistical_test_summary.csv
+models/statistical_ic_confidence_intervals.png
+models/statistical_multiple_testing.csv
+models/statistical_claims.csv
+models/statistical_sharpe_diagnostics.csv
+models/statistical_multiple_testing.png
+models/statistical_sharpe_diagnostics.png
+```
+
+The primary statistical unit is the walk-forward fold. Row-level samples are not treated as independent for IC/Sharpe claims because adjacent financial labels overlap. The row-level DM-style test is used only as a forecast-loss and calibration diagnostic over multiclass negative log-likelihood.
+
+Phase 15B corrected-claim output should be used in paper language. A raw p-value below 0.05 is not enough for a strong claim unless it survives the multiple-testing correction family being cited.
 
 ## Current Baseline Finding
 
