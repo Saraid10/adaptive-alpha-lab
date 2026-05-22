@@ -14,6 +14,13 @@ def read_csv(name: str) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
+def read_repo_csv(relative_path: str) -> pd.DataFrame:
+    path = BASE_DIR / relative_path
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
 def main() -> None:
     try:
         import streamlit as st
@@ -51,6 +58,7 @@ def main() -> None:
     fold_audit = read_csv("fold_audit.csv")
     target_dist = read_csv("target_distribution.csv")
     target_quality = read_csv("target_quality.csv")
+    run_index = read_repo_csv("runs/run_index.csv")
 
     st.header("Experiment Results")
     if results.empty:
@@ -154,6 +162,19 @@ def main() -> None:
         stress_img = MODELS_DIR / "robustness_stress_heatmap.png"
         if stress_img.exists():
             st.image(str(stress_img), width="stretch")
+
+    st.header("Run Registry")
+    if run_index.empty:
+        st.info("Run python src/archive_run.py to freeze a versioned research snapshot.")
+    else:
+        st.caption("Versioned snapshots keep baseline artifacts from being overwritten by later experiment runs.")
+        latest_run = run_index.iloc[-1]
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Registered Runs", len(run_index))
+        c2.metric("Latest Run", latest_run["run_id"])
+        c3.metric("Artifacts", int(latest_run["artifact_count"]))
+        c4.metric("Missing", int(latest_run["missing_artifact_count"]))
+        st.dataframe(run_index, width="stretch")
 
     st.header("Validation Audit")
     if validation_audit.empty:

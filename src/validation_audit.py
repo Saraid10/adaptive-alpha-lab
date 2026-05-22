@@ -1,4 +1,6 @@
 import argparse
+import hashlib
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -625,6 +627,104 @@ def audit_robustness_stress_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_run_registry(rows: list[AuditRecord]) -> None:
+    runs_dir = Path(BASE_DIR) / "runs"
+    index_path = runs_dir / "run_index.csv"
+    latest_path = runs_dir / "latest_run.json"
+
+    if not index_path.exists():
+        record(
+            rows,
+            "run_registry_artifacts",
+            WARN,
+            "artifact",
+            "runs/run_index.csv is missing; run archive_run.py before freezing a baseline.",
+        )
+        return
+
+    index = pd.read_csv(index_path)
+    failures = 0
+    detail_parts = [f"registered_runs={len(index)}"]
+    if index.empty:
+        failures += 1
+        detail_parts.append("run_index_empty")
+
+    latest_run_id = ""
+    if latest_path.exists():
+        try:
+            latest = json.loads(latest_path.read_text(encoding="utf-8"))
+            latest_run_id = str(latest.get("run_id", ""))
+        except (ValueError, OSError):
+            failures += 1
+            detail_parts.append("latest_run_json_unreadable")
+    else:
+        failures += 1
+        detail_parts.append("latest_run_json_missing")
+
+    if not latest_run_id and not index.empty:
+        latest_run_id = str(index.iloc[-1]["run_id"])
+
+    manifest_path = runs_dir / latest_run_id / "manifest.json"
+    artifact_manifest_path = runs_dir / latest_run_id / "artifact_manifest.csv"
+    artifact_count = 0
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            artifact_count = int(manifest.get("artifact_count", 0))
+            missing = manifest.get("missing_artifacts", [])
+            if isinstance(missing, list) and missing:
+                failures += len(missing)
+                detail_parts.append(f"missing_artifacts={len(missing)}")
+            detail_parts.append(f"latest_run={latest_run_id}")
+            detail_parts.append(f"latest_artifacts={artifact_count}")
+        except (ValueError, OSError):
+            failures += 1
+            detail_parts.append("manifest_unreadable")
+    else:
+        failures += 1
+        detail_parts.append(f"manifest_missing={latest_run_id}")
+
+    if artifact_manifest_path.exists():
+        artifacts = pd.read_csv(artifact_manifest_path)
+        missing_files = []
+        bad_hashes = []
+        for item in artifacts.itertuples(index=False):
+            path = Path(BASE_DIR) / item.archived_path
+            if not path.exists():
+                missing_files.append(item.archived_path)
+                continue
+            expected_hash = str(item.sha256)
+            if expected_hash and expected_hash != "nan":
+                digest = hashlib.sha256()
+                with path.open("rb") as handle:
+                    for block in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(block)
+                if digest.hexdigest() != expected_hash:
+                    bad_hashes.append(item.archived_path)
+        if artifact_count and len(artifacts) != artifact_count:
+            failures += 1
+            detail_parts.append(f"artifact_count_mismatch={len(artifacts)} vs {artifact_count}")
+        if missing_files:
+            failures += len(missing_files)
+            detail_parts.append(f"missing_archived_files={len(missing_files)}")
+        if bad_hashes:
+            failures += len(bad_hashes)
+            detail_parts.append(f"bad_hashes={len(bad_hashes)}")
+    else:
+        failures += 1
+        detail_parts.append("artifact_manifest_missing")
+
+    record(
+        rows,
+        "run_registry_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(artifact_count, 1),
+        rows_failed=failures,
+    )
+
+
 def write_outputs(rows: list[AuditRecord], fold_audit: pd.DataFrame) -> pd.DataFrame:
     out_dir = Path(SAVE_DIR)
     out_dir.mkdir(exist_ok=True)
@@ -655,6 +755,7 @@ def main() -> None:
     audit_walkforward_artifacts(rows)
     audit_robustness_artifacts(rows)
     audit_robustness_stress_artifacts(rows)
+    audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)
 
     print("\nValidation audit summary:")
