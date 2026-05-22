@@ -627,6 +627,153 @@ def audit_robustness_stress_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
+    fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
+    summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
+    pairwise_path = Path(SAVE_DIR) / "statistical_pairwise_tests.csv"
+    compact_path = Path(SAVE_DIR) / "statistical_test_summary.csv"
+    corrected_path = Path(SAVE_DIR) / "statistical_multiple_testing.csv"
+    claims_path = Path(SAVE_DIR) / "statistical_claims.csv"
+    psr_path = Path(SAVE_DIR) / "statistical_sharpe_diagnostics.csv"
+    plot_path = Path(SAVE_DIR) / "statistical_ic_confidence_intervals.png"
+    correction_plot_path = Path(SAVE_DIR) / "statistical_multiple_testing.png"
+    psr_plot_path = Path(SAVE_DIR) / "statistical_sharpe_diagnostics.png"
+
+    if not fold_path.exists():
+        record(
+            rows,
+            "statistical_test_artifacts",
+            WARN,
+            "artifact",
+            "statistical_fold_metrics.csv is missing; run statistical_tests.py for Phase 15A significance tests.",
+        )
+        return
+
+    folds = pd.read_csv(fold_path)
+    summary = pd.read_csv(summary_path) if summary_path.exists() else pd.DataFrame()
+    pairwise = pd.read_csv(pairwise_path) if pairwise_path.exists() else pd.DataFrame()
+    compact = pd.read_csv(compact_path) if compact_path.exists() else pd.DataFrame()
+    corrected = pd.read_csv(corrected_path) if corrected_path.exists() else pd.DataFrame()
+    claims = pd.read_csv(claims_path) if claims_path.exists() else pd.DataFrame()
+    psr = pd.read_csv(psr_path) if psr_path.exists() else pd.DataFrame()
+
+    required_methods = ["global_lgbm"] + [f"regime_lgbm_{method}" for method in REGIME_METHODS]
+    expected_fold_rows = 18 * len(required_methods)
+    missing_files = [
+        str(path.name)
+        for path in [
+            summary_path,
+            pairwise_path,
+            compact_path,
+            corrected_path,
+            claims_path,
+            psr_path,
+            plot_path,
+            correction_plot_path,
+            psr_plot_path,
+        ]
+        if not path.exists()
+    ]
+    missing_fold_cols = sorted(
+        {"method", "fold", "IC", "signal_IC", "Sharpe", "total_return", "n_test_rows"} - set(folds.columns)
+    )
+    missing_summary_cols = sorted(
+        {"method", "mean_fold_IC", "IC_ci_low", "IC_ci_high", "positive_ic_folds"} - set(summary.columns)
+    )
+    missing_pairwise_cols = sorted(
+        {"method", "reference_method", "metric", "mean_difference", "paired_t_p_value"} - set(pairwise.columns)
+    )
+    missing_corrected_cols = sorted(
+        {"metric", "primary_p_value", "bh_q_by_metric", "holm_p_by_metric", "claim_status"}
+        - set(corrected.columns)
+    )
+    missing_claim_cols = sorted(
+        {"comparison", "metric", "primary_p_value", "bh_q_by_metric", "holm_p_by_metric", "claim_status"}
+        - set(claims.columns)
+    )
+    missing_psr_cols = sorted(
+        {"method", "annualized_sharpe", "psr_gt_0", "skew", "kurtosis", "n_periods"} - set(psr.columns)
+    )
+
+    failures = (
+        len(missing_files)
+        + len(missing_fold_cols)
+        + len(missing_summary_cols)
+        + len(missing_pairwise_cols)
+        + len(missing_corrected_cols)
+        + len(missing_claim_cols)
+        + len(missing_psr_cols)
+    )
+    detail_parts = [f"fold_metric_rows={len(folds)}, expected={expected_fold_rows}"]
+
+    if len(folds) != expected_fold_rows:
+        failures += 1
+        detail_parts.append("unexpected_fold_metric_row_count")
+
+    if not missing_fold_cols:
+        methods = set(folds["method"])
+        missing_methods = sorted(set(required_methods) - methods)
+        failures += len(missing_methods)
+        detail_parts.append(f"methods={len(methods)}")
+        if missing_methods:
+            detail_parts.append(f"missing_methods={missing_methods}")
+        fold_counts = folds.groupby("method")["fold"].nunique()
+        incomplete = int((fold_counts != 18).sum())
+        failures += incomplete
+        if incomplete:
+            detail_parts.append(f"incomplete_fold_methods={incomplete}")
+
+    if not summary.empty:
+        detail_parts.append(f"summary_rows={len(summary)}")
+        if len(summary) != len(required_methods):
+            failures += 1
+            detail_parts.append("unexpected_summary_row_count")
+
+    if not pairwise.empty:
+        detail_parts.append(f"pairwise_rows={len(pairwise)}")
+        focus = pairwise[pairwise["metric"].isin(["IC", "Sharpe", "nll_loss"])] if "metric" in pairwise else pd.DataFrame()
+        if focus.empty:
+            failures += 1
+            detail_parts.append("missing_focus_pairwise_tests")
+
+    if not compact.empty:
+        detail_parts.append(f"compact_rows={len(compact)}")
+    if not corrected.empty:
+        detail_parts.append(f"corrected_rows={len(corrected)}")
+    if not claims.empty:
+        detail_parts.append(f"claim_rows={len(claims)}")
+    if not psr.empty:
+        detail_parts.append(f"psr_rows={len(psr)}")
+        if len(psr) != len(required_methods):
+            failures += 1
+            detail_parts.append("unexpected_psr_row_count")
+
+    if missing_files:
+        detail_parts.append(f"missing_artifacts={missing_files}")
+    if missing_fold_cols:
+        detail_parts.append(f"missing_fold_columns={missing_fold_cols}")
+    if missing_summary_cols:
+        detail_parts.append(f"missing_summary_columns={missing_summary_cols}")
+    if missing_pairwise_cols:
+        detail_parts.append(f"missing_pairwise_columns={missing_pairwise_cols}")
+    if missing_corrected_cols:
+        detail_parts.append(f"missing_corrected_columns={missing_corrected_cols}")
+    if missing_claim_cols:
+        detail_parts.append(f"missing_claim_columns={missing_claim_cols}")
+    if missing_psr_cols:
+        detail_parts.append(f"missing_psr_columns={missing_psr_cols}")
+
+    record(
+        rows,
+        "statistical_test_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(expected_fold_rows, 1),
+        rows_failed=failures,
+    )
+
+
 def audit_run_registry(rows: list[AuditRecord]) -> None:
     runs_dir = Path(BASE_DIR) / "runs"
     index_path = runs_dir / "run_index.csv"
@@ -755,6 +902,7 @@ def main() -> None:
     audit_walkforward_artifacts(rows)
     audit_robustness_artifacts(rows)
     audit_robustness_stress_artifacts(rows)
+    audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)
 

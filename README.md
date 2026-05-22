@@ -53,6 +53,8 @@ Binance OHLCV
 - Phase 14A robustness matrix across BTC-only, ETH-only, and BTC+ETH scopes at 4h, 8h, and 24h horizons.
 - Phase 14B stress robustness across transaction costs, signal thresholds, and bull/sideways/bear market periods.
 - Phase 15.0 run registry for timestamped artifact snapshots and frozen baselines.
+- Phase 15A statistical testing with fold-level bootstrap confidence intervals, paired tests, and DM-style forecast-loss checks.
+- Phase 15B multiple-testing correction, corrected claim status, and Probabilistic Sharpe diagnostics.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -77,6 +79,7 @@ python src/regime_stability.py --symbols BTCUSDT ETHUSDT
 python src/walkforward_regimes.py --symbols BTCUSDT ETHUSDT
 python src/robustness.py
 python src/robustness_stress.py
+python src/statistical_tests.py
 python src/validation_audit.py --symbols BTCUSDT ETHUSDT
 python src/archive_run.py --phase phase14b_baseline --run-id 20260522_phase14b_baseline --source-ref v1.3-phase14b --notes "Frozen Phase 14B baseline before Phase 15 statistical and encoder work."
 python src/backtest.py
@@ -122,6 +125,15 @@ python -m pip install -r requirements-research.txt
 | `models/robustness_stress_summary.csv` | Best method per stress grid cell |
 | `models/robustness_stress_wins.csv` | Stress-test win counts by metric |
 | `models/robustness_stress_heatmap.png` | Visual summary of stress-test sensitivity |
+| `models/statistical_method_summary.csv` | Phase 15A fold-level confidence intervals by method |
+| `models/statistical_pairwise_tests.csv` | Phase 15A paired and DM-style method comparisons |
+| `models/statistical_test_summary.csv` | Compact paper-facing significance summary |
+| `models/statistical_ic_confidence_intervals.png` | Fold-level IC confidence interval plot |
+| `models/statistical_multiple_testing.csv` | Phase 15B corrected p-values across tested claims |
+| `models/statistical_claims.csv` | Phase 15B corrected claim-status summary |
+| `models/statistical_sharpe_diagnostics.csv` | Probabilistic Sharpe Ratio diagnostics |
+| `models/statistical_multiple_testing.png` | Visual multiple-testing correction summary |
+| `models/statistical_sharpe_diagnostics.png` | Visual PSR diagnostic summary |
 | `runs/run_index.csv` | Versioned run registry |
 | `runs/20260522_phase14b_baseline/manifest.json` | Frozen Phase 14B baseline manifest |
 | `reports/model_card.md` | Reproducible model-card snapshot |
@@ -152,6 +164,7 @@ adaptive-alpha-lab/
 │   ├── walkforward_regimes.py
 │   ├── robustness.py
 │   ├── robustness_stress.py
+│   ├── statistical_tests.py
 │   ├── archive_run.py
 │   ├── alpha_models.py
 │   ├── backtest.py
@@ -168,7 +181,7 @@ The primary target is `tb_label_8h`, an 8-hour triple-barrier label with classes
 
 The validation scheme uses expanding walk-forward folds with a 5-day embargo gap between train and test windows. This reduces leakage from overlapping financial labels and makes the model comparison more defensible.
 
-Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, and run-registry snapshot completeness.
+Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A statistical artifact completeness, and run-registry snapshot completeness.
 
 The audit also records one methodological warning: the legacy `regime_assignments.csv` artifact is offline/global. Paper-grade predictive regime claims should use the Phase 13 `walkforward_experiment_results.csv` artifact instead.
 
@@ -179,6 +192,10 @@ Phase 14A adds a compact robustness matrix. The fold-local benchmark is repeated
 Phase 14B adds stress robustness on top of the fold-local prediction file. It does not retrain the models; it re-scores the same out-of-sample predictions under different signal thresholds, transaction costs, and market-period slices. Bull, sideways, and bear periods are defined from rolling 30-day feature-store returns. This tests whether the benchmark conclusion survives realistic deployment assumptions.
 
 Phase 15.0 adds artifact versioning. Latest files in `models/` are still kept for the dashboard, but frozen baselines are copied into timestamped `runs/` directories with a manifest, SHA-256 hashes, git source ref, and run-index entry. The current frozen baseline is `runs/20260522_phase14b_baseline/`.
+
+Phase 15A adds statistical rigor. It computes fold-level IC, Sharpe, total return, drawdown, and turnover from the fold-local out-of-sample prediction file, then reports bootstrap confidence intervals and paired method tests. It also runs a DM-style Newey-West forecast-loss check on multiclass negative log-likelihood, which is a calibration-oriented complement to the IC and Sharpe tests.
+
+Phase 15B adds multiple-testing discipline. It applies Benjamini-Hochberg and Holm corrections across tested method comparisons, labels each finding as corrected, suggestive, or not significant, and adds Probabilistic Sharpe Ratio diagnostics. This prevents a single attractive p-value from becoming an overclaimed research result.
 
 Dense contrastive regime inference uses stride 1 after the encoder window warmup, so the learned-regime method is compared on the same BTC+ETH row universe as HMM-style, KMeans, and volatility-bucket baselines.
 
@@ -253,7 +270,22 @@ That creates 48 stress cells and 288 method/cell rows. The goal is not to find a
 
 The stress test strengthens the interpretation around HMM regimes: raw-feature HMM is the most robust winner for signal IC, Sharpe, and total return across practical cost/threshold/market-period settings. The global model is the most defensive drawdown winner, especially when transaction costs rise. Contrastive-HMM remains useful in sideways regimes, but it is not yet the dominant learned-regime method.
 
+## Phase 15A/15B Statistical Tests
+
+Phase 15A asks whether the observed method differences are statistically reliable. The test is intentionally conservative: it uses the 18 walk-forward folds as the primary unit for IC and Sharpe tests, then uses a row-level DM-style negative-log-likelihood test as a separate calibration check.
+
+| Method | Mean Fold IC | 95% CI Low | 95% CI High | Positive IC Folds | Mean Fold Sharpe |
+|---|---:|---:|---:|---:|---:|
+| regime_lgbm_hmm | 0.0058 | -0.0135 | 0.0247 | 11 | -0.561 |
+| regime_lgbm_kmeans | 0.0035 | -0.0205 | 0.0276 | 8 | -0.720 |
+| regime_lgbm_vol_bucket | 0.0004 | -0.0223 | 0.0234 | 10 | -0.818 |
+| global_lgbm | -0.0005 | -0.0207 | 0.0209 | 9 | -0.583 |
+| regime_lgbm_contrastive_hmm | -0.0063 | -0.0305 | 0.0196 | 7 | -0.908 |
+| regime_lgbm_contrastive | -0.0147 | -0.0373 | 0.0095 | 7 | -0.990 |
+
+The statistical read is more cautious than the point-estimate read. HMM has the strongest mean fold IC, but most IC and Sharpe differences versus the global model are not significant at the 5% level. Before correction, plain contrastive-GMM is worse than raw-feature HMM on fold-level IC (`p = 0.035`). After Phase 15B multiple-testing correction, this becomes a suggestive result rather than a hard claim (`BH q = 0.347` within the IC family). This supports the current research direction without overclaiming: the next improvement should not simply add a larger encoder; it should add better temporal/state constraints to the learned representation.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, and a Streamlit research dashboard. The next important work is not live trading; it is statistical confidence intervals, regime-quality metrics, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, and a Streamlit research dashboard. The next important work is not live trading; it is regime-quality metrics, encoder ablations, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
 

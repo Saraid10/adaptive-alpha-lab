@@ -30,6 +30,7 @@ These are practical local observations, not formal benchmarks:
 |---|---:|
 | Phase 14A full symbol/horizon robustness grid | about 30 minutes |
 | Phase 14B cost/threshold/period stress grid | under 1 minute |
+| Phase 15A/15B statistical tests | under 1 minute |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
@@ -41,7 +42,8 @@ The next phases should stay small until the baseline is statistically understood
 
 | Phase | Required Runs | Notes |
 |---|---:|---|
-| Phase 15B statistical tests | 0 retraining runs | Uses frozen predictions/artifacts |
+| Phase 15A statistical tests | 0 retraining runs | Complete; uses frozen predictions/artifacts |
+| Phase 15B multiple-testing corrections | 0 retraining runs | Complete; extends Phase 15A tables |
 | Phase 16 regime quality metrics | 0 retraining runs | Uses existing regime assignments |
 | Phase 17 compute plan | 1 timing run if needed | Measure encoder retrain cost |
 | Phase 18 HMM-guided encoder | 1-2 encoder runs | Minimal proof before ablations |

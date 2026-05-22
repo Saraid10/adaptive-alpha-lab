@@ -51,6 +51,12 @@ def main() -> None:
     stress_results = read_csv("robustness_stress_results.csv")
     stress_summary = read_csv("robustness_stress_summary.csv")
     stress_wins = read_csv("robustness_stress_wins.csv")
+    statistical_summary = read_csv("statistical_method_summary.csv")
+    statistical_pairwise = read_csv("statistical_pairwise_tests.csv")
+    statistical_compact = read_csv("statistical_test_summary.csv")
+    statistical_corrections = read_csv("statistical_multiple_testing.csv")
+    statistical_claims = read_csv("statistical_claims.csv")
+    statistical_psr = read_csv("statistical_sharpe_diagnostics.csv")
     regime_summary = read_csv("regime_benchmark_summary.csv")
     regime_stability = read_csv("regime_stability_summary.csv")
     per_regime = read_csv("per_regime_stats.csv")
@@ -162,6 +168,48 @@ def main() -> None:
         stress_img = MODELS_DIR / "robustness_stress_heatmap.png"
         if stress_img.exists():
             st.image(str(stress_img), width="stretch")
+
+    st.header("Statistical Significance")
+    if statistical_summary.empty:
+        st.info("Run python src/statistical_tests.py to generate Phase 15A significance artifacts.")
+    else:
+        st.caption(
+            "Phase 15A turns point estimates into fold-level confidence intervals, "
+            "paired tests, and row-level forecast-loss checks."
+        )
+        st.dataframe(statistical_summary, width="stretch")
+        c1, c2, c3, c4 = st.columns(4)
+        best_ic = statistical_summary.sort_values("mean_fold_IC", ascending=False).iloc[0]
+        c1.metric("Best Mean Fold IC", f"{best_ic['mean_fold_IC']:.4f}", best_ic["method"])
+        c2.metric("IC CI Low", f"{best_ic['IC_ci_low']:.4f}")
+        c3.metric("IC CI High", f"{best_ic['IC_ci_high']:.4f}")
+        c4.metric("Positive IC Folds", int(best_ic["positive_ic_folds"]))
+        stats_img = MODELS_DIR / "statistical_ic_confidence_intervals.png"
+        if stats_img.exists():
+            st.image(str(stats_img), width="stretch")
+        correction_img = MODELS_DIR / "statistical_multiple_testing.png"
+        if correction_img.exists():
+            st.subheader("Multiple-Testing Correction")
+            st.image(str(correction_img), width="stretch")
+        psr_img = MODELS_DIR / "statistical_sharpe_diagnostics.png"
+        if psr_img.exists():
+            st.subheader("Probabilistic Sharpe Diagnostics")
+            st.image(str(psr_img), width="stretch")
+        if not statistical_claims.empty:
+            st.subheader("Corrected Claim Summary")
+            st.dataframe(statistical_claims, width="stretch")
+        if not statistical_psr.empty:
+            st.subheader("PSR Table")
+            st.dataframe(statistical_psr, width="stretch")
+        if not statistical_corrections.empty:
+            st.subheader("Multiple-Testing Table")
+            st.dataframe(statistical_corrections, width="stretch")
+        if not statistical_compact.empty:
+            st.subheader("Focused Test Summary")
+            st.dataframe(statistical_compact, width="stretch")
+        if not statistical_pairwise.empty:
+            st.subheader("All Pairwise Tests")
+            st.dataframe(statistical_pairwise, width="stretch")
 
     st.header("Run Registry")
     if run_index.empty:
