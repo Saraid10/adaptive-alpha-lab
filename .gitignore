@@ -35,6 +35,24 @@ models/*.csv
 # Keep visualization outputs.
 !models/*.png
 
+# Versioned research run snapshots. Keep curated snapshots, not raw row-level data.
+runs/**
+!runs/
+!runs/.gitkeep
+!runs/run_index.csv
+!runs/latest_run.json
+!runs/*/
+!runs/*/manifest.json
+!runs/*/artifact_manifest.csv
+!runs/*/README.md
+!runs/*/requirements.txt
+!runs/*/requirements-research.txt
+!runs/*/reports/
+!runs/*/reports/*.md
+!runs/*/models/
+!runs/*/models/*.csv
+!runs/*/models/*.png
+
 # Python cache
 __pycache__/
 *.pyc
