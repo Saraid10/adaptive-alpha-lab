@@ -105,6 +105,31 @@ This encoder is the main candidate for future upgrades. The current research fin
 
 HMM states are not ground-truth regimes. They are a classical reference proxy and a competitive baseline. Agreement with HMM states should be described as proxy agreement, not accuracy.
 
+## Regime Quality Diagnostics
+
+Phase 16 evaluates regime structure independently of alpha-model returns.
+
+| Field | Value |
+|---|---|
+| Main artifact | `models/regime_quality_summary.csv` |
+| Pairwise artifact | `models/regime_agreement_matrix.csv` |
+| Visual artifacts | `models/regime_quality_heatmap.png`, `models/regime_agreement_heatmap.png` |
+| Reference method | raw-feature Gaussian HMM |
+| Reference interpretation | classical proxy, not ground truth |
+| Metrics | balance entropy, switch rate, transition diagonal, duration, posterior confidence, NMI, ARI, purity |
+
+Latest BTC+ETH structural read:
+
+| Method | Balance Entropy | Avg Duration | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|
+| contrastive | 0.999 | 30.51 | 0.032 | 0.379 |
+| contrastive_hmm | 0.999 | 42.18 | 0.020 | 0.377 |
+| hmm | 0.959 | 6.98 | 1.000 | 1.000 |
+| kmeans | 0.866 | 4.05 | 0.182 | 0.459 |
+| vol_bucket | 1.000 | 10.44 | 0.333 | 0.599 |
+
+The learned regimes are balanced and persistent, but weakly aligned with the HMM reference. This suggests the current encoder objective creates smooth partitions without yet producing the most alpha-relevant state structure.
+
 ## Alpha Models
 
 | Field | Value |
@@ -142,7 +167,7 @@ random_state=42
 | Embargo | 5 days, 120 hourly bars |
 | Primary label horizon purge | 8 bars |
 | Main OOS rows | 25,920 per method |
-| Critical audit status | 22 PASS, 1 methodological WARN, 0 FAIL |
+| Critical audit status | 23 PASS, 1 methodological WARN, 0 FAIL |
 
 The current methodological warning is that the legacy `regime_assignments.csv` artifact is offline/global. Predictive regime claims should use the fold-local Phase 13 artifacts.
 
@@ -154,6 +179,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 14B | Thresholds 0.03, 0.05, 0.07, 0.10; costs 5, 10, 20 bps; all/bull/sideways/bear periods |
 | Phase 15A | Fold-level bootstrap confidence intervals, paired tests, and DM-style NLL forecast-loss checks |
 | Phase 15B | Benjamini-Hochberg/Holm corrections, corrected claim status, and Probabilistic Sharpe diagnostics |
+| Phase 16 | Regime quality and pairwise agreement diagnostics independent of alpha performance |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 

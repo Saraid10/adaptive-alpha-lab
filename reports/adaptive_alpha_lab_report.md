@@ -34,6 +34,8 @@ The contrastive method now uses dense stride-1 inference for every valid feature
 
 Phase 11 adds a contrastive-HMM hybrid. Instead of clustering learned embeddings with GMM only, it fits a Gaussian HMM directly on the learned contrastive embedding sequence. This tests whether the weakness in contrastive regimes comes from representation learning itself or from the lack of temporal state dynamics in the assignment layer.
 
+Phase 16 adds a separate structural regime-quality layer. It measures whether regimes are balanced, persistent, confident, and mutually consistent before evaluating whether they improve downstream alpha. The raw-feature HMM sequence is used as a classical reference proxy, not as ground truth.
+
 ## Regime Stability Diagnostics
 
 Phase 10 adds explicit stability diagnostics to separate regime persistence from downstream usefulness. This matters because a regime method can look visually smooth while still being weak for alpha conditioning.
@@ -68,11 +70,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 22 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, and run-registry checks passed |
+| PASS | 23 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A statistical artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -172,6 +174,30 @@ The row-level DM-style negative-log-likelihood tests show that the global model 
 
 Probabilistic Sharpe Ratio diagnostics are also negative in the honest sense: all methods have PSR below 0.5 for `SR > 0`, with raw-feature HMM highest at about 0.121. This reinforces that the project should be framed as a regime-learning benchmark and research artifact, not as a profitable trading system.
 
+## Phase 16 Regime Quality
+
+Phase 16 evaluates regime methods structurally before asking whether they help trading. This is important because a regime method can look smooth or produce a better backtest by chance without actually discovering meaningful state partitions.
+
+The metrics include:
+
+- regime balance entropy: whether one regime dominates all rows
+- switch rate and transition diagonal probability: how persistent the state sequence is
+- posterior confidence and entropy: how uncertain soft-assignment methods are
+- pairwise NMI/ARI: how much two regime methods agree after ignoring arbitrary label names
+- HMM-reference NMI/purity: agreement with the classical raw-feature HMM proxy
+
+| Method | Balance Entropy | Switches / 1k Bars | Transition Diagonal | Avg Duration | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|---:|---:|
+| contrastive | 0.999 | 32.72 | 0.967 | 30.51 | 0.032 | 0.379 |
+| contrastive_hmm | 0.999 | 23.65 | 0.976 | 42.18 | 0.020 | 0.377 |
+| hmm | 0.959 | 143.24 | 0.857 | 6.98 | 1.000 | 1.000 |
+| kmeans | 0.866 | 246.60 | 0.753 | 4.05 | 0.182 | 0.459 |
+| vol_bucket | 1.000 | 95.71 | 0.904 | 10.44 | 0.333 | 0.599 |
+
+The main finding is that learned regimes are structurally smooth but not strongly aligned with the HMM reference. Contrastive-HMM has the longest average duration and highest transition diagonal, but its HMM-reference NMI is only 0.020. Volatility buckets have the strongest non-HMM agreement with the HMM reference (`NMI = 0.333`, purity `0.599`), even though the method is much simpler.
+
+This supports the paper's core diagnostic interpretation: persistence alone is not enough. The learned encoder currently creates stable partitions, but those partitions are not yet aligned with the state structure that helps the downstream alpha benchmark. The next encoder phase should therefore change the representation-learning objective, not merely increase model size.
+
 ## Model Comparison
 
 | Method | IC | Accuracy | Balanced Accuracy | Sharpe | Drawdown | Turnover | Total Return |
@@ -200,6 +226,7 @@ This is still a useful research result because it separates representation learn
 - The contrastive encoder is still trained as an offline/frozen representation; a future paper-grade upgrade is fold-local encoder retraining.
 - Offline/global regime results and fold-local regime results should be interpreted separately.
 - HMM states are not ground truth market regimes. They are a classical proxy/reference state sequence used for comparison and weak supervision.
+- Regime-quality agreement metrics are diagnostic; agreement with HMM does not prove economic correctness.
 - Phase 14B stress testing re-scores existing predictions; it does not retrain models under each cost or threshold assumption.
 - Several method differences are not statistically significant at the 5% level under fold-level tests, and the strongest IC finding does not survive multiple-testing correction.
 - Backtest returns are research diagnostics, not deployable trading evidence.
@@ -207,8 +234,8 @@ This is still a useful research result because it separates representation learn
 
 ## Next Steps
 
-1. Add direct regime-quality metrics such as NMI/ARI against reference state sequences while clearly noting that HMM is not ground truth.
+1. Improve the learned encoder objective and retest the contrastive-HMM hybrid.
 2. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
-3. Improve the learned encoder objective and retest the contrastive-HMM hybrid.
-4. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
-5. Add multiple-testing controls before making any strong performance claim from larger ablation grids.
+3. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
+4. Add time-frequency augmentation and hard-negative mining only after compute planning.
+5. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.
