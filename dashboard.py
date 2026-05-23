@@ -59,6 +59,8 @@ def main() -> None:
     statistical_psr = read_csv("statistical_sharpe_diagnostics.csv")
     regime_summary = read_csv("regime_benchmark_summary.csv")
     regime_stability = read_csv("regime_stability_summary.csv")
+    regime_quality = read_csv("regime_quality_summary.csv")
+    regime_agreement = read_csv("regime_agreement_matrix.csv")
     per_regime = read_csv("per_regime_stats.csv")
     validation_audit = read_csv("validation_audit.csv")
     fold_audit = read_csv("fold_audit.csv")
@@ -251,6 +253,42 @@ def main() -> None:
         img = MODELS_DIR / "target_distribution.png"
         if img.exists():
             st.image(str(img), caption="Target label distribution")
+
+    st.header("Regime Quality")
+    if regime_quality.empty:
+        st.info("Run python src/regime_quality.py to generate Phase 16 regime-quality artifacts.")
+    else:
+        st.caption(
+            "Phase 16 evaluates regime structure independently of alpha performance. "
+            "HMM is used as a classical reference proxy, not as ground truth."
+        )
+        all_scope_quality = regime_quality[regime_quality["symbol_scope"] == "ALL"]
+        c1, c2, c3, c4 = st.columns(4)
+        if not all_scope_quality.empty:
+            most_balanced = all_scope_quality.sort_values("regime_balance_entropy", ascending=False).iloc[0]
+            most_persistent = all_scope_quality.sort_values("avg_regime_duration", ascending=False).iloc[0]
+            best_reference = all_scope_quality[
+                all_scope_quality["method"] != "hmm"
+            ].sort_values("hmm_reference_nmi", ascending=False).iloc[0]
+            best_purity = all_scope_quality[
+                all_scope_quality["method"] != "hmm"
+            ].sort_values("hmm_reference_purity", ascending=False).iloc[0]
+            c1.metric("Most Balanced", most_balanced["method"], f"{most_balanced['regime_balance_entropy']:.3f}")
+            c2.metric("Most Persistent", most_persistent["method"], f"{most_persistent['avg_regime_duration']:.1f} bars")
+            c3.metric("Best HMM NMI", best_reference["method"], f"{best_reference['hmm_reference_nmi']:.3f}")
+            c4.metric("Best HMM Purity", best_purity["method"], f"{best_purity['hmm_reference_purity']:.3f}")
+        st.dataframe(regime_quality, width="stretch")
+        quality_img = MODELS_DIR / "regime_quality_heatmap.png"
+        agreement_img = MODELS_DIR / "regime_agreement_heatmap.png"
+        if quality_img.exists():
+            st.subheader("Quality Heatmap")
+            st.image(str(quality_img), width="stretch")
+        if agreement_img.exists():
+            st.subheader("Pairwise Agreement")
+            st.image(str(agreement_img), width="stretch")
+        if not regime_agreement.empty:
+            st.subheader("Agreement Table")
+            st.dataframe(regime_agreement, width="stretch")
 
     st.header("Regime Benchmarking")
     if regime_summary.empty:

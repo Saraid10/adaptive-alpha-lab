@@ -17,6 +17,8 @@ models/*.csv
 !models/strategy_comparison.csv
 !models/regime_benchmark_summary.csv
 !models/regime_stability_summary.csv
+!models/regime_quality_summary.csv
+!models/regime_agreement_matrix.csv
 !models/per_regime_stats.csv
 !models/validation_audit.csv
 !models/fold_audit.csv

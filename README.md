@@ -46,6 +46,7 @@ Binance OHLCV
 - Regime baselines: contrastive, Gaussian HMM, KMeans, volatility buckets.
 - Contrastive-HMM hybrid regimes fitted on learned embeddings.
 - Regime stability diagnostics: switch rate, duration, transition entropy, and stable-vs-transition IC.
+- Phase 16 regime-quality diagnostics: balance, persistence, posterior confidence, pairwise NMI/ARI, and HMM-reference agreement.
 - Global LightGBM baseline and regime-conditioned LightGBM models.
 - 5-day embargoed walk-forward validation.
 - Validation audit for fold separation, target horizon leakage, coverage parity, and prediction alignment.
@@ -76,6 +77,7 @@ python src/visualize_regimes.py --symbols BTCUSDT ETHUSDT
 python src/baselines.py --symbols BTCUSDT ETHUSDT
 python src/alpha_models.py --symbols BTCUSDT ETHUSDT
 python src/regime_stability.py --symbols BTCUSDT ETHUSDT
+python src/regime_quality.py --symbols BTCUSDT ETHUSDT
 python src/walkforward_regimes.py --symbols BTCUSDT ETHUSDT
 python src/robustness.py
 python src/robustness_stress.py
@@ -109,6 +111,10 @@ python -m pip install -r requirements-research.txt
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
 | `models/regime_stability_summary.csv` | Persistence, switch-rate, confidence, and stable-vs-transition IC diagnostics |
+| `models/regime_quality_summary.csv` | Phase 16 structural regime-quality metrics independent of alpha performance |
+| `models/regime_agreement_matrix.csv` | Pairwise NMI/ARI/same-label agreement across regime methods |
+| `models/regime_quality_heatmap.png` | Visual summary of balance, persistence, confidence, and HMM-reference agreement |
+| `models/regime_agreement_heatmap.png` | Pairwise method-agreement heatmap |
 | `models/per_regime_stats.csv` | Volatility, return, liquidity, and IC diagnostics by regime |
 | `models/experiment_results.csv` | Master model comparison table |
 | `models/alpha_oos_predictions.csv` | Out-of-sample model predictions |
@@ -160,6 +166,7 @@ adaptive-alpha-lab/
 │   ├── visualize_regimes.py
 │   ├── baselines.py
 │   ├── regime_stability.py
+│   ├── regime_quality.py
 │   ├── validation_audit.py
 │   ├── walkforward_regimes.py
 │   ├── robustness.py
@@ -181,7 +188,7 @@ The primary target is `tb_label_8h`, an 8-hour triple-barrier label with classes
 
 The validation scheme uses expanding walk-forward folds with a 5-day embargo gap between train and test windows. This reduces leakage from overlapping financial labels and makes the model comparison more defensible.
 
-Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A statistical artifact completeness, and run-registry snapshot completeness.
+Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, and run-registry snapshot completeness.
 
 The audit also records one methodological warning: the legacy `regime_assignments.csv` artifact is offline/global. Paper-grade predictive regime claims should use the Phase 13 `walkforward_experiment_results.csv` artifact instead.
 
@@ -196,6 +203,8 @@ Phase 15.0 adds artifact versioning. Latest files in `models/` are still kept fo
 Phase 15A adds statistical rigor. It computes fold-level IC, Sharpe, total return, drawdown, and turnover from the fold-local out-of-sample prediction file, then reports bootstrap confidence intervals and paired method tests. It also runs a DM-style Newey-West forecast-loss check on multiclass negative log-likelihood, which is a calibration-oriented complement to the IC and Sharpe tests.
 
 Phase 15B adds multiple-testing discipline. It applies Benjamini-Hochberg and Holm corrections across tested method comparisons, labels each finding as corrected, suggestive, or not significant, and adds Probabilistic Sharpe Ratio diagnostics. This prevents a single attractive p-value from becoming an overclaimed research result.
+
+Phase 16 adds structural regime-quality metrics independent of alpha returns. It measures regime balance, persistence, posterior confidence, pairwise NMI/ARI agreement, and agreement with the raw-feature HMM reference. The HMM sequence is a classical comparison proxy, not ground truth. This phase answers whether a method produces coherent state partitions before asking whether those states improve alpha models.
 
 Dense contrastive regime inference uses stride 1 after the encoder window warmup, so the learned-regime method is compared on the same BTC+ETH row universe as HMM-style, KMeans, and volatility-bucket baselines.
 
@@ -285,7 +294,21 @@ Phase 15A asks whether the observed method differences are statistically reliabl
 
 The statistical read is more cautious than the point-estimate read. HMM has the strongest mean fold IC, but most IC and Sharpe differences versus the global model are not significant at the 5% level. Before correction, plain contrastive-GMM is worse than raw-feature HMM on fold-level IC (`p = 0.035`). After Phase 15B multiple-testing correction, this becomes a suggestive result rather than a hard claim (`BH q = 0.347` within the IC family). This supports the current research direction without overclaiming: the next improvement should not simply add a larger encoder; it should add better temporal/state constraints to the learned representation.
 
+## Phase 16 Regime Quality
+
+Phase 16 asks whether regime methods form coherent state partitions before using them for alpha modeling. This is deliberately separate from Sharpe or return.
+
+| Method | Balance Entropy | Switches / 1k Bars | Transition Diagonal | Avg Duration | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|---:|---:|
+| contrastive | 0.999 | 32.72 | 0.967 | 30.51 | 0.032 | 0.379 |
+| contrastive_hmm | 0.999 | 23.65 | 0.976 | 42.18 | 0.020 | 0.377 |
+| hmm | 0.959 | 143.24 | 0.857 | 6.98 | 1.000 | 1.000 |
+| kmeans | 0.866 | 246.60 | 0.753 | 4.05 | 0.182 | 0.459 |
+| vol_bucket | 1.000 | 95.71 | 0.904 | 10.44 | 0.333 | 0.599 |
+
+The useful finding is diagnostic rather than promotional. Contrastive and contrastive-HMM produce very balanced and persistent regimes, but they weakly agree with the raw-feature HMM reference. Volatility buckets and KMeans agree more with HMM states, even though they are simpler. This supports the next research step: improve the encoder objective so learned embeddings become alpha-relevant, not merely smooth.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, and a Streamlit research dashboard. The next important work is not live trading; it is regime-quality metrics, encoder ablations, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, and a Streamlit research dashboard. The next important work is not live trading; it is encoder ablations, improved contrastive objectives, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
 

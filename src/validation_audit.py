@@ -627,6 +627,125 @@ def audit_robustness_stress_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_regime_quality_artifacts(rows: list[AuditRecord]) -> None:
+    summary_path = Path(SAVE_DIR) / "regime_quality_summary.csv"
+    agreement_path = Path(SAVE_DIR) / "regime_agreement_matrix.csv"
+    quality_plot_path = Path(SAVE_DIR) / "regime_quality_heatmap.png"
+    agreement_plot_path = Path(SAVE_DIR) / "regime_agreement_heatmap.png"
+
+    if not summary_path.exists():
+        record(
+            rows,
+            "regime_quality_artifacts",
+            WARN,
+            "artifact",
+            "regime_quality_summary.csv is missing; run regime_quality.py for Phase 16 structural regime diagnostics.",
+        )
+        return
+
+    summary = pd.read_csv(summary_path)
+    agreement = pd.read_csv(agreement_path) if agreement_path.exists() else pd.DataFrame()
+    required_methods = ["contrastive", "contrastive_hmm", "hmm", "kmeans", "vol_bucket"]
+    expected_scopes = {"ALL", "BTCUSDT", "ETHUSDT"}
+    expected_summary_rows = len(required_methods) * len(expected_scopes)
+    expected_agreement_rows = len(required_methods) * len(required_methods) * len(expected_scopes)
+    missing_files = [
+        str(path.name)
+        for path in [agreement_path, quality_plot_path, agreement_plot_path]
+        if not path.exists()
+    ]
+    missing_summary_cols = sorted(
+        {
+            "method",
+            "symbol_scope",
+            "n_rows",
+            "regime_balance_entropy",
+            "transition_diagonal_probability",
+            "mean_confidence",
+            "hmm_reference_nmi",
+            "hmm_reference_ari",
+            "hmm_reference_purity",
+        }
+        - set(summary.columns)
+    )
+    missing_agreement_cols = sorted(
+        {"symbol_scope", "method_a", "method_b", "n_rows", "nmi", "ari", "same_label_pct"}
+        - set(agreement.columns)
+    )
+
+    failures = len(missing_files) + len(missing_summary_cols) + len(missing_agreement_cols)
+    detail_parts = [f"summary_rows={len(summary)}, expected={expected_summary_rows}"]
+
+    if len(summary) != expected_summary_rows:
+        failures += 1
+        detail_parts.append("unexpected_summary_row_count")
+
+    if not missing_summary_cols:
+        all_scope = summary[summary["symbol_scope"] == "ALL"]
+        missing_methods = sorted(set(required_methods) - set(all_scope["method"]))
+        missing_scopes = sorted(expected_scopes - set(summary["symbol_scope"]))
+        failures += len(missing_methods) + len(missing_scopes)
+        detail_parts.append(f"all_scope_methods={len(all_scope)}")
+        if missing_methods:
+            detail_parts.append(f"missing_all_scope_methods={missing_methods}")
+        if missing_scopes:
+            detail_parts.append(f"missing_scopes={missing_scopes}")
+        bad_ranges = int(
+            (
+                (summary["regime_balance_entropy"] < 0)
+                | (summary["regime_balance_entropy"] > 1)
+                | (summary["transition_diagonal_probability"] < 0)
+                | (summary["transition_diagonal_probability"] > 1)
+                | (summary["mean_confidence"] < 0)
+                | (summary["mean_confidence"] > 1)
+                | (summary["hmm_reference_nmi"] < 0)
+                | (summary["hmm_reference_nmi"] > 1)
+                | (summary["hmm_reference_purity"] < 0)
+                | (summary["hmm_reference_purity"] > 1)
+            ).sum()
+        )
+        failures += bad_ranges
+        if bad_ranges:
+            detail_parts.append(f"bounded_metric_rows_out_of_range={bad_ranges}")
+
+    if not agreement.empty:
+        detail_parts.append(f"agreement_rows={len(agreement)}, expected={expected_agreement_rows}")
+        if len(agreement) != expected_agreement_rows:
+            failures += 1
+            detail_parts.append("unexpected_agreement_row_count")
+        if not missing_agreement_cols:
+            bad_agreement_ranges = int(
+                (
+                    (agreement["nmi"] < 0)
+                    | (agreement["nmi"] > 1)
+                    | (agreement["same_label_pct"] < 0)
+                    | (agreement["same_label_pct"] > 1)
+                ).sum()
+            )
+            failures += bad_agreement_ranges
+            if bad_agreement_ranges:
+                detail_parts.append(f"agreement_metric_rows_out_of_range={bad_agreement_ranges}")
+    else:
+        detail_parts.append("agreement_rows=0")
+
+    if missing_files:
+        detail_parts.append(f"missing_artifacts={missing_files}")
+    if missing_summary_cols:
+        detail_parts.append(f"missing_summary_columns={missing_summary_cols}")
+    if missing_agreement_cols:
+        detail_parts.append(f"missing_agreement_columns={missing_agreement_cols}")
+
+    record(
+        rows,
+        "regime_quality_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(expected_summary_rows + expected_agreement_rows, 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -902,6 +1021,7 @@ def main() -> None:
     audit_walkforward_artifacts(rows)
     audit_robustness_artifacts(rows)
     audit_robustness_stress_artifacts(rows)
+    audit_regime_quality_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)
