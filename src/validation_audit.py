@@ -868,6 +868,7 @@ def audit_compute_plan_artifacts(rows: list[AuditRecord]) -> None:
 def audit_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
     summary_path = Path(SAVE_DIR) / "guided_encoder_summary.csv"
     loss_path = Path(SAVE_DIR) / "guided_encoder_loss.csv"
+    comparison_path = Path(SAVE_DIR) / "guided_encoder_comparison.csv"
     loss_plot_path = Path(SAVE_DIR) / "guided_encoder_loss_curve.png"
     transition_gmm_path = Path(SAVE_DIR) / "guided_encoder_transition_hmm_guided_gmm.png"
     transition_hmm_path = Path(SAVE_DIR) / "guided_encoder_transition_hmm_guided_hmm.png"
@@ -878,15 +879,16 @@ def audit_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
             "guided_encoder_artifacts",
             WARN,
             "artifact",
-            "guided_encoder_summary.csv is missing; run guided_encoder.py for Phase 18 HMM-guided encoder diagnostics.",
+            "guided_encoder_summary.csv is missing; run guided_encoder.py for Phase 19B HMM-guided encoder diagnostics.",
         )
         return
 
     summary = pd.read_csv(summary_path)
     loss = pd.read_csv(loss_path) if loss_path.exists() else pd.DataFrame()
+    comparison = pd.read_csv(comparison_path) if comparison_path.exists() else pd.DataFrame()
     missing_files = [
         str(path.name)
-        for path in [loss_path, loss_plot_path, transition_gmm_path, transition_hmm_path]
+        for path in [loss_path, comparison_path, loss_plot_path, transition_gmm_path, transition_hmm_path]
         if not path.exists()
     ]
     missing_summary_cols = sorted(
@@ -913,10 +915,23 @@ def audit_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
         {"epoch", "loss", "valid_anchor_pct", "positive_pairs_per_batch", "hard_negative_pairs_per_batch"}
         - set(loss.columns)
     )
+    missing_comparison_cols = sorted(
+        {
+            "method",
+            "source_phase",
+            "n_rows",
+            "hmm_reference_nmi",
+            "hmm_reference_ari",
+            "hmm_reference_purity",
+            "hmm_nmi_vs_contrastive_delta",
+            "hmm_purity_vs_contrastive_delta",
+        }
+        - set(comparison.columns)
+    )
 
     required_methods = {"hmm_guided_gmm", "hmm_guided_hmm"}
-    failures = len(missing_files) + len(missing_summary_cols) + len(missing_loss_cols)
-    detail_parts = [f"summary_rows={len(summary)}", f"loss_rows={len(loss)}"]
+    failures = len(missing_files) + len(missing_summary_cols) + len(missing_loss_cols) + len(missing_comparison_cols)
+    detail_parts = [f"summary_rows={len(summary)}", f"loss_rows={len(loss)}", f"comparison_rows={len(comparison)}"]
 
     if not missing_summary_cols:
         missing_methods = sorted(required_methods - set(summary["method"]))
@@ -940,7 +955,11 @@ def audit_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
             detail_parts.append(f"bounded_metric_rows_out_of_range={bad_ranges}")
 
         if not summary.empty:
-            detail_parts.append(f"epochs={int(summary['epochs'].max())}")
+            max_epochs = int(summary["epochs"].max())
+            if max_epochs < 30:
+                failures += 1
+                detail_parts.append(f"epochs_below_phase19b_full_run={max_epochs}")
+            detail_parts.append(f"epochs={max_epochs}")
             detail_parts.append(f"best_hmm_reference_nmi={summary['hmm_reference_nmi'].max():.3f}")
 
     if not loss.empty and not missing_loss_cols:
@@ -949,12 +968,29 @@ def audit_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
         if bad_loss:
             detail_parts.append(f"non_positive_loss_rows={bad_loss}")
 
+    if not comparison.empty and not missing_comparison_cols:
+        comparison_methods = set(comparison["method"])
+        missing_comparison_methods = sorted(required_methods - comparison_methods)
+        failures += len(missing_comparison_methods)
+        if missing_comparison_methods:
+            detail_parts.append(f"missing_comparison_methods={missing_comparison_methods}")
+        if "contrastive" in comparison_methods:
+            best_guided_nmi = comparison[
+                comparison["method"].isin(required_methods)
+            ]["hmm_reference_nmi"].max()
+            contrastive_nmi = comparison.loc[
+                comparison["method"] == "contrastive", "hmm_reference_nmi"
+            ].iloc[0]
+            detail_parts.append(f"guided_nmi_minus_contrastive={best_guided_nmi - contrastive_nmi:.3f}")
+
     if missing_files:
         detail_parts.append(f"missing_artifacts={missing_files}")
     if missing_summary_cols:
         detail_parts.append(f"missing_summary_columns={missing_summary_cols}")
     if missing_loss_cols:
         detail_parts.append(f"missing_loss_columns={missing_loss_cols}")
+    if missing_comparison_cols:
+        detail_parts.append(f"missing_comparison_columns={missing_comparison_cols}")
 
     record(
         rows,

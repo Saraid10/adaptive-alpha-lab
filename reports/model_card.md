@@ -200,6 +200,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 17 | Encoder compute profile and 12-run ablation budget |
 | Phase 18 | HMM-guided contrastive encoder prototype and structural diagnostics |
 | Phase 19A | Literature positioning and paper contribution map |
+| Phase 19B | Full 30-epoch HMM-guided encoder run and baseline structural comparison |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -222,7 +223,7 @@ The first queued experiments are HMM-guided objectives with HMM/GMM assignment, 
 
 ## HMM-Guided Encoder Variant
 
-Phase 18 adds a separate encoder variant. It does not overwrite the current baseline encoder.
+Phase 18/19B adds a separate encoder variant. It does not overwrite the current baseline encoder.
 
 | Field | Value |
 |---|---|
@@ -234,16 +235,16 @@ Phase 18 adds a separate encoder variant. It does not overwrite the current base
 | Default hard negative gap | 24 bars |
 | Default hard negative weight | 2.0 |
 | Output model | `models/guided_encoder.pt` locally; ignored by Git |
-| Committed diagnostics | `guided_encoder_summary.csv`, `guided_encoder_loss.csv`, guided plots |
+| Committed diagnostics | `guided_encoder_summary.csv`, `guided_encoder_loss.csv`, `guided_encoder_comparison.csv`, guided plots |
 
-One-epoch smoke diagnostics:
+Full 30-epoch Phase 19B diagnostics:
 
-| Method | Silhouette | HMM NMI | HMM Purity |
-|---|---:|---:|---:|
-| `hmm_guided_gmm` | 0.341 | 0.387 | 0.652 |
-| `hmm_guided_hmm` | 0.353 | 0.389 | 0.620 |
+| Method | Silhouette | Avg Duration | Transition Diagonal | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|---:|
+| `hmm_guided_gmm` | 0.384 | 5.09 | 0.804 | 0.609 | 0.759 |
+| `hmm_guided_hmm` | 0.629 | 5.72 | 0.825 | 0.869 | 0.957 |
 
-These results validate the implementation path, but the model card should not treat them as final model performance until a full 30-epoch run and downstream statistical re-test are completed.
+The full run confirms that HMM-guided weak supervision strongly improves structural alignment versus the old contrastive encoder path. It is still not downstream alpha evidence until the guided assignments are evaluated inside the fold-local alpha benchmark.
 
 ## Statistical Testing
 

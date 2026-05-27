@@ -34,6 +34,7 @@ These are practical local observations, not formal benchmarks:
 | Phase 16 regime-quality diagnostics | under 1 minute |
 | Phase 17 compute planner | about 20 seconds with 5 profiled CPU steps |
 | Phase 18 one-epoch guided encoder smoke run | about 4 minutes |
+| Phase 19B 30-epoch guided encoder full run | about 61 minutes |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
@@ -62,10 +63,11 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 15B multiple-testing corrections | 0 retraining runs | Complete; extends Phase 15A tables |
 | Phase 16 regime quality metrics | 0 retraining runs | Complete; uses existing regime assignments |
 | Phase 17 compute plan | 0 retraining runs | Complete; measured local encoder cost using synthetic timing |
-| Phase 18 HMM-guided encoder | 1-2 encoder runs | Smoke-tested for 1 epoch; full 30-epoch run remains |
-| Phase 19 time-frequency augmentation | 2-3 encoder runs | Time-only, frequency-only, both |
-| Phase 20 hard negatives | 2-3 encoder runs | Random vs in-trajectory vs boundary negatives |
-| Phase 21 ablations | capped matrix | Expand only if early results justify it |
+| Phase 18 HMM-guided encoder | 1 smoke encoder run | Complete; validated artifact path |
+| Phase 19B full HMM-guided encoder | 1 full encoder run | Complete; 30 epochs, time-only, HMM/GMM assignments |
+| Phase 20 guided downstream alpha re-test | 0 encoder runs | Use Phase 19B guided assignments in fold-local alpha/statistical benchmark |
+| Phase 21 time-frequency augmentation | 2-3 encoder runs | Time-only, frequency-only, both |
+| Phase 22 hard negatives and ablations | capped matrix | Expand only if early results justify it |
 
 ## Initial Ablation Cap
 
@@ -105,6 +107,17 @@ The first Phase 18 implementation run used `guided_encoder.py --epochs 1` to val
 | `hmm_guided_hmm` | 1 | 0.353 | 0.389 | 0.620 |
 
 This is a smoke-test result, not a final performance claim. The full Phase 18 run should use 30 epochs before downstream alpha/statistical comparisons.
+
+## Phase 19B Full Guided Run
+
+The full HMM-guided time-only encoder run completed with the standard 30-epoch setting.
+
+| Method | Epochs | Silhouette | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|
+| `hmm_guided_gmm` | 30 | 0.384 | 0.609 | 0.759 |
+| `hmm_guided_hmm` | 30 | 0.629 | 0.869 | 0.957 |
+
+Observed runtime was about 61 minutes on the current CPU environment, better than the Phase 17 synthetic estimate of about 99 minutes. This justifies the next step: use the guided assignments in the downstream fold-local alpha benchmark before launching broader time-frequency or architecture ablations.
 
 ## Multi-Asset Gate
 
