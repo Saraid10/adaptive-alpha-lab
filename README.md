@@ -22,6 +22,19 @@ Does learning market regimes from raw financial time-series features improve alp
 
 The project is intentionally framed as a research benchmark, not a live trading bot. Honest weak or mixed results are part of the contribution.
 
+## Research Positioning
+
+Adaptive Alpha Lab sits between four research areas:
+
+- contrastive representation learning for time series, such as TS2Vec, TNC, CoST, TS-TCC, and TF-C
+- classical financial regime-switching models, including Hamilton-style Markov switching, Gaussian HMMs, and Markov-switching GARCH
+- financial ML validation discipline: triple-barrier labels, purging, embargoes, fold-level testing, and multiple-testing control
+- regime-conditioned alpha modeling, where predictors are trained or weighted differently across market states
+
+The contribution is not "a new trading bot" or "HMM is ground truth." The contribution is a reproducible benchmark that tests whether learned regime embeddings can beat, match, or explain classical sequential regimes under financial validation. Phase 18 adds the first model-side response to the current finding: an HMM-guided contrastive encoder that uses HMM states as weak supervision rather than hard truth.
+
+The full positioning note is in `reports/related_work.md`, with a compact source matrix in `reports/literature_matrix.csv`.
+
 ## Architecture
 
 ```text
@@ -58,6 +71,7 @@ Binance OHLCV
 - Phase 15B multiple-testing correction, corrected claim status, and Probabilistic Sharpe diagnostics.
 - Phase 17 compute planning with encoder timing, ablation budget, and experiment-priority queue.
 - Phase 18 HMM-guided contrastive encoder prototype with weak HMM-state positives and boundary-aware hard negatives.
+- Phase 19A literature positioning across time-series contrastive learning, financial regime switching, financial ML validation, and regime-conditioned alpha modeling.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -155,6 +169,8 @@ python -m pip install -r requirements-research.txt
 | `runs/20260522_phase14b_baseline/manifest.json` | Frozen Phase 14B baseline manifest |
 | `reports/model_card.md` | Reproducible model-card snapshot |
 | `reports/compute_budget.md` | Compute-aware experiment plan and multi-asset gate |
+| `reports/related_work.md` | Phase 19A paper-positioning note and contribution map |
+| `reports/literature_matrix.csv` | Compact source matrix for paper planning |
 | `models/regime_stability.png` | Stability and transition-period IC dashboard panel |
 | `models/phase4_dashboard.png` | Static research backtest dashboard |
 | `reports/adaptive_alpha_lab_report.md` | Research note |
@@ -166,7 +182,11 @@ adaptive-alpha-lab/
 ├── dashboard.py
 ├── streamlit_app.py
 ├── reports/
-│   └── adaptive_alpha_lab_report.md
+│   ├── adaptive_alpha_lab_report.md
+│   ├── related_work.md
+│   ├── literature_matrix.csv
+│   ├── model_card.md
+│   └── compute_budget.md
 ├── src/
 │   ├── ingestion.py
 │   ├── features.py
@@ -201,7 +221,7 @@ The primary target is `tb_label_8h`, an 8-hour triple-barrier label with classes
 
 The validation scheme uses expanding walk-forward folds with a 5-day embargo gap between train and test windows. This reduces leakage from overlapping financial labels and makes the model comparison more defensible.
 
-Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, Phase 17 compute-plan artifact completeness, Phase 18 guided-encoder artifact completeness, and run-registry snapshot completeness.
+Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, Phase 17 compute-plan artifact completeness, Phase 18 guided-encoder artifact completeness, Phase 19A literature-positioning artifact completeness, and run-registry snapshot completeness.
 
 The audit also records one methodological warning: the legacy `regime_assignments.csv` artifact is offline/global. Paper-grade predictive regime claims should use the Phase 13 `walkforward_experiment_results.csv` artifact instead.
 
@@ -222,6 +242,8 @@ Phase 16 adds structural regime-quality metrics independent of alpha returns. It
 Phase 17 adds compute planning before heavier encoder experiments. It profiles a synthetic encoder forward/backward step on the local machine, estimates full 30-epoch retraining cost, and creates a capped ablation queue. On the current CPU-only environment, one encoder retrain is estimated at about 99.45 minutes, and the full 12-run initial ablation grid is estimated at about 21.49 hours including evaluation overhead. The first three runs are marked as the priority queue before expanding the full grid.
 
 Phase 18 adds the first encoder-objective upgrade. Instead of treating adjacent windows as positives by default, `guided_encoder.py` uses raw-feature HMM states as weak supervision: distant windows in the same HMM state become positives, and different-state windows near each other in the same symbol become harder negatives. The script writes separate guided artifacts and does not overwrite the existing `encoder.pt`, `regime_posteriors.csv`, or canonical benchmark files.
+
+Phase 19A adds literature positioning. The project is now explicitly mapped against contrastive time-series representation learning, financial regime-switching models, financial ML validation, and regime-conditioned alpha modeling. This makes the paper contribution precise: the benchmark studies where learned regimes help, where classical HMM discipline remains stronger, and whether HMM-guided weak supervision can close that gap.
 
 Dense contrastive regime inference uses stride 1 after the encoder window warmup, so the learned-regime method is compared on the same BTC+ETH row universe as HMM-style, KMeans, and volatility-bucket baselines.
 
@@ -362,7 +384,18 @@ The one-epoch smoke run produced:
 
 This is a smoke-test result, not the final Phase 18 claim. It is still promising because the guided encoder already aligns with the HMM reference more strongly than the old contrastive encoder path from Phase 16. The full research run should use the standard 30 epochs and then feed the best guided assignments into the later statistical re-test phase.
 
+## Phase 19A Literature Positioning
+
+Phase 19A turns the project from a strong engineering artifact into a paper-shaped research artifact. It adds a related-work map across four areas:
+
+- time-series contrastive learning: TS2Vec, TNC, CoST, TS-TCC, and TF-C
+- financial regime switching: Hamilton-style Markov switching, Gaussian HMMs, and Markov-switching GARCH
+- financial ML validation: triple-barrier labeling, purging, embargoing, and backtest overfitting control
+- regime-conditioned alpha modeling: global versus state-conditioned predictors under equal validation
+
+The key paper framing is now clear: Adaptive Alpha Lab is not claiming that HMM states are true market regimes or that the strategy is profitable. It is testing whether learned regime representations can beat, match, or explain classical sequential regimes under fair financial validation. The detailed source map is stored in `reports/related_work.md` and `reports/literature_matrix.csv`.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18 HMM-guided encoder diagnostics, and a Streamlit research dashboard. The next important work is not live trading; it is running the full guided encoder experiment, adding time-frequency views, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18 HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, and a Streamlit research dashboard. The next important work is not live trading; it is running the full guided encoder experiment, adding time-frequency views, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
 
