@@ -57,6 +57,7 @@ Binance OHLCV
 - Phase 15A statistical testing with fold-level bootstrap confidence intervals, paired tests, and DM-style forecast-loss checks.
 - Phase 15B multiple-testing correction, corrected claim status, and Probabilistic Sharpe diagnostics.
 - Phase 17 compute planning with encoder timing, ablation budget, and experiment-priority queue.
+- Phase 18 HMM-guided contrastive encoder prototype with weak HMM-state positives and boundary-aware hard negatives.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -80,6 +81,7 @@ python src/alpha_models.py --symbols BTCUSDT ETHUSDT
 python src/regime_stability.py --symbols BTCUSDT ETHUSDT
 python src/regime_quality.py --symbols BTCUSDT ETHUSDT
 python src/compute_plan.py --symbols BTCUSDT ETHUSDT
+python src/guided_encoder.py --symbols BTCUSDT ETHUSDT --epochs 30
 python src/walkforward_regimes.py --symbols BTCUSDT ETHUSDT
 python src/robustness.py
 python src/robustness_stress.py
@@ -121,6 +123,9 @@ python -m pip install -r requirements-research.txt
 | `models/ablation_budget.csv` | Prioritized 12-run encoder ablation queue |
 | `models/compute_budget_summary.csv` | Compact compute-budget summary for dashboard/report use |
 | `models/compute_budget_plan.png` | Visual ablation-runtime budget |
+| `models/guided_encoder_summary.csv` | Phase 18 HMM-guided encoder structural diagnostics |
+| `models/guided_encoder_loss.csv` | Phase 18 guided training loss and pair-mining diagnostics |
+| `models/guided_encoder_loss_curve.png` | Visual Phase 18 training loss curve |
 | `models/per_regime_stats.csv` | Volatility, return, liquidity, and IC diagnostics by regime |
 | `models/experiment_results.csv` | Master model comparison table |
 | `models/alpha_oos_predictions.csv` | Out-of-sample model predictions |
@@ -174,6 +179,7 @@ adaptive-alpha-lab/
 │   ├── regime_stability.py
 │   ├── regime_quality.py
 │   ├── compute_plan.py
+│   ├── guided_encoder.py
 │   ├── validation_audit.py
 │   ├── walkforward_regimes.py
 │   ├── robustness.py
@@ -195,7 +201,7 @@ The primary target is `tb_label_8h`, an 8-hour triple-barrier label with classes
 
 The validation scheme uses expanding walk-forward folds with a 5-day embargo gap between train and test windows. This reduces leakage from overlapping financial labels and makes the model comparison more defensible.
 
-Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, Phase 17 compute-plan artifact completeness, and run-registry snapshot completeness.
+Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, Phase 17 compute-plan artifact completeness, Phase 18 guided-encoder artifact completeness, and run-registry snapshot completeness.
 
 The audit also records one methodological warning: the legacy `regime_assignments.csv` artifact is offline/global. Paper-grade predictive regime claims should use the Phase 13 `walkforward_experiment_results.csv` artifact instead.
 
@@ -214,6 +220,8 @@ Phase 15B adds multiple-testing discipline. It applies Benjamini-Hochberg and Ho
 Phase 16 adds structural regime-quality metrics independent of alpha returns. It measures regime balance, persistence, posterior confidence, pairwise NMI/ARI agreement, and agreement with the raw-feature HMM reference. The HMM sequence is a classical comparison proxy, not ground truth. This phase answers whether a method produces coherent state partitions before asking whether those states improve alpha models.
 
 Phase 17 adds compute planning before heavier encoder experiments. It profiles a synthetic encoder forward/backward step on the local machine, estimates full 30-epoch retraining cost, and creates a capped ablation queue. On the current CPU-only environment, one encoder retrain is estimated at about 99.45 minutes, and the full 12-run initial ablation grid is estimated at about 21.49 hours including evaluation overhead. The first three runs are marked as the priority queue before expanding the full grid.
+
+Phase 18 adds the first encoder-objective upgrade. Instead of treating adjacent windows as positives by default, `guided_encoder.py` uses raw-feature HMM states as weak supervision: distant windows in the same HMM state become positives, and different-state windows near each other in the same symbol become harder negatives. The script writes separate guided artifacts and does not overwrite the existing `encoder.pt`, `regime_posteriors.csv`, or canonical benchmark files.
 
 Dense contrastive regime inference uses stride 1 after the encoder window warmup, so the learned-regime method is compared on the same BTC+ETH row universe as HMM-style, KMeans, and volatility-bucket baselines.
 
@@ -341,7 +349,20 @@ The first three runs are:
 
 This makes Phase 18 practical: start with HMM-guided objectives and only expand to the full ablation grid if the early runs improve the learned-regime path.
 
+## Phase 18 HMM-Guided Encoder
+
+Phase 18 implements the first representation-learning upgrade. It uses the existing raw-feature HMM sequence as weak supervision, not ground truth. The goal is to test whether the learned embedding space becomes more state-aligned when positives and hard negatives are chosen from regime structure rather than only adjacent windows.
+
+The one-epoch smoke run produced:
+
+| Method | Epochs | Silhouette | Avg Duration | Transition Diagonal | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|---:|---:|
+| hmm_guided_gmm | 1 | 0.341 | 15.17 | 0.934 | 0.387 | 0.652 |
+| hmm_guided_hmm | 1 | 0.353 | 18.55 | 0.946 | 0.389 | 0.620 |
+
+This is a smoke-test result, not the final Phase 18 claim. It is still promising because the guided encoder already aligns with the HMM reference more strongly than the old contrastive encoder path from Phase 16. The full research run should use the standard 30 epochs and then feed the best guided assignments into the later statistical re-test phase.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, and a Streamlit research dashboard. The next important work is not live trading; it is HMM-guided encoder objectives, time-frequency views, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18 HMM-guided encoder diagnostics, and a Streamlit research dashboard. The next important work is not live trading; it is running the full guided encoder experiment, adding time-frequency views, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
 
