@@ -72,6 +72,7 @@ def main() -> None:
     target_dist = read_csv("target_distribution.csv")
     target_quality = read_csv("target_quality.csv")
     run_index = read_repo_csv("runs/run_index.csv")
+    literature_matrix = read_repo_csv("reports/literature_matrix.csv")
 
     st.header("Experiment Results")
     if results.empty:
@@ -286,6 +287,25 @@ def main() -> None:
                     st.image(str(path))
                 else:
                     st.info("missing")
+
+    st.header("Research Positioning")
+    st.caption(
+        "Phase 19A maps the project against time-series contrastive learning, "
+        "financial regime switching, financial ML validation, and regime-conditioned alpha modeling."
+    )
+    if literature_matrix.empty:
+        st.info("Add reports/literature_matrix.csv to show the related-work source matrix.")
+    else:
+        cluster_counts = literature_matrix["cluster"].value_counts()
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Literature Clusters", literature_matrix["cluster"].nunique())
+        c2.metric("Mapped Sources", len(literature_matrix))
+        c3.metric("Time-Series CL", int(cluster_counts.get("contrastive_time_series", 0)))
+        c4.metric("Finance/Validation", int(
+            cluster_counts.get("financial_regimes", 0)
+            + cluster_counts.get("financial_ml_validation", 0)
+        ))
+        st.dataframe(literature_matrix, width="stretch")
 
     st.header("Validation Audit")
     if validation_audit.empty:

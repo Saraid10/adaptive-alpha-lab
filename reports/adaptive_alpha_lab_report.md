@@ -8,6 +8,19 @@ The central question is:
 
 > Do learned regimes improve IC, drawdown, Sharpe, or turnover versus global and classical-regime baselines?
 
+## Related Work And Contribution Positioning
+
+Phase 19A maps the project against four literature clusters:
+
+1. Contrastive time-series representation learning: TS2Vec, TNC, CoST, TS-TCC, and TF-C show that unlabeled time-series windows can be embedded through carefully designed temporal, contextual, and frequency-aware objectives.
+2. Classical financial regime switching: Hamilton-style Markov switching, Gaussian HMMs, and Markov-switching GARCH motivate sequential latent-state baselines with explicit transition structure.
+3. Financial ML validation: triple-barrier labeling, purging, embargoing, fold-level tests, and multiple-testing controls define the evidence standard for financial prediction.
+4. Regime-conditioned alpha modeling: predictors can be trained or weighted differently across market states, but the comparison must use the same labels, folds, costs, and test universe.
+
+The paper contribution is therefore not a claim that HMM states are true regimes or that the project is a profitable trading system. The contribution is a controlled benchmark testing whether learned regime embeddings can beat, match, or explain classical sequential regimes under financial validation. Phase 18 then becomes a natural model-side response: use HMM states as weak supervision to improve contrastive representation learning, while still treating the HMM as a proxy rather than ground truth.
+
+The narrative related-work note is `reports/related_work.md`; the compact source matrix is `reports/literature_matrix.csv`.
+
 ## Data And Features
 
 The current benchmark uses hourly Binance OHLCV data for BTCUSDT and ETHUSDT. Each symbol has 17,520 OHLCV bars and 17,460 feature rows after indicator warmup. The feature store contains 22 engineered technical and microstructure-inspired features, including multi-horizon returns, realized volatility, volatility of volatility, Amihud illiquidity, volume z-score, return autocorrelation, spread proxy, order-flow proxy, RSI, Garman-Klass volatility, ATR, close-vs-VWAP, log volume trend, and return dispersion.
@@ -70,11 +83,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 25 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder artifact, and run-registry checks passed |
+| PASS | 26 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder artifact, literature-positioning artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 18 guided-encoder artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 18 guided-encoder artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -245,6 +258,21 @@ The first run is intentionally a one-epoch smoke test to validate the training a
 
 This is already directionally useful: the Phase 16 contrastive-GMM method had only `HMM NMI = 0.032`, while the one-epoch HMM-guided variant reaches about `0.39`. That does not prove alpha improvement, but it confirms that the guided objective changes the embedding geometry in the intended direction. The next step is a full 30-epoch guided run followed by fold-local alpha and statistical re-testing.
 
+## Phase 19A Literature Positioning
+
+Phase 19A adds a paper-facing related-work layer before expanding the encoder roadmap. This phase does not change model outputs. It changes the research framing so later experiments answer a precise question instead of becoming a collection of model variants.
+
+The project is positioned against:
+
+| Cluster | Key References | Why It Matters Here |
+|---|---|---|
+| Time-series contrastive learning | TS2Vec, TNC, CoST, TS-TCC, TF-C | Defines the representation-learning family that the encoder belongs to |
+| Financial regime switching | Hamilton 1989, Gaussian HMMs, Markov-switching GARCH | Defines the classical sequential-state baseline the learned regimes must beat |
+| Financial ML validation | triple-barrier labels, purging, embargoing, multiple-testing discipline | Defines what counts as credible evidence in a financial prediction benchmark |
+| Regime-conditioned alpha | global versus state-conditioned predictors | Defines the downstream use case and evaluation surface |
+
+This positioning clarifies the contribution statement: the project is an empirical bridge between classical sequential regime models and deep time-series representation learning. Its strongest current finding is not that deep regimes dominate, but that sequential state discipline matters and that HMM-guided weak supervision may repair part of the contrastive encoder's regime-structure weakness.
+
 ## Model Comparison
 
 | Method | IC | Accuracy | Balanced Accuracy | Sharpe | Drawdown | Turnover | Total Return |
@@ -275,6 +303,8 @@ This is still a useful research result because it separates representation learn
 - HMM states are not ground truth market regimes. They are a classical proxy/reference state sequence used for comparison and weak supervision.
 - Regime-quality agreement metrics are diagnostic; agreement with HMM does not prove economic correctness.
 - Phase 18 is currently smoke-tested for structural alignment only; no downstream alpha claim should be made from the one-epoch run.
+- Phase 19A is a positioning phase, not an empirical result. It clarifies contribution language but does not prove a new model improvement.
+- Literature positioning depends on describing HMM states as proxy/reference states, not ground truth labels.
 - Phase 14B stress testing re-scores existing predictions; it does not retrain models under each cost or threshold assumption.
 - Several method differences are not statistically significant at the 5% level under fold-level tests, and the strongest IC finding does not survive multiple-testing correction.
 - Phase 17 timings are synthetic planning estimates, not formal hardware benchmarks.
@@ -285,6 +315,7 @@ This is still a useful research result because it separates representation learn
 
 1. Run the full 30-epoch HMM-guided encoder and compare it against the one-epoch smoke result.
 2. Feed the best guided assignments into the fold-local alpha benchmark and Phase 15 statistical tests.
-3. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
-4. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
-5. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.
+3. Use the Phase 19A literature matrix to write the formal related-work section before paper drafting.
+4. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
+5. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
+6. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.

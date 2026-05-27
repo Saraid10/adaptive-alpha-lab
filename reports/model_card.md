@@ -13,6 +13,23 @@
 
 This model card documents the current Phase 14B baseline before statistical testing and encoder upgrades. The frozen run is the reference point for later significance tests, regime-quality metrics, encoder changes, and ablations.
 
+## Research Positioning
+
+Phase 19A adds paper-facing literature positioning.
+
+| Field | Value |
+|---|---|
+| Narrative note | `reports/related_work.md` |
+| Source matrix | `reports/literature_matrix.csv` |
+| Literature clusters | time-series contrastive learning, financial regime switching, financial ML validation, regime-conditioned alpha modeling |
+| Contribution framing | benchmark learned regimes versus classical sequential regimes under financial validation |
+| Key caution | HMM states are reference/proxy states, not ground-truth labels |
+
+The model-card contribution statement is: Adaptive Alpha Lab evaluates whether
+learned market-regime representations can beat, match, or explain classical
+sequential regime models when both are tested under equal targets, walk-forward
+folds, transaction costs, robustness checks, and statistical claim controls.
+
 ## Data
 
 | Field | Value |
@@ -167,7 +184,7 @@ random_state=42
 | Embargo | 5 days, 120 hourly bars |
 | Primary label horizon purge | 8 bars |
 | Main OOS rows | 25,920 per method |
-| Critical audit status | 25 PASS, 1 methodological WARN, 0 FAIL |
+| Critical audit status | 26 PASS, 1 methodological WARN, 0 FAIL |
 
 The current methodological warning is that the legacy `regime_assignments.csv` artifact is offline/global. Predictive regime claims should use the fold-local Phase 13 artifacts.
 
@@ -182,6 +199,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 16 | Regime quality and pairwise agreement diagnostics independent of alpha performance |
 | Phase 17 | Encoder compute profile and 12-run ablation budget |
 | Phase 18 | HMM-guided contrastive encoder prototype and structural diagnostics |
+| Phase 19A | Literature positioning and paper contribution map |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 

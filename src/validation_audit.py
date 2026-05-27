@@ -967,6 +967,78 @@ def audit_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_literature_positioning_artifacts(rows: list[AuditRecord]) -> None:
+    related_work_path = Path(BASE_DIR) / "reports" / "related_work.md"
+    matrix_path = Path(BASE_DIR) / "reports" / "literature_matrix.csv"
+
+    if not related_work_path.exists() or not matrix_path.exists():
+        missing = [
+            str(path.relative_to(BASE_DIR))
+            for path in [related_work_path, matrix_path]
+            if not path.exists()
+        ]
+        record(
+            rows,
+            "literature_positioning_artifacts",
+            WARN,
+            "artifact",
+            f"Missing Phase 19A literature artifacts: {missing}",
+        )
+        return
+
+    matrix = pd.read_csv(matrix_path)
+    required_cols = {
+        "cluster",
+        "reference",
+        "year",
+        "main_idea",
+        "relevance_to_adaptive_alpha_lab",
+        "gap_or_caution",
+        "source_url",
+    }
+    required_clusters = {
+        "contrastive_time_series",
+        "financial_regimes",
+        "financial_ml_validation",
+        "regime_conditioned_alpha",
+        "project_contribution",
+    }
+    missing_cols = sorted(required_cols - set(matrix.columns))
+    missing_clusters = sorted(required_clusters - set(matrix["cluster"])) if not missing_cols else []
+    empty_required = int(matrix[list(required_cols & set(matrix.columns))].isna().any(axis=1).sum()) if not matrix.empty else 1
+    related_text = related_work_path.read_text(encoding="utf-8")
+    required_phrases = [
+        "HMM states are not ground truth",
+        "Contribution Statement",
+        "Reviewer Risk Register",
+    ]
+    missing_phrases = [phrase for phrase in required_phrases if phrase not in related_text]
+
+    failures = len(missing_cols) + len(missing_clusters) + empty_required + len(missing_phrases)
+    detail_parts = [
+        f"matrix_rows={len(matrix)}",
+        f"clusters={matrix['cluster'].nunique() if 'cluster' in matrix.columns else 0}",
+    ]
+    if missing_cols:
+        detail_parts.append(f"missing_cols={missing_cols}")
+    if missing_clusters:
+        detail_parts.append(f"missing_clusters={missing_clusters}")
+    if empty_required:
+        detail_parts.append(f"rows_with_empty_required_fields={empty_required}")
+    if missing_phrases:
+        detail_parts.append(f"missing_phrases={missing_phrases}")
+
+    record(
+        rows,
+        "literature_positioning_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(len(matrix), 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -1252,6 +1324,7 @@ def main() -> None:
     audit_regime_quality_artifacts(rows)
     audit_compute_plan_artifacts(rows)
     audit_guided_encoder_artifacts(rows)
+    audit_literature_positioning_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)
