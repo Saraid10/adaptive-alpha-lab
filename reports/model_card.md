@@ -167,7 +167,7 @@ random_state=42
 | Embargo | 5 days, 120 hourly bars |
 | Primary label horizon purge | 8 bars |
 | Main OOS rows | 25,920 per method |
-| Critical audit status | 24 PASS, 1 methodological WARN, 0 FAIL |
+| Critical audit status | 25 PASS, 1 methodological WARN, 0 FAIL |
 
 The current methodological warning is that the legacy `regime_assignments.csv` artifact is offline/global. Predictive regime claims should use the fold-local Phase 13 artifacts.
 
@@ -181,6 +181,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 15B | Benjamini-Hochberg/Holm corrections, corrected claim status, and Probabilistic Sharpe diagnostics |
 | Phase 16 | Regime quality and pairwise agreement diagnostics independent of alpha performance |
 | Phase 17 | Encoder compute profile and 12-run ablation budget |
+| Phase 18 | HMM-guided contrastive encoder prototype and structural diagnostics |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -200,6 +201,31 @@ Phase 17 records local compute estimates before starting encoder-upgrade work.
 | Budget status | green |
 
 The first queued experiments are HMM-guided objectives with HMM/GMM assignment, followed by an HMM-guided time-frequency variant. Full ablations should only expand if these priority runs improve the learned-regime benchmark.
+
+## HMM-Guided Encoder Variant
+
+Phase 18 adds a separate encoder variant. It does not overwrite the current baseline encoder.
+
+| Field | Value |
+|---|---|
+| Script | `src/guided_encoder.py` |
+| Weak supervision source | raw-feature HMM states from `regime_assignments.csv` |
+| Positive pairs | same HMM state, distant in time or cross-symbol |
+| Hard negatives | different HMM state, nearby in the same symbol |
+| Default min positive gap | 24 bars |
+| Default hard negative gap | 24 bars |
+| Default hard negative weight | 2.0 |
+| Output model | `models/guided_encoder.pt` locally; ignored by Git |
+| Committed diagnostics | `guided_encoder_summary.csv`, `guided_encoder_loss.csv`, guided plots |
+
+One-epoch smoke diagnostics:
+
+| Method | Silhouette | HMM NMI | HMM Purity |
+|---|---:|---:|---:|
+| `hmm_guided_gmm` | 0.341 | 0.387 | 0.652 |
+| `hmm_guided_hmm` | 0.353 | 0.389 | 0.620 |
+
+These results validate the implementation path, but the model card should not treat them as final model performance until a full 30-epoch run and downstream statistical re-test are completed.
 
 ## Statistical Testing
 

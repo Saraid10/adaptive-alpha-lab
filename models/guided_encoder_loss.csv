@@ -1,0 +1,2 @@
+epoch,loss,valid_anchor_pct,positive_pairs_per_batch,hard_negative_pairs_per_batch,lr
+1,0.9283888735894348,1.0,4511.10701107011,11.14391143911439,0.0

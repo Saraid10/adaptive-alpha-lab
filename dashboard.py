@@ -64,6 +64,8 @@ def main() -> None:
     compute_profile = read_csv("compute_profile.csv")
     ablation_budget = read_csv("ablation_budget.csv")
     compute_budget_summary = read_csv("compute_budget_summary.csv")
+    guided_encoder_summary = read_csv("guided_encoder_summary.csv")
+    guided_encoder_loss = read_csv("guided_encoder_loss.csv")
     per_regime = read_csv("per_regime_stats.csv")
     validation_audit = read_csv("validation_audit.csv")
     fold_audit = read_csv("fold_audit.csv")
@@ -252,6 +254,38 @@ def main() -> None:
         compute_img = MODELS_DIR / "compute_budget_plan.png"
         if compute_img.exists():
             st.image(str(compute_img), width="stretch")
+
+    st.header("HMM-Guided Encoder")
+    if guided_encoder_summary.empty:
+        st.info("Run python src/guided_encoder.py to generate Phase 18 HMM-guided encoder artifacts.")
+    else:
+        st.caption(
+            "Phase 18 trains a separate guided encoder using HMM states as weak supervision. "
+            "The existing production encoder and canonical regime files are not overwritten."
+        )
+        c1, c2, c3, c4 = st.columns(4)
+        best_nmi = guided_encoder_summary.sort_values("hmm_reference_nmi", ascending=False).iloc[0]
+        best_sil = guided_encoder_summary.sort_values("silhouette", ascending=False).iloc[0]
+        c1.metric("Best HMM NMI", f"{best_nmi['hmm_reference_nmi']:.3f}", best_nmi["method"])
+        c2.metric("Best Silhouette", f"{best_sil['silhouette']:.3f}", best_sil["method"])
+        c3.metric("Epochs", int(guided_encoder_summary["epochs"].max()))
+        c4.metric("Final Loss", f"{guided_encoder_summary['final_loss'].min():.3f}")
+        st.dataframe(guided_encoder_summary, width="stretch")
+        if not guided_encoder_loss.empty:
+            st.subheader("Training Loss")
+            st.dataframe(guided_encoder_loss, width="stretch")
+        loss_img = MODELS_DIR / "guided_encoder_loss_curve.png"
+        if loss_img.exists():
+            st.image(str(loss_img), width="stretch")
+        matrix_cols = st.columns(2)
+        for col, method in zip(matrix_cols, ["hmm_guided_gmm", "hmm_guided_hmm"]):
+            path = MODELS_DIR / f"guided_encoder_transition_{method}.png"
+            with col:
+                st.caption(method)
+                if path.exists():
+                    st.image(str(path))
+                else:
+                    st.info("missing")
 
     st.header("Validation Audit")
     if validation_audit.empty:

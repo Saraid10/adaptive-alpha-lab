@@ -33,6 +33,7 @@ These are practical local observations, not formal benchmarks:
 | Phase 15A/15B statistical tests | under 1 minute |
 | Phase 16 regime-quality diagnostics | under 1 minute |
 | Phase 17 compute planner | about 20 seconds with 5 profiled CPU steps |
+| Phase 18 one-epoch guided encoder smoke run | about 4 minutes |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
@@ -61,7 +62,7 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 15B multiple-testing corrections | 0 retraining runs | Complete; extends Phase 15A tables |
 | Phase 16 regime quality metrics | 0 retraining runs | Complete; uses existing regime assignments |
 | Phase 17 compute plan | 0 retraining runs | Complete; measured local encoder cost using synthetic timing |
-| Phase 18 HMM-guided encoder | 1-2 encoder runs | Minimal proof before ablations |
+| Phase 18 HMM-guided encoder | 1-2 encoder runs | Smoke-tested for 1 epoch; full 30-epoch run remains |
 | Phase 19 time-frequency augmentation | 2-3 encoder runs | Time-only, frequency-only, both |
 | Phase 20 hard negatives | 2-3 encoder runs | Random vs in-trajectory vs boundary negatives |
 | Phase 21 ablations | capped matrix | Expand only if early results justify it |
@@ -93,6 +94,17 @@ The first three queued runs are:
 | 3 | `hmm_guided` | `time_frequency` | `hmm` | run first |
 
 The rest of the 12-run grid should stay on hold until one of these runs improves the learned-regime path.
+
+## Phase 18 Smoke Result
+
+The first Phase 18 implementation run used `guided_encoder.py --epochs 1` to validate the full artifact path before launching the longer run. It produced both GMM and HMM assignments from the HMM-guided embedding space.
+
+| Method | Epochs | Silhouette | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|
+| `hmm_guided_gmm` | 1 | 0.341 | 0.387 | 0.652 |
+| `hmm_guided_hmm` | 1 | 0.353 | 0.389 | 0.620 |
+
+This is a smoke-test result, not a final performance claim. The full Phase 18 run should use 30 epochs before downstream alpha/statistical comparisons.
 
 ## Multi-Asset Gate
 

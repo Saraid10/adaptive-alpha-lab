@@ -70,11 +70,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 24 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, and run-registry checks passed |
+| PASS | 25 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 18 guided-encoder artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -226,6 +226,25 @@ The initial ablation cap remains 12 runs: 3 losses by 2 augmentations by 2 assig
 
 This matters for paper execution because it prevents an uncontrolled ablation explosion. The project should first test whether HMM-guided supervision improves the learned-regime path. Only if the priority runs improve the fold-local learned-regime benchmark should the remaining grid be launched.
 
+## Phase 18 HMM-Guided Encoder
+
+Phase 18 implements the first encoder-objective upgrade. The current contrastive encoder treats adjacent windows as positives, which can encourage local smoothness even when the market is crossing a regime boundary. The Phase 18 encoder instead uses the raw-feature HMM sequence as weak supervision:
+
+- same HMM state and distant in time: positive pair
+- different HMM state and nearby in the same symbol: hard negative pair
+- HMM is treated as a proxy/reference sequence, not market-regime ground truth
+
+The implementation writes separate guided artifacts and does not overwrite the existing canonical encoder or benchmark assignments. This keeps the experiment reversible and prevents Phase 18 from contaminating the Phase 15/16 baseline.
+
+The first run is intentionally a one-epoch smoke test to validate the training and artifact path before spending compute on a 30-epoch run.
+
+| Method | Epochs | Silhouette | Avg Duration | Transition Diagonal | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|---:|---:|
+| `hmm_guided_gmm` | 1 | 0.341 | 15.17 | 0.934 | 0.387 | 0.652 |
+| `hmm_guided_hmm` | 1 | 0.353 | 18.55 | 0.946 | 0.389 | 0.620 |
+
+This is already directionally useful: the Phase 16 contrastive-GMM method had only `HMM NMI = 0.032`, while the one-epoch HMM-guided variant reaches about `0.39`. That does not prove alpha improvement, but it confirms that the guided objective changes the embedding geometry in the intended direction. The next step is a full 30-epoch guided run followed by fold-local alpha and statistical re-testing.
+
 ## Model Comparison
 
 | Method | IC | Accuracy | Balanced Accuracy | Sharpe | Drawdown | Turnover | Total Return |
@@ -255,6 +274,7 @@ This is still a useful research result because it separates representation learn
 - Offline/global regime results and fold-local regime results should be interpreted separately.
 - HMM states are not ground truth market regimes. They are a classical proxy/reference state sequence used for comparison and weak supervision.
 - Regime-quality agreement metrics are diagnostic; agreement with HMM does not prove economic correctness.
+- Phase 18 is currently smoke-tested for structural alignment only; no downstream alpha claim should be made from the one-epoch run.
 - Phase 14B stress testing re-scores existing predictions; it does not retrain models under each cost or threshold assumption.
 - Several method differences are not statistically significant at the 5% level under fold-level tests, and the strongest IC finding does not survive multiple-testing correction.
 - Phase 17 timings are synthetic planning estimates, not formal hardware benchmarks.
@@ -263,8 +283,8 @@ This is still a useful research result because it separates representation learn
 
 ## Next Steps
 
-1. Improve the learned encoder objective and retest the contrastive-HMM hybrid.
-2. Run the Phase 17 priority queue: HMM-guided time-only HMM, HMM-guided time-only GMM, and HMM-guided time-frequency HMM.
+1. Run the full 30-epoch HMM-guided encoder and compare it against the one-epoch smoke result.
+2. Feed the best guided assignments into the fold-local alpha benchmark and Phase 15 statistical tests.
 3. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
 4. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
 5. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.
