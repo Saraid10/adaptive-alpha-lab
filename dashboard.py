@@ -66,6 +66,7 @@ def main() -> None:
     compute_budget_summary = read_csv("compute_budget_summary.csv")
     guided_encoder_summary = read_csv("guided_encoder_summary.csv")
     guided_encoder_loss = read_csv("guided_encoder_loss.csv")
+    guided_encoder_comparison = read_csv("guided_encoder_comparison.csv")
     per_regime = read_csv("per_regime_stats.csv")
     validation_audit = read_csv("validation_audit.csv")
     fold_audit = read_csv("fold_audit.csv")
@@ -272,6 +273,9 @@ def main() -> None:
         c3.metric("Epochs", int(guided_encoder_summary["epochs"].max()))
         c4.metric("Final Loss", f"{guided_encoder_summary['final_loss'].min():.3f}")
         st.dataframe(guided_encoder_summary, width="stretch")
+        if not guided_encoder_comparison.empty:
+            st.subheader("Guided vs Baseline Regime Structure")
+            st.dataframe(guided_encoder_comparison, width="stretch")
         if not guided_encoder_loss.empty:
             st.subheader("Training Loss")
             st.dataframe(guided_encoder_loss, width="stretch")

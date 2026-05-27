@@ -25,6 +25,21 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 POST_COLS = [f"post_{idx}" for idx in range(N_REGIMES)]
 ASSIGNMENT_COLS = ["method", "symbol", "open_time", "feat_idx", "regime"] + POST_COLS
 GUIDED_METHODS = ["hmm_guided_gmm", "hmm_guided_hmm"]
+COMPARISON_COLS = [
+    "method",
+    "source_phase",
+    "n_rows",
+    "n_symbols",
+    "n_regimes",
+    "avg_regime_duration",
+    "transition_diagonal_probability",
+    "mean_confidence",
+    "hmm_reference_nmi",
+    "hmm_reference_ari",
+    "hmm_reference_purity",
+    "hmm_nmi_vs_contrastive_delta",
+    "hmm_purity_vs_contrastive_delta",
+]
 
 
 @dataclass
@@ -119,7 +134,7 @@ class HMMGuidedContrastiveLoss(nn.Module):
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train a Phase 18 HMM-guided contrastive encoder.")
+    parser = argparse.ArgumentParser(description="Train a Phase 19B HMM-guided contrastive encoder.")
     parser.add_argument("--symbols", nargs="*", default=SYMBOLS)
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
@@ -458,10 +473,72 @@ def summarize_guided(
     return summary
 
 
+def save_guided_comparison(summary: pd.DataFrame) -> pd.DataFrame:
+    quality_path = Path(SAVE_DIR) / "regime_quality_summary.csv"
+    baseline = pd.DataFrame()
+    if quality_path.exists():
+        quality = pd.read_csv(quality_path)
+        if "symbol_scope" in quality.columns:
+            baseline = quality[quality["symbol_scope"] == "ALL"].copy()
+        keep_cols = [
+            "method",
+            "n_rows",
+            "n_symbols",
+            "n_regimes",
+            "avg_regime_duration",
+            "transition_diagonal_probability",
+            "mean_confidence",
+            "hmm_reference_nmi",
+            "hmm_reference_ari",
+            "hmm_reference_purity",
+        ]
+        baseline = baseline[[col for col in keep_cols if col in baseline.columns]]
+        baseline["source_phase"] = "phase16_regime_quality"
+
+    guided = summary[
+        [
+            "method",
+            "n_rows",
+            "n_symbols",
+            "n_regimes",
+            "avg_regime_duration",
+            "transition_diagonal_probability",
+            "mean_confidence",
+            "hmm_reference_nmi",
+            "hmm_reference_ari",
+            "hmm_reference_purity",
+        ]
+    ].copy()
+    guided["source_phase"] = "phase19b_full_guided_encoder"
+
+    comparison = pd.concat([baseline, guided], ignore_index=True)
+    if comparison.empty:
+        comparison = guided
+
+    contrastive_nmi = np.nan
+    contrastive_purity = np.nan
+    if "method" in comparison.columns and (comparison["method"] == "contrastive").any():
+        contrastive_row = comparison[comparison["method"] == "contrastive"].iloc[0]
+        contrastive_nmi = float(contrastive_row.get("hmm_reference_nmi", np.nan))
+        contrastive_purity = float(contrastive_row.get("hmm_reference_purity", np.nan))
+
+    comparison["hmm_nmi_vs_contrastive_delta"] = (
+        comparison["hmm_reference_nmi"].astype(float) - contrastive_nmi
+    )
+    comparison["hmm_purity_vs_contrastive_delta"] = (
+        comparison["hmm_reference_purity"].astype(float) - contrastive_purity
+    )
+    comparison = comparison[COMPARISON_COLS].sort_values(
+        ["hmm_reference_nmi", "hmm_reference_purity"], ascending=False
+    )
+    comparison.to_csv(Path(SAVE_DIR) / "guided_encoder_comparison.csv", index=False)
+    return comparison
+
+
 def save_loss_plot(loss_history: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.plot(loss_history["epoch"], loss_history["loss"], color="#2563EB", marker="o")
-    ax.set_title("Phase 18 - HMM-Guided Encoder Loss")
+    ax.set_title("Phase 19B - HMM-Guided Encoder Loss")
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Loss")
     ax.grid(True, alpha=0.25)
@@ -476,7 +553,7 @@ def save_transition_plot(method: str, frame: pd.DataFrame) -> None:
     matrix = np.divide(counts, row_sum, out=np.zeros_like(counts), where=row_sum != 0)
     fig, ax = plt.subplots(figsize=(6, 5))
     image = ax.imshow(matrix, cmap="Blues", vmin=0, vmax=1)
-    ax.set_title(f"Phase 18 Transition Matrix - {method}")
+    ax.set_title(f"Phase 19B Transition Matrix - {method}")
     ax.set_xlabel("Next regime")
     ax.set_ylabel("Current regime")
     ax.set_xticks(range(N_REGIMES))
@@ -501,13 +578,16 @@ def main() -> None:
     embeddings, meta = extract_guided_embeddings(model, guided.matrices)
     assignments = fit_guided_assignments(embeddings, meta)
     summary = summarize_guided(embeddings, assignments, loss_history, args)
+    comparison = save_guided_comparison(summary)
 
     save_loss_plot(loss_history)
     for method in GUIDED_METHODS:
         save_transition_plot(method, assignments[assignments["method"] == method])
 
-    print("\nPhase 18 guided encoder summary:")
+    print("\nPhase 19B guided encoder summary:")
     print(summary.to_string(index=False))
+    print("\nPhase 19B guided encoder comparison:")
+    print(comparison.to_string(index=False))
     print("\nOK: HMM-guided encoder artifacts saved.")
 
 

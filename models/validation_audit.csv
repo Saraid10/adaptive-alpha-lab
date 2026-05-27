@@ -7,7 +7,7 @@ feature_source_no_obvious_future_ops,PASS,critical,0,0,No shift(-h) or centered 
 features_symbol_rows,PASS,critical,2,0,"features counts: BTCUSDT=17460, ETHUSDT=17460"
 fold_embargo_and_label_purge,PASS,critical,18,0,"18/18 folds satisfy row separation, 120-bar embargo, and 8-bar label-horizon purge."
 fold_local_regime_refit_artifacts,PASS,critical,6,0,"Fold-local rows by method: global_lgbm=25920, regime_lgbm_contrastive=25920, regime_lgbm_contrastive_hmm=25920, regime_lgbm_hmm=25920, regime_lgbm_kmeans=25920, regime_lgbm_vol_bucket=25920"
-guided_encoder_artifacts,PASS,critical,3,0,summary_rows=2; loss_rows=1; epochs=1; best_hmm_reference_nmi=0.389
+guided_encoder_artifacts,PASS,critical,32,0,summary_rows=2; loss_rows=30; comparison_rows=7; epochs=30; best_hmm_reference_nmi=0.869; guided_nmi_minus_contrastive=0.837
 joined_model_rows_are_finite,PASS,critical,34872,0,Joined feature/target rows contain no NaN/inf values.
 literature_positioning_artifacts,PASS,critical,13,0,matrix_rows=13; clusters=5
 ohlcv_symbol_rows,PASS,critical,2,0,"ohlcv counts: BTCUSDT=17520, ETHUSDT=17520"

@@ -72,6 +72,7 @@ Binance OHLCV
 - Phase 17 compute planning with encoder timing, ablation budget, and experiment-priority queue.
 - Phase 18 HMM-guided contrastive encoder prototype with weak HMM-state positives and boundary-aware hard negatives.
 - Phase 19A literature positioning across time-series contrastive learning, financial regime switching, financial ML validation, and regime-conditioned alpha modeling.
+- Phase 19B full 30-epoch HMM-guided encoder run with guided-vs-baseline structural comparison.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -137,9 +138,10 @@ python -m pip install -r requirements-research.txt
 | `models/ablation_budget.csv` | Prioritized 12-run encoder ablation queue |
 | `models/compute_budget_summary.csv` | Compact compute-budget summary for dashboard/report use |
 | `models/compute_budget_plan.png` | Visual ablation-runtime budget |
-| `models/guided_encoder_summary.csv` | Phase 18 HMM-guided encoder structural diagnostics |
-| `models/guided_encoder_loss.csv` | Phase 18 guided training loss and pair-mining diagnostics |
-| `models/guided_encoder_loss_curve.png` | Visual Phase 18 training loss curve |
+| `models/guided_encoder_summary.csv` | Phase 19B HMM-guided encoder structural diagnostics |
+| `models/guided_encoder_loss.csv` | Phase 19B guided training loss and pair-mining diagnostics |
+| `models/guided_encoder_comparison.csv` | Phase 19B comparison of guided encoder regimes versus existing structural baselines |
+| `models/guided_encoder_loss_curve.png` | Visual Phase 19B training loss curve |
 | `models/per_regime_stats.csv` | Volatility, return, liquidity, and IC diagnostics by regime |
 | `models/experiment_results.csv` | Master model comparison table |
 | `models/alpha_oos_predictions.csv` | Out-of-sample model predictions |
@@ -221,7 +223,7 @@ The primary target is `tb_label_8h`, an 8-hour triple-barrier label with classes
 
 The validation scheme uses expanding walk-forward folds with a 5-day embargo gap between train and test windows. This reduces leakage from overlapping financial labels and makes the model comparison more defensible.
 
-Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, Phase 17 compute-plan artifact completeness, Phase 18 guided-encoder artifact completeness, Phase 19A literature-positioning artifact completeness, and run-registry snapshot completeness.
+Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, Phase 17 compute-plan artifact completeness, Phase 19B guided-encoder full-run artifact completeness, Phase 19A literature-positioning artifact completeness, and run-registry snapshot completeness.
 
 The audit also records one methodological warning: the legacy `regime_assignments.csv` artifact is offline/global. Paper-grade predictive regime claims should use the Phase 13 `walkforward_experiment_results.csv` artifact instead.
 
@@ -395,7 +397,18 @@ Phase 19A turns the project from a strong engineering artifact into a paper-shap
 
 The key paper framing is now clear: Adaptive Alpha Lab is not claiming that HMM states are true market regimes or that the strategy is profitable. It is testing whether learned regime representations can beat, match, or explain classical sequential regimes under fair financial validation. The detailed source map is stored in `reports/related_work.md` and `reports/literature_matrix.csv`.
 
+## Phase 19B Full Guided Encoder Run
+
+Phase 19B runs the HMM-guided encoder for the intended 30-epoch budget. The loss fell from `0.9284` in epoch 1 to `0.0949` in epoch 30, and every batch kept valid contrastive anchors.
+
+| Method | Epochs | Silhouette | Avg Duration | Transition Diagonal | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|---:|---:|
+| hmm_guided_gmm | 30 | 0.384 | 5.09 | 0.804 | 0.609 | 0.759 |
+| hmm_guided_hmm | 30 | 0.629 | 5.72 | 0.825 | 0.869 | 0.957 |
+
+The important structural result is that `hmm_guided_hmm` is now much closer to the raw-feature HMM reference than the old learned-regime path. Phase 16 contrastive-GMM had `HMM NMI = 0.032`; the full HMM-guided HMM reaches `0.869`. This does not yet prove better alpha performance, but it does prove that the guided objective can make the learned embedding path strongly state-aligned. The downstream test comes next.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18 HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, and a Streamlit research dashboard. The next important work is not live trading; it is running the full guided encoder experiment, adding time-frequency views, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, and a Streamlit research dashboard. The next important work is not live trading; it is feeding the full guided-regime assignments into the fold-local alpha benchmark and testing whether better structural alignment improves downstream IC, Sharpe, drawdown, or calibration.
 
