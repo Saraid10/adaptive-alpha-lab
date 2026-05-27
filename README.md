@@ -56,6 +56,7 @@ Binance OHLCV
 - Phase 15.0 run registry for timestamped artifact snapshots and frozen baselines.
 - Phase 15A statistical testing with fold-level bootstrap confidence intervals, paired tests, and DM-style forecast-loss checks.
 - Phase 15B multiple-testing correction, corrected claim status, and Probabilistic Sharpe diagnostics.
+- Phase 17 compute planning with encoder timing, ablation budget, and experiment-priority queue.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -78,6 +79,7 @@ python src/baselines.py --symbols BTCUSDT ETHUSDT
 python src/alpha_models.py --symbols BTCUSDT ETHUSDT
 python src/regime_stability.py --symbols BTCUSDT ETHUSDT
 python src/regime_quality.py --symbols BTCUSDT ETHUSDT
+python src/compute_plan.py --symbols BTCUSDT ETHUSDT
 python src/walkforward_regimes.py --symbols BTCUSDT ETHUSDT
 python src/robustness.py
 python src/robustness_stress.py
@@ -115,6 +117,10 @@ python -m pip install -r requirements-research.txt
 | `models/regime_agreement_matrix.csv` | Pairwise NMI/ARI/same-label agreement across regime methods |
 | `models/regime_quality_heatmap.png` | Visual summary of balance, persistence, confidence, and HMM-reference agreement |
 | `models/regime_agreement_heatmap.png` | Pairwise method-agreement heatmap |
+| `models/compute_profile.csv` | Phase 17 local encoder timing and train-cost estimate |
+| `models/ablation_budget.csv` | Prioritized 12-run encoder ablation queue |
+| `models/compute_budget_summary.csv` | Compact compute-budget summary for dashboard/report use |
+| `models/compute_budget_plan.png` | Visual ablation-runtime budget |
 | `models/per_regime_stats.csv` | Volatility, return, liquidity, and IC diagnostics by regime |
 | `models/experiment_results.csv` | Master model comparison table |
 | `models/alpha_oos_predictions.csv` | Out-of-sample model predictions |
@@ -167,6 +173,7 @@ adaptive-alpha-lab/
 │   ├── baselines.py
 │   ├── regime_stability.py
 │   ├── regime_quality.py
+│   ├── compute_plan.py
 │   ├── validation_audit.py
 │   ├── walkforward_regimes.py
 │   ├── robustness.py
@@ -188,7 +195,7 @@ The primary target is `tb_label_8h`, an 8-hour triple-barrier label with classes
 
 The validation scheme uses expanding walk-forward folds with a 5-day embargo gap between train and test windows. This reduces leakage from overlapping financial labels and makes the model comparison more defensible.
 
-Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, and run-registry snapshot completeness.
+Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, fold-local artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, Phase 17 compute-plan artifact completeness, and run-registry snapshot completeness.
 
 The audit also records one methodological warning: the legacy `regime_assignments.csv` artifact is offline/global. Paper-grade predictive regime claims should use the Phase 13 `walkforward_experiment_results.csv` artifact instead.
 
@@ -205,6 +212,8 @@ Phase 15A adds statistical rigor. It computes fold-level IC, Sharpe, total retur
 Phase 15B adds multiple-testing discipline. It applies Benjamini-Hochberg and Holm corrections across tested method comparisons, labels each finding as corrected, suggestive, or not significant, and adds Probabilistic Sharpe Ratio diagnostics. This prevents a single attractive p-value from becoming an overclaimed research result.
 
 Phase 16 adds structural regime-quality metrics independent of alpha returns. It measures regime balance, persistence, posterior confidence, pairwise NMI/ARI agreement, and agreement with the raw-feature HMM reference. The HMM sequence is a classical comparison proxy, not ground truth. This phase answers whether a method produces coherent state partitions before asking whether those states improve alpha models.
+
+Phase 17 adds compute planning before heavier encoder experiments. It profiles a synthetic encoder forward/backward step on the local machine, estimates full 30-epoch retraining cost, and creates a capped ablation queue. On the current CPU-only environment, one encoder retrain is estimated at about 99.45 minutes, and the full 12-run initial ablation grid is estimated at about 21.49 hours including evaluation overhead. The first three runs are marked as the priority queue before expanding the full grid.
 
 Dense contrastive regime inference uses stride 1 after the encoder window warmup, so the learned-regime method is compared on the same BTC+ETH row universe as HMM-style, KMeans, and volatility-bucket baselines.
 
@@ -308,7 +317,31 @@ Phase 16 asks whether regime methods form coherent state partitions before using
 
 The useful finding is diagnostic rather than promotional. Contrastive and contrastive-HMM produce very balanced and persistent regimes, but they weakly agree with the raw-feature HMM reference. Volatility buckets and KMeans agree more with HMM states, even though they are simpler. This supports the next research step: improve the encoder objective so learned embeddings become alpha-relevant, not merely smooth.
 
+## Phase 17 Compute Plan
+
+Phase 17 prevents scope creep before the encoder-upgrade phases. The project now records the current encoder cost and the next ablation queue as artifacts.
+
+| Metric | Value | Meaning |
+|---|---:|---|
+| Training windows | 34,798 | Sliding windows across BTCUSDT and ETHUSDT |
+| Batches per epoch | 271 | Batch size 128, drop-last |
+| Encoder parameters | 139,408 | Current `TemporalEncoder` size |
+| Measured step time | 0.734 sec | Synthetic CPU forward/backward step |
+| Estimated 30-epoch retrain | 99.45 min | One encoder experiment |
+| Initial 12-run grid | 21.49 hours | 3 losses x 2 augmentations x 2 assignment methods |
+| Budget status | green | Under the 24-hour local budget |
+
+The first three runs are:
+
+| Priority | Loss | Augmentation | Assignment | Decision |
+|---:|---|---|---|---|
+| 1 | hmm_guided | time_only | hmm | run_first |
+| 2 | hmm_guided | time_only | gmm | run_first |
+| 3 | hmm_guided | time_frequency | hmm | run_first |
+
+This makes Phase 18 practical: start with HMM-guided objectives and only expand to the full ablation grid if the early runs improve the learned-regime path.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, and a Streamlit research dashboard. The next important work is not live trading; it is encoder ablations, improved contrastive objectives, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, and a Streamlit research dashboard. The next important work is not live trading; it is HMM-guided encoder objectives, time-frequency views, and testing whether better learned embeddings can close the remaining gap against simple fold-local baselines.
 

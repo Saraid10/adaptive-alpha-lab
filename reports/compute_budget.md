@@ -32,10 +32,24 @@ These are practical local observations, not formal benchmarks:
 | Phase 14B cost/threshold/period stress grid | under 1 minute |
 | Phase 15A/15B statistical tests | under 1 minute |
 | Phase 16 regime-quality diagnostics | under 1 minute |
+| Phase 17 compute planner | about 20 seconds with 5 profiled CPU steps |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
-The encoder retraining runtime should be measured before large ablations. Future Phase 17 should add measured timings for one encoder training run on the current machine.
+Phase 17 measured the current encoder training cost with a synthetic CPU forward/backward timing profile. This is not a formal hardware benchmark, but it is enough to keep the next experiment queue realistic.
+
+| Metric | Value |
+|---|---:|
+| Device | CPU |
+| Encoder parameters | 139,408 |
+| Training windows | 34,798 |
+| Batches per epoch | 271 |
+| Synthetic step time | 0.734 seconds |
+| Estimated epoch time | 3.32 minutes |
+| Estimated 30-epoch encoder run | 99.45 minutes |
+| Estimated 12-run ablation grid | 21.49 hours |
+| Local budget | 24 hours |
+| Budget status | green |
 
 ## Mandatory Next Experiments
 
@@ -46,7 +60,7 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 15A statistical tests | 0 retraining runs | Complete; uses frozen predictions/artifacts |
 | Phase 15B multiple-testing corrections | 0 retraining runs | Complete; extends Phase 15A tables |
 | Phase 16 regime quality metrics | 0 retraining runs | Complete; uses existing regime assignments |
-| Phase 17 compute plan | 1 timing run if needed | Measure encoder retrain cost |
+| Phase 17 compute plan | 0 retraining runs | Complete; measured local encoder cost using synthetic timing |
 | Phase 18 HMM-guided encoder | 1-2 encoder runs | Minimal proof before ablations |
 | Phase 19 time-frequency augmentation | 2-3 encoder runs | Time-only, frequency-only, both |
 | Phase 20 hard negatives | 2-3 encoder runs | Random vs in-trajectory vs boundary negatives |
@@ -69,6 +83,16 @@ assignment methods = GMM, HMM
 ```
 
 Encoder depth and hidden-dimension ablations should only happen after the loss/augmentation/assignment choices show promise.
+
+The first three queued runs are:
+
+| Priority | Loss | Augmentation | Assignment | Decision |
+|---:|---|---|---|---|
+| 1 | `hmm_guided` | `time_only` | `hmm` | run first |
+| 2 | `hmm_guided` | `time_only` | `gmm` | run first |
+| 3 | `hmm_guided` | `time_frequency` | `hmm` | run first |
+
+The rest of the 12-run grid should stay on hold until one of these runs improves the learned-regime path.
 
 ## Multi-Asset Gate
 

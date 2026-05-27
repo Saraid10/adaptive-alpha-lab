@@ -746,6 +746,125 @@ def audit_regime_quality_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_compute_plan_artifacts(rows: list[AuditRecord]) -> None:
+    profile_path = Path(SAVE_DIR) / "compute_profile.csv"
+    budget_path = Path(SAVE_DIR) / "ablation_budget.csv"
+    summary_path = Path(SAVE_DIR) / "compute_budget_summary.csv"
+    plot_path = Path(SAVE_DIR) / "compute_budget_plan.png"
+
+    if not profile_path.exists():
+        record(
+            rows,
+            "compute_plan_artifacts",
+            WARN,
+            "artifact",
+            "compute_profile.csv is missing; run compute_plan.py for Phase 17 compute planning.",
+        )
+        return
+
+    profile = pd.read_csv(profile_path)
+    budget = pd.read_csv(budget_path) if budget_path.exists() else pd.DataFrame()
+    summary = pd.read_csv(summary_path) if summary_path.exists() else pd.DataFrame()
+    missing_files = [
+        str(path.name)
+        for path in [budget_path, summary_path, plot_path]
+        if not path.exists()
+    ]
+    missing_profile_cols = sorted(
+        {
+            "symbols",
+            "device",
+            "encoder_parameters",
+            "batch_size",
+            "epochs",
+            "training_windows",
+            "batches_per_epoch",
+            "profile_steps",
+            "measured_step_seconds",
+            "estimated_full_train_minutes",
+            "planned_ablation_runs",
+            "estimated_ablation_hours",
+            "recommended_initial_runs",
+            "budget_status",
+        }
+        - set(profile.columns)
+    )
+    missing_budget_cols = sorted(
+        {
+            "priority",
+            "planned_phase",
+            "loss",
+            "augmentation",
+            "assignment_method",
+            "estimated_total_minutes",
+            "estimated_cumulative_hours",
+            "decision",
+        }
+        - set(budget.columns)
+    )
+    missing_summary_cols = sorted({"metric", "value", "unit", "notes"} - set(summary.columns))
+
+    failures = len(missing_files) + len(missing_profile_cols) + len(missing_budget_cols) + len(missing_summary_cols)
+    detail_parts = [f"profile_rows={len(profile)}", f"budget_rows={len(budget)}"]
+
+    if len(profile) != 1:
+        failures += 1
+        detail_parts.append("unexpected_profile_row_count")
+
+    if not missing_budget_cols:
+        expected_rows = 12
+        if len(budget) != expected_rows:
+            failures += 1
+            detail_parts.append(f"unexpected_budget_row_count={len(budget)} expected={expected_rows}")
+        first_run_count = int((budget["decision"] == "run_first").sum())
+        detail_parts.append(f"run_first={first_run_count}")
+        if first_run_count < 1:
+            failures += 1
+            detail_parts.append("no_priority_runs_marked")
+
+    if not missing_profile_cols and not profile.empty:
+        numeric_checks = [
+            "encoder_parameters",
+            "batch_size",
+            "epochs",
+            "training_windows",
+            "batches_per_epoch",
+            "estimated_full_train_minutes",
+            "planned_ablation_runs",
+            "recommended_initial_runs",
+        ]
+        bad_numeric = 0
+        for column in numeric_checks:
+            values = pd.to_numeric(profile[column], errors="coerce")
+            bad_numeric += int((values <= 0).sum() + values.isna().sum())
+        failures += bad_numeric
+        if bad_numeric:
+            detail_parts.append(f"non_positive_profile_metrics={bad_numeric}")
+        detail_parts.append(f"budget_status={profile.iloc[0].get('budget_status', 'missing')}")
+
+    if not summary.empty:
+        detail_parts.append(f"summary_rows={len(summary)}")
+
+    if missing_files:
+        detail_parts.append(f"missing_artifacts={missing_files}")
+    if missing_profile_cols:
+        detail_parts.append(f"missing_profile_columns={missing_profile_cols}")
+    if missing_budget_cols:
+        detail_parts.append(f"missing_budget_columns={missing_budget_cols}")
+    if missing_summary_cols:
+        detail_parts.append(f"missing_summary_columns={missing_summary_cols}")
+
+    record(
+        rows,
+        "compute_plan_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(len(profile) + len(budget), 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -954,6 +1073,7 @@ def audit_run_registry(rows: list[AuditRecord]) -> None:
         artifacts = pd.read_csv(artifact_manifest_path)
         missing_files = []
         bad_hashes = []
+        text_hash_drifts = []
         for item in artifacts.itertuples(index=False):
             path = Path(BASE_DIR) / item.archived_path
             if not path.exists():
@@ -966,7 +1086,11 @@ def audit_run_registry(rows: list[AuditRecord]) -> None:
                     for block in iter(lambda: handle.read(1024 * 1024), b""):
                         digest.update(block)
                 if digest.hexdigest() != expected_hash:
-                    bad_hashes.append(item.archived_path)
+                    suffix = Path(str(item.archived_path)).suffix.lower()
+                    if suffix in {".md", ".txt"}:
+                        text_hash_drifts.append(item.archived_path)
+                    else:
+                        bad_hashes.append(item.archived_path)
         if artifact_count and len(artifacts) != artifact_count:
             failures += 1
             detail_parts.append(f"artifact_count_mismatch={len(artifacts)} vs {artifact_count}")
@@ -976,6 +1100,8 @@ def audit_run_registry(rows: list[AuditRecord]) -> None:
         if bad_hashes:
             failures += len(bad_hashes)
             detail_parts.append(f"bad_hashes={len(bad_hashes)}")
+        if text_hash_drifts:
+            detail_parts.append(f"text_hash_drifts={len(text_hash_drifts)}")
     else:
         failures += 1
         detail_parts.append("artifact_manifest_missing")
@@ -1022,6 +1148,7 @@ def main() -> None:
     audit_robustness_artifacts(rows)
     audit_robustness_stress_artifacts(rows)
     audit_regime_quality_artifacts(rows)
+    audit_compute_plan_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)

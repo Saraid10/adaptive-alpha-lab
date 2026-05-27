@@ -167,7 +167,7 @@ random_state=42
 | Embargo | 5 days, 120 hourly bars |
 | Primary label horizon purge | 8 bars |
 | Main OOS rows | 25,920 per method |
-| Critical audit status | 23 PASS, 1 methodological WARN, 0 FAIL |
+| Critical audit status | 24 PASS, 1 methodological WARN, 0 FAIL |
 
 The current methodological warning is that the legacy `regime_assignments.csv` artifact is offline/global. Predictive regime claims should use the fold-local Phase 13 artifacts.
 
@@ -180,8 +180,26 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 15A | Fold-level bootstrap confidence intervals, paired tests, and DM-style NLL forecast-loss checks |
 | Phase 15B | Benjamini-Hochberg/Holm corrections, corrected claim status, and Probabilistic Sharpe diagnostics |
 | Phase 16 | Regime quality and pairwise agreement diagnostics independent of alpha performance |
+| Phase 17 | Encoder compute profile and 12-run ablation budget |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
+
+## Compute Plan
+
+Phase 17 records local compute estimates before starting encoder-upgrade work.
+
+| Field | Value |
+|---|---|
+| Artifact | `models/compute_profile.csv` |
+| Ablation queue | `models/ablation_budget.csv` |
+| Visual plan | `models/compute_budget_plan.png` |
+| Device measured | CPU |
+| Synthetic step time | 0.734 seconds |
+| Estimated encoder retrain | 99.45 minutes |
+| Estimated 12-run grid | 21.49 hours |
+| Budget status | green |
+
+The first queued experiments are HMM-guided objectives with HMM/GMM assignment, followed by an HMM-guided time-frequency variant. Full ablations should only expand if these priority runs improve the learned-regime benchmark.
 
 ## Statistical Testing
 

@@ -19,6 +19,9 @@ models/*.csv
 !models/regime_stability_summary.csv
 !models/regime_quality_summary.csv
 !models/regime_agreement_matrix.csv
+!models/compute_profile.csv
+!models/ablation_budget.csv
+!models/compute_budget_summary.csv
 !models/per_regime_stats.csv
 !models/validation_audit.csv
 !models/fold_audit.csv

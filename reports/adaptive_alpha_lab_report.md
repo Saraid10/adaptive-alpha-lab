@@ -70,11 +70,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 23 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, and run-registry checks passed |
+| PASS | 24 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -198,6 +198,34 @@ The main finding is that learned regimes are structurally smooth but not strongl
 
 This supports the paper's core diagnostic interpretation: persistence alone is not enough. The learned encoder currently creates stable partitions, but those partitions are not yet aligned with the state structure that helps the downstream alpha benchmark. The next encoder phase should therefore change the representation-learning objective, not merely increase model size.
 
+## Phase 17 Compute Plan
+
+Phase 17 makes the encoder-upgrade roadmap compute-aware. Before launching HMM-guided losses, time-frequency views, or broader ablation grids, the project now records a local training-cost estimate and a capped experiment queue.
+
+The current profile uses synthetic forward/backward timing for the existing `TemporalEncoder` on the local CPU-only environment.
+
+| Metric | Value |
+|---|---:|
+| Encoder parameters | 139,408 |
+| Training windows | 34,798 |
+| Batches per epoch | 271 |
+| Profiled step time | 0.734 seconds |
+| Estimated epoch time | 3.32 minutes |
+| Estimated 30-epoch retrain | 99.45 minutes |
+| Estimated 12-run initial grid | 21.49 hours |
+| Local budget | 24 hours |
+| Budget status | green |
+
+The initial ablation cap remains 12 runs: 3 losses by 2 augmentations by 2 assignment methods. Phase 17 marks only three runs as `run_first`:
+
+| Priority | Loss | Augmentation | Assignment |
+|---:|---|---|---|
+| 1 | `hmm_guided` | `time_only` | `hmm` |
+| 2 | `hmm_guided` | `time_only` | `gmm` |
+| 3 | `hmm_guided` | `time_frequency` | `hmm` |
+
+This matters for paper execution because it prevents an uncontrolled ablation explosion. The project should first test whether HMM-guided supervision improves the learned-regime path. Only if the priority runs improve the fold-local learned-regime benchmark should the remaining grid be launched.
+
 ## Model Comparison
 
 | Method | IC | Accuracy | Balanced Accuracy | Sharpe | Drawdown | Turnover | Total Return |
@@ -229,13 +257,14 @@ This is still a useful research result because it separates representation learn
 - Regime-quality agreement metrics are diagnostic; agreement with HMM does not prove economic correctness.
 - Phase 14B stress testing re-scores existing predictions; it does not retrain models under each cost or threshold assumption.
 - Several method differences are not statistically significant at the 5% level under fold-level tests, and the strongest IC finding does not survive multiple-testing correction.
+- Phase 17 timings are synthetic planning estimates, not formal hardware benchmarks.
 - Backtest returns are research diagnostics, not deployable trading evidence.
 - The project intentionally excludes live trading, RL, online retraining, and order-book data in this phase.
 
 ## Next Steps
 
 1. Improve the learned encoder objective and retest the contrastive-HMM hybrid.
-2. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
-3. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
-4. Add time-frequency augmentation and hard-negative mining only after compute planning.
+2. Run the Phase 17 priority queue: HMM-guided time-only HMM, HMM-guided time-only GMM, and HMM-guided time-frequency HMM.
+3. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
+4. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
 5. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.

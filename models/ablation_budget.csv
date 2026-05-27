@@ -1,0 +1,13 @@
+priority,planned_phase,loss,augmentation,assignment_method,epochs,estimated_train_minutes,estimated_eval_minutes,estimated_total_minutes,decision,estimated_cumulative_hours
+1,phase18,hmm_guided,time_only,hmm,30,99.45013557000975,8.0,107.45013557000975,run_first,1.7908355928334958
+2,phase18,hmm_guided,time_only,gmm,30,99.45013557000975,8.0,107.45013557000975,run_first,3.5816711856669916
+3,phase19,hmm_guided,time_frequency,hmm,30,99.45013557000975,8.0,107.45013557000975,run_first,5.372506778500488
+4,phase21,nt_xent,time_only,hmm,30,99.45013557000975,8.0,107.45013557000975,hold_until_signal,7.163342371333983
+5,phase21,info_nce,time_only,hmm,30,99.45013557000975,8.0,107.45013557000975,hold_until_signal,8.95417796416748
+6,phase19,nt_xent,time_frequency,hmm,30,99.45013557000975,8.0,107.45013557000975,hold_until_signal,10.745013557000975
+7,phase19,hmm_guided,time_frequency,gmm,30,99.45013557000975,8.0,107.45013557000975,hold_until_signal,12.535849149834469
+8,phase21,info_nce,time_frequency,gmm,30,99.45013557000975,8.0,107.45013557000975,hold_until_signal,14.326684742667965
+9,phase21,info_nce,time_frequency,hmm,30,99.45013557000975,8.0,107.45013557000975,hold_until_signal,16.11752033550146
+10,phase21,info_nce,time_only,gmm,30,99.45013557000975,8.0,107.45013557000975,hold_until_signal,17.908355928334956
+11,phase19,nt_xent,time_frequency,gmm,30,99.45013557000975,8.0,107.45013557000975,hold_until_signal,19.69919152116845
+12,phase21,nt_xent,time_only,gmm,30,99.45013557000975,8.0,107.45013557000975,hold_until_signal,21.490027114001943
