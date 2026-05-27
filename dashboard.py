@@ -61,6 +61,9 @@ def main() -> None:
     regime_stability = read_csv("regime_stability_summary.csv")
     regime_quality = read_csv("regime_quality_summary.csv")
     regime_agreement = read_csv("regime_agreement_matrix.csv")
+    compute_profile = read_csv("compute_profile.csv")
+    ablation_budget = read_csv("ablation_budget.csv")
+    compute_budget_summary = read_csv("compute_budget_summary.csv")
     per_regime = read_csv("per_regime_stats.csv")
     validation_audit = read_csv("validation_audit.csv")
     fold_audit = read_csv("fold_audit.csv")
@@ -225,6 +228,30 @@ def main() -> None:
         c3.metric("Artifacts", int(latest_run["artifact_count"]))
         c4.metric("Missing", int(latest_run["missing_artifact_count"]))
         st.dataframe(run_index, width="stretch")
+
+    st.header("Compute Plan")
+    if compute_profile.empty:
+        st.info("Run python src/compute_plan.py to generate Phase 17 compute-planning artifacts.")
+    else:
+        st.caption(
+            "Phase 17 estimates the local cost of encoder retraining before launching "
+            "HMM-guided, time-frequency, or ablation experiments."
+        )
+        row = compute_profile.iloc[0]
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Device", row["device"])
+        c2.metric("One Encoder Run", f"{float(row['estimated_full_train_minutes']):.1f} min")
+        c3.metric("12-Run Grid", f"{float(row['estimated_ablation_hours']):.1f} h")
+        c4.metric("Budget Status", row["budget_status"])
+        if not compute_budget_summary.empty:
+            st.subheader("Budget Summary")
+            st.dataframe(compute_budget_summary, width="stretch")
+        if not ablation_budget.empty:
+            st.subheader("Initial Ablation Queue")
+            st.dataframe(ablation_budget, width="stretch")
+        compute_img = MODELS_DIR / "compute_budget_plan.png"
+        if compute_img.exists():
+            st.image(str(compute_img), width="stretch")
 
     st.header("Validation Audit")
     if validation_audit.empty:
