@@ -201,6 +201,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 18 | HMM-guided contrastive encoder prototype and structural diagnostics |
 | Phase 19A | Literature positioning and paper contribution map |
 | Phase 19B | Full 30-epoch HMM-guided encoder run and baseline structural comparison |
+| Phase 20 | Fold-local downstream alpha retest for HMM-guided embeddings |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -219,7 +220,7 @@ Phase 17 records local compute estimates before starting encoder-upgrade work.
 | Estimated 12-run grid | 21.49 hours |
 | Budget status | green |
 
-The first queued experiments are HMM-guided objectives with HMM/GMM assignment, followed by an HMM-guided time-frequency variant. Full ablations should only expand if these priority runs improve the learned-regime benchmark.
+The completed guided-encoder experiments now include a structural run and a fold-local downstream alpha retest. The next queued experiment is the time-frequency guided variant; broader ablations should expand only after the guided-HMM result is stress-tested.
 
 ## HMM-Guided Encoder Variant
 
@@ -235,7 +236,7 @@ Phase 18/19B adds a separate encoder variant. It does not overwrite the current 
 | Default hard negative gap | 24 bars |
 | Default hard negative weight | 2.0 |
 | Output model | `models/guided_encoder.pt` locally; ignored by Git |
-| Committed diagnostics | `guided_encoder_summary.csv`, `guided_encoder_loss.csv`, `guided_encoder_comparison.csv`, guided plots |
+| Committed diagnostics | `guided_encoder_summary.csv`, `guided_encoder_loss.csv`, `guided_encoder_comparison.csv`, `guided_alpha_comparison.csv`, guided plots |
 
 Full 30-epoch Phase 19B diagnostics:
 
@@ -244,7 +245,19 @@ Full 30-epoch Phase 19B diagnostics:
 | `hmm_guided_gmm` | 0.384 | 5.09 | 0.804 | 0.609 | 0.759 |
 | `hmm_guided_hmm` | 0.629 | 5.72 | 0.825 | 0.869 | 0.957 |
 
-The full run confirms that HMM-guided weak supervision strongly improves structural alignment versus the old contrastive encoder path. It is still not downstream alpha evidence until the guided assignments are evaluated inside the fold-local alpha benchmark.
+The full run confirms that HMM-guided weak supervision strongly improves structural alignment versus the old contrastive encoder path.
+
+## Guided Alpha Retest
+
+Phase 20 evaluates the Phase 19B guided embeddings inside the strict fold-local alpha benchmark. The embeddings are frozen, but the GMM/HMM assignment layer on top of those embeddings is fit inside each walk-forward fold.
+
+| Method | IC | Sharpe | Drawdown | Total Return | OOS Rows |
+|---|---:|---:|---:|---:|---:|
+| `regime_lgbm_hmm` | 0.0051 | -0.340 | -0.710 | -0.536 | 25,920 |
+| `regime_lgbm_hmm_guided_gmm` | -0.0092 | -0.976 | -0.900 | -0.854 | 25,920 |
+| `regime_lgbm_hmm_guided_hmm` | 0.0094 | 0.099 | -0.614 | 0.031 | 25,920 |
+
+The useful finding is narrow but real: guided embeddings help downstream alpha only when paired with an HMM assignment layer. The GMM assignment layer on the same guided embedding space remains weak. Fold-level IC improvement versus raw-feature HMM is positive but not statistically significant at the 5% level.
 
 ## Statistical Testing
 
@@ -272,10 +285,10 @@ Phase 15B corrected-claim output should be used in paper language. A raw p-value
 The current frozen baseline supports a cautious conclusion:
 
 ```text
-Raw-feature HMM is the strongest current regime-aware layer for signal IC,
-Sharpe, and total-return robustness. The global model is more defensive on
-drawdown under higher costs. Contrastive-HMM improves the learned-regime path
-but does not yet dominate raw-feature HMM.
+HMM-guided embeddings with fold-local HMM assignment are the strongest current
+point-estimate method for IC, Sharpe, drawdown, and total return. The result is
+promising but not yet a statistically significant dominance claim over the
+raw-feature HMM. The GMM assignment layer on guided embeddings remains weak.
 ```
 
 Future encoder phases must be evaluated against this frozen run, not against overwritten latest CSVs.

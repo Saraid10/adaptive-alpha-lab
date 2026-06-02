@@ -32,6 +32,7 @@ CURATED_ARTIFACTS = [
     "models/guided_encoder_summary.csv",
     "models/guided_encoder_loss.csv",
     "models/guided_encoder_comparison.csv",
+    "models/guided_alpha_comparison.csv",
     "models/per_regime_stats.csv",
     "models/validation_audit.csv",
     "models/fold_audit.csv",

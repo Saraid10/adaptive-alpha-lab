@@ -28,6 +28,9 @@ from targets import HORIZONS
 PASS = "PASS"
 WARN = "WARN"
 FAIL = "FAIL"
+GUIDED_REGIME_METHODS = ["hmm_guided_gmm", "hmm_guided_hmm"]
+FOLD_LOCAL_REGIME_METHODS = REGIME_METHODS + GUIDED_REGIME_METHODS
+FOLD_LOCAL_METHODS = ["global_lgbm"] + [f"regime_lgbm_{method}" for method in FOLD_LOCAL_REGIME_METHODS]
 
 
 @dataclass
@@ -452,6 +455,7 @@ def audit_walkforward_artifacts(rows: list[AuditRecord]) -> None:
     results_path = Path(SAVE_DIR) / "walkforward_experiment_results.csv"
     comparison_path = Path(SAVE_DIR) / "walkforward_comparison.csv"
     summary_path = Path(SAVE_DIR) / "walkforward_regime_summary.csv"
+    guided_comparison_path = Path(SAVE_DIR) / "guided_alpha_comparison.csv"
 
     if not results_path.exists():
         record(
@@ -459,16 +463,20 @@ def audit_walkforward_artifacts(rows: list[AuditRecord]) -> None:
             "fold_local_regime_refit_artifacts",
             WARN,
             "artifact",
-            "walkforward_experiment_results.csv is missing; run walkforward_regimes.py for Phase 13 strict regime-refit results.",
+            "walkforward_experiment_results.csv is missing; run walkforward_regimes.py for Phase 20 guided alpha retest results.",
         )
         return
 
     results = pd.read_csv(results_path)
-    required_methods = ["global_lgbm"] + [f"regime_lgbm_{method}" for method in REGIME_METHODS]
+    required_methods = FOLD_LOCAL_METHODS
     missing = sorted(set(required_methods) - set(results["method"]))
     row_counts = results.set_index("method")["n_test_rows"]
     unequal = int(row_counts.nunique() > 1)
-    missing_files = [str(path.name) for path in [comparison_path, summary_path] if not path.exists()]
+    missing_files = [
+        str(path.name)
+        for path in [comparison_path, summary_path, guided_comparison_path]
+        if not path.exists()
+    ]
     failures = len(missing) + unequal + len(missing_files)
 
     detail = (
@@ -1105,7 +1113,7 @@ def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     claims = pd.read_csv(claims_path) if claims_path.exists() else pd.DataFrame()
     psr = pd.read_csv(psr_path) if psr_path.exists() else pd.DataFrame()
 
-    required_methods = ["global_lgbm"] + [f"regime_lgbm_{method}" for method in REGIME_METHODS]
+    required_methods = FOLD_LOCAL_METHODS
     expected_fold_rows = 18 * len(required_methods)
     missing_files = [
         str(path.name)

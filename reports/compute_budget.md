@@ -35,6 +35,7 @@ These are practical local observations, not formal benchmarks:
 | Phase 17 compute planner | about 20 seconds with 5 profiled CPU steps |
 | Phase 18 one-epoch guided encoder smoke run | about 4 minutes |
 | Phase 19B 30-epoch guided encoder full run | about 61 minutes |
+| Phase 20 guided downstream alpha retest | about 12 minutes |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
@@ -65,8 +66,8 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 17 compute plan | 0 retraining runs | Complete; measured local encoder cost using synthetic timing |
 | Phase 18 HMM-guided encoder | 1 smoke encoder run | Complete; validated artifact path |
 | Phase 19B full HMM-guided encoder | 1 full encoder run | Complete; 30 epochs, time-only, HMM/GMM assignments |
-| Phase 20 guided downstream alpha re-test | 0 encoder runs | Use Phase 19B guided assignments in fold-local alpha/statistical benchmark |
-| Phase 21 time-frequency augmentation | 2-3 encoder runs | Time-only, frequency-only, both |
+| Phase 20 guided downstream alpha re-test | 0 encoder runs | Complete; uses Phase 19B guided embeddings in fold-local alpha/statistical benchmark |
+| Phase 21 time-frequency augmentation | 2-3 encoder runs | Next model-side experiment; time-only baseline is complete, compare frequency-only and time+frequency |
 | Phase 22 hard negatives and ablations | capped matrix | Expand only if early results justify it |
 
 ## Initial Ablation Cap
@@ -91,9 +92,9 @@ The first three queued runs are:
 
 | Priority | Loss | Augmentation | Assignment | Decision |
 |---:|---|---|---|---|
-| 1 | `hmm_guided` | `time_only` | `hmm` | run first |
-| 2 | `hmm_guided` | `time_only` | `gmm` | run first |
-| 3 | `hmm_guided` | `time_frequency` | `hmm` | run first |
+| 1 | `hmm_guided` | `time_only` | `hmm` | complete; best point-estimate downstream method |
+| 2 | `hmm_guided` | `time_only` | `gmm` | complete; weak downstream method |
+| 3 | `hmm_guided` | `time_frequency` | `hmm` | run next |
 
 The rest of the 12-run grid should stay on hold until one of these runs improves the learned-regime path.
 
@@ -117,7 +118,19 @@ The full HMM-guided time-only encoder run completed with the standard 30-epoch s
 | `hmm_guided_gmm` | 30 | 0.384 | 0.609 | 0.759 |
 | `hmm_guided_hmm` | 30 | 0.629 | 0.869 | 0.957 |
 
-Observed runtime was about 61 minutes on the current CPU environment, better than the Phase 17 synthetic estimate of about 99 minutes. This justifies the next step: use the guided assignments in the downstream fold-local alpha benchmark before launching broader time-frequency or architecture ablations.
+Observed runtime was about 61 minutes on the current CPU environment, better than the Phase 17 synthetic estimate of about 99 minutes. This justified the Phase 20 downstream test before launching broader time-frequency or architecture ablations.
+
+## Phase 20 Downstream Result
+
+Phase 20 reused the Phase 19B guided embeddings and added no encoder retraining cost. The fold-local alpha retest completed in about 12 minutes.
+
+| Method | IC | Sharpe | Drawdown | Total Return | Statistical Read |
+|---|---:|---:|---:|---:|---|
+| `regime_lgbm_hmm` | 0.0051 | -0.340 | -0.710 | -0.536 | raw-feature sequential reference |
+| `regime_lgbm_hmm_guided_gmm` | -0.0092 | -0.976 | -0.900 | -0.854 | guided representation with weak assignment layer |
+| `regime_lgbm_hmm_guided_hmm` | 0.0094 | 0.099 | -0.614 | 0.031 | best point estimate, not significant versus raw HMM on fold-level IC |
+
+The result is strong enough to justify one focused next encoder experiment: add the time-frequency view to the guided-HMM path. It is not strong enough to justify multi-asset expansion yet.
 
 ## Multi-Asset Gate
 
@@ -151,6 +164,14 @@ List multi-asset validation as future work.
 ```
 
 This gate prevents scope creep and avoids spending compute on a generalization claim before the learned encoder has earned it.
+
+Current gate status after Phase 20:
+
+```text
+point-estimate improvement: yes
+fold-level IC significance versus raw HMM: no, p = 0.801
+decision: do not expand to multi-asset yet
+```
 
 ## Paper-Safety Rules
 
