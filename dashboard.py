@@ -45,6 +45,7 @@ def main() -> None:
     walkforward_results = read_csv("walkforward_experiment_results.csv")
     walkforward_comparison = read_csv("walkforward_comparison.csv")
     walkforward_regime_summary = read_csv("walkforward_regime_summary.csv")
+    guided_alpha_comparison = read_csv("guided_alpha_comparison.csv")
     robustness_results = read_csv("robustness_results.csv")
     robustness_summary = read_csv("robustness_summary.csv")
     robustness_wins = read_csv("robustness_wins.csv")
@@ -104,6 +105,29 @@ def main() -> None:
         c2.metric("Best Fold-Local Sharpe", f"{best_sharpe['Sharpe']:.3f}", best_sharpe["method"])
         c3.metric("Fold-Local Methods", len(walkforward_results))
         c4.metric("Rows / Method", int(walkforward_results["n_test_rows"].max()))
+        guided_rows = walkforward_results[
+            walkforward_results["regime_method"].isin(["hmm_guided_gmm", "hmm_guided_hmm"])
+        ]
+        if not guided_rows.empty:
+            st.subheader("Phase 20 Guided Alpha Retest")
+            st.caption(
+                "Guided embeddings are frozen from Phase 19B, but their GMM/HMM "
+                "assignment layers are refit inside each walk-forward fold."
+            )
+            g1, g2, g3, g4 = st.columns(4)
+            best_guided_ic = guided_rows.sort_values("IC", ascending=False).iloc[0]
+            best_guided_sharpe = guided_rows.sort_values("Sharpe", ascending=False).iloc[0]
+            hmm_reference = walkforward_results[walkforward_results["method"] == "regime_lgbm_hmm"]
+            if hmm_reference.empty:
+                delta_vs_hmm = 0.0
+            else:
+                delta_vs_hmm = float(best_guided_ic["IC"] - hmm_reference.iloc[0]["IC"])
+            g1.metric("Best Guided IC", f"{best_guided_ic['IC']:.4f}", best_guided_ic["method"])
+            g2.metric("Best Guided Sharpe", f"{best_guided_sharpe['Sharpe']:.3f}", best_guided_sharpe["method"])
+            g3.metric("Guided IC vs HMM", f"{delta_vs_hmm:+.4f}")
+            g4.metric("Guided Methods", len(guided_rows))
+            if not guided_alpha_comparison.empty:
+                st.dataframe(guided_alpha_comparison, width="stretch")
         if not walkforward_comparison.empty:
             st.subheader("Offline vs Fold-Local")
             st.dataframe(walkforward_comparison, width="stretch")

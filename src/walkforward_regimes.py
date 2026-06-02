@@ -33,6 +33,9 @@ from baselines import HMM_FEATURES
 
 POST_COLS = [f"post_{k}" for k in range(N_REGIMES)]
 ASSIGNMENT_COLS = ["fold", "split", "method", "symbol", "open_time", "feat_idx", "row_id", "regime"] + POST_COLS
+GUIDED_REGIME_METHODS = ["hmm_guided_gmm", "hmm_guided_hmm"]
+PHASE20_REGIME_METHODS = REGIME_METHODS + GUIDED_REGIME_METHODS
+GUIDED_METADATA_METHOD = "hmm_guided_gmm"
 
 
 @dataclass
@@ -47,6 +50,11 @@ def parse_args() -> argparse.Namespace:
         description="Run a strict benchmark with regime models refit inside each walk-forward fold."
     )
     parser.add_argument("--symbols", nargs="*", default=SYMBOLS)
+    parser.add_argument(
+        "--skip-guided",
+        action="store_true",
+        help="Run only the pre-Phase-20 fold-local regime methods.",
+    )
     return parser.parse_args()
 
 
@@ -119,6 +127,49 @@ def load_dense_contrastive_universe(symbols: list[str]) -> tuple[pd.DataFrame, n
     return df, aligned_embeddings
 
 
+def load_guided_embedding_matrix(df: pd.DataFrame) -> np.ndarray:
+    assignment_path = Path(SAVE_DIR) / "guided_encoder_assignments.csv"
+    embedding_path = Path(SAVE_DIR) / "guided_embeddings.npy"
+    if not assignment_path.exists() or not embedding_path.exists():
+        raise RuntimeError(
+            "Missing guided_encoder_assignments.csv or guided_embeddings.npy. "
+            "Run guided_encoder.py --epochs 30 first, or pass --skip-guided."
+        )
+
+    assignments = pd.read_csv(assignment_path)
+    required = {"method", "symbol", "feat_idx"}
+    missing = required - set(assignments.columns)
+    if missing:
+        raise RuntimeError(f"guided_encoder_assignments.csv missing columns: {sorted(missing)}")
+
+    meta = assignments[assignments["method"] == GUIDED_METADATA_METHOD][["symbol", "feat_idx"]].copy()
+    if meta.empty:
+        raise RuntimeError(f"guided_encoder_assignments.csv has no {GUIDED_METADATA_METHOD} rows.")
+    meta["feat_idx"] = meta["feat_idx"].astype(int)
+    meta = meta.drop_duplicates(["symbol", "feat_idx"]).reset_index(drop=True)
+    meta["guided_embedding_idx"] = np.arange(len(meta), dtype=int)
+
+    embeddings = np.load(embedding_path)
+    if len(meta) != len(embeddings):
+        raise RuntimeError(
+            f"Guided metadata rows ({len(meta):,}) do not match guided embeddings ({len(embeddings):,}). "
+            "Rerun guided_encoder.py."
+        )
+
+    aligned = df[["symbol", "feat_idx"]].merge(meta, on=["symbol", "feat_idx"], how="left")
+    missing_rows = int(aligned["guided_embedding_idx"].isna().sum())
+    if missing_rows:
+        raise RuntimeError(
+            f"Guided embeddings are missing {missing_rows:,} rows from the fold-local universe. "
+            "Rerun guided_encoder.py with the same symbols and dense feature store."
+        )
+
+    idx = aligned["guided_embedding_idx"].astype(int).to_numpy()
+    guided = embeddings[idx]
+    print(f"Aligned guided embeddings: {len(guided):,} rows | dim={guided.shape[1]}")
+    return guided
+
+
 def fit_scaled(train_x: np.ndarray, full_x: np.ndarray) -> tuple[np.ndarray, np.ndarray, StandardScaler]:
     scaler = StandardScaler()
     train_scaled = scaler.fit_transform(train_x)
@@ -133,6 +184,7 @@ def fit_gmm_assignments(
     test_ids: list[int],
     fold: int,
     method: str,
+    implementation: str = "fold_local_embedding_gmm",
 ) -> FoldAssignments:
     train_x, full_x, _ = fit_scaled(matrix[train_ids], matrix)
     model = GaussianMixture(
@@ -154,7 +206,7 @@ def fit_gmm_assignments(
         ],
         ignore_index=True,
     )
-    return FoldAssignments(method, "fold_local_embedding_gmm", assignments)
+    return FoldAssignments(method, implementation, assignments)
 
 
 def fit_kmeans_assignments(
@@ -313,6 +365,7 @@ def fit_fold_assignments(
     train_ids: list[int],
     test_ids: list[int],
     fold: int,
+    guided_embeddings: np.ndarray | None = None,
 ) -> list[FoldAssignments]:
     outputs = [
         fit_gmm_assignments(df_by_row, embeddings, train_ids, test_ids, fold, "contrastive"),
@@ -339,6 +392,30 @@ def fit_fold_assignments(
         fit_kmeans_assignments(df_by_row, raw_matrix, train_ids, test_ids, fold),
         fit_vol_bucket_assignments(df_by_row, train_ids, test_ids, fold),
     ]
+    if guided_embeddings is not None:
+        outputs.extend(
+            [
+                fit_gmm_assignments(
+                    df_by_row,
+                    guided_embeddings,
+                    train_ids,
+                    test_ids,
+                    fold,
+                    "hmm_guided_gmm",
+                    implementation="fold_local_guided_embedding_gmm",
+                ),
+                fit_hmm_assignments(
+                    df_by_row,
+                    guided_embeddings,
+                    train_ids,
+                    test_ids,
+                    fold,
+                    "hmm_guided_hmm",
+                    covariance_type="diag",
+                    implementation="fold_local_guided_embedding_hmm_online_filter",
+                ),
+            ]
+        )
     return outputs
 
 
@@ -346,10 +423,12 @@ def run_fold_local_regime_models(
     df_by_row: pd.DataFrame,
     embeddings: np.ndarray,
     folds: list[tuple[int, int, int]],
+    guided_embeddings: np.ndarray | None = None,
 ) -> tuple[list[PredictionSet], pd.DataFrame, pd.DataFrame]:
     raw_matrix = finite_matrix(df_by_row.sort_index(), FEATURE_COLS)
     hmm_matrix = finite_matrix(df_by_row.sort_index(), HMM_FEATURES)
-    predictions_by_method: dict[str, list[pd.DataFrame]] = {method: [] for method in REGIME_METHODS}
+    methods = PHASE20_REGIME_METHODS if guided_embeddings is not None else REGIME_METHODS
+    predictions_by_method: dict[str, list[pd.DataFrame]] = {method: [] for method in methods}
     test_assignments = []
     implementation_rows = []
 
@@ -366,6 +445,7 @@ def run_fold_local_regime_models(
             train_ids,
             test_ids,
             fold,
+            guided_embeddings=guided_embeddings,
         )
 
         for output in fold_outputs:
@@ -385,7 +465,7 @@ def run_fold_local_regime_models(
                 predictions_by_method[output.method].append(pred)
 
     outputs = []
-    for method in REGIME_METHODS:
+    for method in methods:
         frame = pd.concat(predictions_by_method[method], ignore_index=True) if predictions_by_method[method] else pd.DataFrame()
         outputs.append(PredictionSet(f"regime_lgbm_{method}", method, frame))
 
@@ -489,10 +569,55 @@ def build_comparison(walkforward_results: pd.DataFrame) -> pd.DataFrame:
     return merged[cols]
 
 
+def build_guided_alpha_comparison(walkforward_results: pd.DataFrame) -> pd.DataFrame:
+    guided_methods = [f"regime_lgbm_{method}" for method in GUIDED_REGIME_METHODS]
+    reference_methods = [
+        "global_lgbm",
+        "regime_lgbm_hmm",
+        "regime_lgbm_contrastive",
+        "regime_lgbm_contrastive_hmm",
+        "regime_lgbm_kmeans",
+        "regime_lgbm_vol_bucket",
+    ]
+    metrics = ["IC", "Sharpe", "drawdown", "total_return", "turnover", "n_test_rows"]
+    by_method = walkforward_results.set_index("method")
+    rows = []
+
+    for guided_method in guided_methods:
+        if guided_method not in by_method.index:
+            continue
+        guided = by_method.loc[guided_method]
+        for reference_method in reference_methods:
+            if reference_method not in by_method.index:
+                continue
+            reference = by_method.loc[reference_method]
+            row = {
+                "guided_method": guided_method,
+                "guided_regime_method": guided["regime_method"],
+                "reference_method": reference_method,
+                "reference_regime_method": reference["regime_method"],
+                "target": guided["target"],
+                "horizon": guided["horizon"],
+                "symbol_scope": guided["symbol_scope"],
+            }
+            for metric in metrics:
+                row[f"{metric}_guided"] = guided[metric]
+                row[f"{metric}_reference"] = reference[metric]
+                row[f"delta_{metric}"] = guided[metric] - reference[metric]
+            row["beats_reference_on_IC"] = bool(row["delta_IC"] > 0)
+            row["beats_reference_on_Sharpe"] = bool(row["delta_Sharpe"] > 0)
+            row["beats_reference_on_drawdown"] = bool(row["delta_drawdown"] > 0)
+            row["equal_test_coverage"] = bool(row["delta_n_test_rows"] == 0)
+            rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
 def main() -> None:
     args = parse_args()
     symbol_scope = "+".join(args.symbols)
     df, embeddings = load_dense_contrastive_universe(args.symbols)
+    guided_embeddings = None if args.skip_guided else load_guided_embedding_matrix(df)
     df_by_row = df.set_index("row_id", drop=False)
     folds = fold_ranges(df)
     if not folds:
@@ -504,7 +629,12 @@ def main() -> None:
     )
 
     global_output = run_global_model(df_by_row, folds)
-    regime_outputs, assignments, implementations = run_fold_local_regime_models(df_by_row, embeddings, folds)
+    regime_outputs, assignments, implementations = run_fold_local_regime_models(
+        df_by_row,
+        embeddings,
+        folds,
+        guided_embeddings=guided_embeddings,
+    )
     outputs = [global_output] + regime_outputs
 
     predictions = pd.concat([output.frame for output in outputs if not output.frame.empty], ignore_index=True)
@@ -523,6 +653,9 @@ def main() -> None:
     comparison = build_comparison(results)
     if not comparison.empty:
         comparison.to_csv(os.path.join(SAVE_DIR, "walkforward_comparison.csv"), index=False)
+    guided_comparison = build_guided_alpha_comparison(results)
+    if not guided_comparison.empty:
+        guided_comparison.to_csv(os.path.join(SAVE_DIR, "guided_alpha_comparison.csv"), index=False)
     save_walkforward_equity_plot(predictions)
 
     print("\nFold-local experiment results:")
@@ -532,6 +665,9 @@ def main() -> None:
     if not comparison.empty:
         print("\nOffline vs fold-local comparison:")
         print(comparison.to_string(index=False))
+    if not guided_comparison.empty:
+        print("\nGuided alpha comparison:")
+        print(guided_comparison.to_string(index=False))
     print("\nOK: fold-local regime benchmark artifacts saved.")
 
 

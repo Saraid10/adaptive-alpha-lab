@@ -83,11 +83,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 26 | All critical data, fold, target, coverage, prediction-alignment, fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, literature-positioning artifact, and run-registry checks passed |
+| PASS | 26 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, literature-positioning artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. All six alpha methods also have equal out-of-sample prediction coverage of 25,920 rows. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -110,7 +110,7 @@ The `models/` directory remains the latest-artifact location used by the dashboa
 
 Phase 13 adds a stricter predictive benchmark. For each walk-forward fold, regime assignment models are refit using training-history rows only and are then applied to the test window. HMM-based methods use an online filtering pass for test assignments, initialized from the training sequence and advanced through the embargo gap. This avoids using a single full-sample regime assignment file for predictive alpha claims.
 
-The contrastive methods still use frozen embeddings from the existing contrastive encoder, so this phase does not yet claim fully fold-local encoder training. The assignment layer on top of those embeddings, however, is fit fold-locally.
+Phase 20 extends this same strict benchmark with two HMM-guided learned-regime methods. The guided embeddings are frozen from the Phase 19B encoder run, but the GMM/HMM assignment layer on top of those embeddings is fit fold-locally.
 
 | Method | IC | Accuracy | Balanced Accuracy | Sharpe | Drawdown | Turnover | Total Return |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -120,8 +120,10 @@ The contrastive methods still use frozen embeddings from the existing contrastiv
 | regime_lgbm_hmm | 0.0051 | 0.5623 | 0.3698 | -0.340 | -0.710 | 0.079 | -0.536 |
 | regime_lgbm_kmeans | 0.0072 | 0.5672 | 0.3704 | -0.728 | -0.860 | 0.081 | -0.797 |
 | regime_lgbm_vol_bucket | -0.0020 | 0.5570 | 0.3679 | -0.820 | -0.854 | 0.083 | -0.820 |
+| regime_lgbm_hmm_guided_gmm | -0.0092 | 0.5600 | 0.3669 | -0.976 | -0.900 | 0.079 | -0.854 |
+| regime_lgbm_hmm_guided_hmm | 0.0094 | 0.5623 | 0.3743 | 0.099 | -0.614 | 0.084 | 0.031 |
 
-The stricter benchmark changes the interpretation. Fold-local KMeans has the strongest IC, while raw-feature HMM has the strongest Sharpe and drawdown profile among regime-aware methods. Contrastive-HMM remains better than contrastive-GMM, but it no longer looks as strong as it did in the offline/global assignment benchmark. This is important evidence: some of the apparent offline benefit of learned regimes weakens when the assignment layer is refit inside each fold.
+The Phase 20 benchmark changes the interpretation. The original fold-local learned-regime path remains weak, and guided embeddings with GMM also fail. However, guided embeddings with an HMM assignment layer become the strongest point-estimate method: they beat raw-feature HMM by `+0.0043` IC, `+0.439` Sharpe, `+0.095` drawdown, and `+0.567` total return. This supports a precise mechanism: HMM-guided representation learning helps only when the downstream assignment layer also enforces sequential state dynamics.
 
 ## Phase 14A Robustness Matrix
 
@@ -174,18 +176,20 @@ Phase 15B then applies multiple-testing controls. It uses Benjamini-Hochberg fal
 
 | Method | Mean Fold IC | 95% CI Low | 95% CI High | Positive IC Folds | Mean Fold Sharpe |
 |---|---:|---:|---:|---:|---:|
+| regime_lgbm_hmm_guided_hmm | 0.0080 | -0.0122 | 0.0278 | 9 | -0.026 |
 | regime_lgbm_hmm | 0.0058 | -0.0135 | 0.0247 | 11 | -0.561 |
-| regime_lgbm_kmeans | 0.0035 | -0.0205 | 0.0276 | 8 | -0.720 |
-| regime_lgbm_vol_bucket | 0.0004 | -0.0223 | 0.0234 | 10 | -0.818 |
+| regime_lgbm_kmeans | 0.0035 | -0.0202 | 0.0282 | 8 | -0.720 |
+| regime_lgbm_vol_bucket | 0.0004 | -0.0230 | 0.0241 | 10 | -0.818 |
 | global_lgbm | -0.0005 | -0.0207 | 0.0209 | 9 | -0.583 |
 | regime_lgbm_contrastive_hmm | -0.0063 | -0.0305 | 0.0196 | 7 | -0.908 |
+| regime_lgbm_hmm_guided_gmm | -0.0075 | -0.0336 | 0.0189 | 8 | -1.058 |
 | regime_lgbm_contrastive | -0.0147 | -0.0373 | 0.0095 | 7 | -0.990 |
 
-The confidence intervals are wide and mostly overlap zero. That means the project should not claim that the current HMM or KMeans edge is statistically decisive from IC alone. The strongest fold-level result is instead a negative finding: contrastive-GMM is worse than raw-feature HMM on IC (`mean difference = -0.0205`, paired fold `p = 0.035`). After Phase 15B correction, this becomes `raw_only_suggestive` rather than a hard corrected claim (`BH q = 0.347` within the IC family; Holm-adjusted p = 0.347). Most other IC and Sharpe differences are not significant at the 5% level.
+The confidence intervals are wide and mostly overlap zero. That means the project should not claim that the current guided-HMM edge is statistically decisive from IC alone. The strongest point-estimate result is positive: `regime_lgbm_hmm_guided_hmm` has the highest mean fold IC and the least negative mean fold Sharpe. Against raw-feature HMM, however, the IC improvement is small relative to fold noise (`mean difference = 0.0022`, paired fold `p = 0.801`). The strongest fold-level significant result remains a negative finding: contrastive-GMM is worse than raw-feature HMM on IC (`mean difference = -0.0205`, paired fold `p = 0.035`). After Phase 15B correction, this becomes `raw_only_suggestive` rather than a hard corrected claim. Most other IC and Sharpe differences are not significant at the 5% level.
 
 The row-level DM-style negative-log-likelihood tests show that the global model is often better calibrated than the regime-conditioned models. This does not contradict the IC result; it separates directional/ranking usefulness from probability calibration. For a paper, this is valuable because it prevents overclaiming: the regime methods may improve some alpha diagnostics, but their probability estimates are not automatically better calibrated.
 
-Probabilistic Sharpe Ratio diagnostics are also negative in the honest sense: all methods have PSR below 0.5 for `SR > 0`, with raw-feature HMM highest at about 0.121. This reinforces that the project should be framed as a regime-learning benchmark and research artifact, not as a profitable trading system.
+Probabilistic Sharpe Ratio diagnostics improve materially after Phase 20: `regime_lgbm_hmm_guided_hmm` has `PSR(SR > 0) = 0.633`, while raw-feature HMM is about `0.121`. This is useful support for the guided-HMM direction, but it remains a diagnostic on overlapping portfolio returns, not a deployable performance claim.
 
 ## Phase 16 Regime Quality
 
@@ -290,28 +294,43 @@ The comparison artifact shows the structural jump clearly:
 | `hmm_guided_gmm` | Phase 19B | 0.609 | 0.759 | 0.577 |
 | `hmm_guided_hmm` | Phase 19B | 0.869 | 0.957 | 0.837 |
 
-This is the first strong model-side evidence that the weakly supervised objective is doing what it was designed to do. The learned representation path no longer merely creates smooth partitions; when paired with an HMM assignment layer, it becomes strongly aligned with the classical sequential reference. This remains a structural result, not an alpha result. The next paper-critical test is whether these guided assignments improve fold-local alpha IC, Sharpe, drawdown, turnover, or calibration.
+This is the first strong model-side evidence that the weakly supervised objective is doing what it was designed to do. The learned representation path no longer merely creates smooth partitions; when paired with an HMM assignment layer, it becomes strongly aligned with the classical sequential reference. Phase 20 then tests whether that structural improvement survives contact with the downstream alpha benchmark.
+
+## Phase 20 Guided Alpha Retest
+
+Phase 20 adds the paper-critical downstream test for the Phase 19B encoder. The guided embeddings are kept frozen, but the regime assignment layer on top of them is refit inside each walk-forward fold. This avoids the invalid shortcut of using one full-sample guided assignment file for predictive claims.
+
+Two learned-regime variants are evaluated:
+
+1. `hmm_guided_gmm`: fold-local GMM assignment on HMM-guided embeddings.
+2. `hmm_guided_hmm`: fold-local online HMM assignment on HMM-guided embeddings.
+
+Both variants are evaluated on the same 25,920 out-of-sample rows as every other method.
 
 ## Model Comparison
 
 | Method | IC | Accuracy | Balanced Accuracy | Sharpe | Drawdown | Turnover | Total Return |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | global_lgbm | 0.0024 | 0.5736 | 0.3625 | -0.506 | -0.688 | 0.050 | -0.557 |
-| regime_lgbm_contrastive | -0.0165 | 0.5616 | 0.3724 | -0.902 | -0.909 | 0.077 | -0.855 |
-| regime_lgbm_contrastive_hmm | 0.0035 | 0.5585 | 0.3720 | -0.382 | -0.852 | 0.079 | -0.588 |
-| regime_lgbm_hmm | 0.0051 | 0.5622 | 0.3727 | -0.229 | -0.825 | 0.081 | -0.446 |
-| regime_lgbm_kmeans | -0.0013 | 0.5647 | 0.3670 | -1.180 | -0.920 | 0.079 | -0.912 |
-| regime_lgbm_vol_bucket | -0.0030 | 0.5566 | 0.3670 | -0.988 | -0.896 | 0.083 | -0.872 |
+| regime_lgbm_contrastive | -0.0110 | 0.5623 | 0.3708 | -0.834 | -0.926 | 0.074 | -0.823 |
+| regime_lgbm_contrastive_hmm | -0.0026 | 0.5623 | 0.3730 | -0.548 | -0.778 | 0.077 | -0.685 |
+| regime_lgbm_hmm | 0.0051 | 0.5623 | 0.3698 | -0.340 | -0.710 | 0.079 | -0.536 |
+| regime_lgbm_kmeans | 0.0072 | 0.5672 | 0.3704 | -0.728 | -0.860 | 0.081 | -0.797 |
+| regime_lgbm_vol_bucket | -0.0020 | 0.5570 | 0.3679 | -0.820 | -0.854 | 0.083 | -0.820 |
+| regime_lgbm_hmm_guided_gmm | -0.0092 | 0.5600 | 0.3669 | -0.976 | -0.900 | 0.079 | -0.854 |
+| regime_lgbm_hmm_guided_hmm | 0.0094 | 0.5623 | 0.3743 | 0.099 | -0.614 | 0.084 | 0.031 |
 
 All methods are evaluated on 25,920 out-of-sample rows. This equal test coverage is important: it prevents a regime method from looking better simply because it was tested on a smaller or easier subset.
 
 ## Results Interpretation
 
-The real Gaussian HMM baseline produces the strongest IC in this run, improving from 0.0024 for the global baseline to 0.0051. It also has the least negative Sharpe among the tested methods, although drawdown remains large and total return remains negative after transaction costs.
+Phase 20 changes the headline result. The strongest point-estimate method is now `regime_lgbm_hmm_guided_hmm`, with IC `0.0094`, Sharpe `0.099`, drawdown `-0.614`, and total return `0.031`. It beats the raw-feature HMM on the main point estimates while using the same walk-forward folds, costs, target, and test rows.
 
-The honest conclusion is mixed but stronger than before. The contrastive-HMM hybrid improves the learned-regime path substantially: IC moves from -0.0165 to 0.0035, and Sharpe improves from -0.902 to -0.382. That validates the Phase 11 hypothesis that temporal state dynamics help learned embeddings. However, the raw-feature HMM still beats the hybrid on IC and Sharpe, so the current learned representation is not yet superior to the simpler classical state model.
+The mechanism is specific. Guided embeddings with GMM assignment still fail, while guided embeddings with HMM assignment become the best point-estimate method. That supports the main research thesis: representation learning helps only when the assignment layer preserves sequential state dynamics. Rich embeddings alone are not enough.
 
-This is still a useful research result because it separates representation learning, regime diagnostics, statistical reliability, and deployable alpha instead of overclaiming profitability. The project now has a clear scientific progression: dense contrastive regimes underperform, stability diagnostics identify the assignment-layer weakness, contrastive-HMM partially fixes it, and Phase 15A shows which differences are statistically reliable versus merely suggestive.
+The statistical interpretation stays cautious. At the fold level, the guided-HMM IC advantage over raw-feature HMM is positive but not significant at the 5% level (`p = 0.801`). The guided-HMM method also has a stronger Probabilistic Sharpe read than raw HMM (`PSR(SR>0) = 0.633` versus about `0.121`), but calibration/NLL diagnostics still favor simpler references in some comparisons. The paper claim should therefore be phrased as a promising, controlled empirical finding rather than proof of a dominant trading strategy.
+
+The project now has a clean scientific progression: dense contrastive regimes underperform, stability diagnostics identify the assignment-layer weakness, contrastive-HMM partly fixes temporal consistency, HMM-guided weak supervision repairs structural alignment, and Phase 20 shows that the guided-HMM path can become the strongest downstream point-estimate method under strict fold-local validation.
 
 ## Limitations
 
@@ -321,7 +340,10 @@ This is still a useful research result because it separates representation learn
 - Offline/global regime results and fold-local regime results should be interpreted separately.
 - HMM states are not ground truth market regimes. They are a classical proxy/reference state sequence used for comparison and weak supervision.
 - Regime-quality agreement metrics are diagnostic; agreement with HMM does not prove economic correctness.
-- Phase 19B proves stronger structural alignment for the guided encoder, but no downstream alpha claim should be made until guided assignments are tested in the fold-local alpha benchmark.
+- Phase 20 tests guided embeddings downstream, but the guided encoder itself is still trained as a frozen/offline representation. A stricter future version would retrain or update the encoder inside each walk-forward fold.
+- The Phase 20 guided-HMM edge over raw-feature HMM is promising but not statistically significant at the 5% level on fold-level IC.
+- Guided-HMM improves IC, Sharpe, drawdown, and total return point estimates, but the guided methods still need robustness-grid and stress-grid coverage before any broad robustness claim.
+- Calibration/NLL diagnostics do not uniformly favor the guided methods, so probability quality and trading-score quality should be discussed separately.
 - Phase 19A is a positioning phase, not an empirical result. It clarifies contribution language but does not prove a new model improvement.
 - Literature positioning depends on describing HMM states as proxy/reference states, not ground truth labels.
 - Phase 14B stress testing re-scores existing predictions; it does not retrain models under each cost or threshold assumption.
@@ -332,8 +354,9 @@ This is still a useful research result because it separates representation learn
 
 ## Next Steps
 
-1. Feed the best guided assignments into the fold-local alpha benchmark and Phase 15 statistical tests.
-2. Use the Phase 19A literature matrix to write the formal related-work section before paper drafting.
-3. Add feature importance and SHAP summaries for global and regime-aware LightGBM models.
+1. Extend Phase 20 guided methods into robustness and stress testing before making a broad robustness claim.
+2. Add feature importance and SHAP summaries for global, raw-HMM, and guided-HMM LightGBM models.
+3. Add time-frequency augmentation and hard-negative ablations, but keep the grid capped by the compute budget.
 4. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
-5. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.
+5. Use the Phase 19A literature matrix to write the formal related-work section before paper drafting.
+6. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.
