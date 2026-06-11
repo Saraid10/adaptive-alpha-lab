@@ -20,6 +20,8 @@ CURATED_ARTIFACTS = [
     "reports/adaptive_alpha_lab_report.md",
     "reports/model_card.md",
     "reports/compute_budget.md",
+    "reports/related_work.md",
+    "reports/literature_matrix.csv",
     "models/experiment_results.csv",
     "models/strategy_comparison.csv",
     "models/regime_benchmark_summary.csv",

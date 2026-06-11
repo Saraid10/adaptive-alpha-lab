@@ -165,7 +165,7 @@ The paper-style contribution should be framed as:
 | H1 | Sequential regime consistency matters for downstream alpha modeling. | Supported directionally by HMM and contrastive-HMM results. |
 | H2 | Vanilla contrastive embeddings create smooth but not necessarily alpha-relevant regimes. | Supported by Phase 16 regime-quality diagnostics. |
 | H3 | HMM-guided contrastive learning can improve learned-regime structure. | Strongly supported structurally by the 30-epoch Phase 19B run. |
-| H4 | Improved regime structure improves fold-local alpha performance. | Not tested yet; requires Phase 20/21. |
+| H4 | Improved regime structure improves fold-local alpha performance. | Directionally supported by Phase 20 and strongly stress-supported by Phase 21; fold-level IC significance remains inconclusive. |
 | H5 | The finding generalizes beyond BTC and ETH. | Not tested yet; conditional multi-asset phase. |
 
 ## Reviewer Risk Register

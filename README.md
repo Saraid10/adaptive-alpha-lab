@@ -244,7 +244,7 @@ Phase 15B adds multiple-testing discipline. It applies Benjamini-Hochberg and Ho
 
 Phase 16 adds structural regime-quality metrics independent of alpha returns. It measures regime balance, persistence, posterior confidence, pairwise NMI/ARI agreement, and agreement with the raw-feature HMM reference. The HMM sequence is a classical comparison proxy, not ground truth. This phase answers whether a method produces coherent state partitions before asking whether those states improve alpha models.
 
-Phase 17 adds compute planning before heavier encoder experiments. It profiles a synthetic encoder forward/backward step on the local machine, estimates full 30-epoch retraining cost, and creates a capped ablation queue. On the current CPU-only environment, one encoder retrain is estimated at about 99.45 minutes, and the full 12-run initial ablation grid is estimated at about 21.49 hours including evaluation overhead. The first three runs are marked as the priority queue before expanding the full grid.
+Phase 17 adds compute planning before heavier encoder experiments. It profiles a synthetic encoder forward/backward step on the local machine, estimates full 30-epoch retraining cost, and creates a capped ablation queue. On the current CPU-only environment, one encoder retrain is estimated at about 124.03 minutes, and the full 12-run initial ablation grid is estimated at about 26.41 hours including evaluation overhead. The time-only guided runs are complete; the active next model-side run is the time-frequency guided-HMM variant.
 
 Phase 18 adds the first encoder-objective upgrade. Instead of treating adjacent windows as positives by default, `guided_encoder.py` uses raw-feature HMM states as weak supervision: distant windows in the same HMM state become positives, and different-state windows near each other in the same symbol become harder negatives. The script writes separate guided artifacts and does not overwrite the existing `encoder.pt`, `regime_posteriors.csv`, or canonical benchmark files.
 
@@ -298,17 +298,17 @@ Phase 14A repeats the strict fold-local benchmark across 9 grid cells: 3 symbol 
 
 | Scope | Target | Best IC Method | Best IC | Best Sharpe Method | Best Sharpe | Lowest Drawdown Method |
 |---|---|---|---:|---|---:|---|
-| BTCUSDT | tb_label_4h | regime_lgbm_hmm | 0.0016 | regime_lgbm_hmm | -0.993 | regime_lgbm_contrastive |
-| BTCUSDT | tb_label_8h | regime_lgbm_kmeans | -0.0034 | regime_lgbm_contrastive | -0.546 | regime_lgbm_contrastive |
+| BTCUSDT | tb_label_4h | regime_lgbm_hmm_guided_hmm | 0.0058 | regime_lgbm_hmm_guided_hmm | -0.837 | regime_lgbm_hmm_guided_hmm |
+| BTCUSDT | tb_label_8h | regime_lgbm_hmm_guided_gmm | 0.0004 | regime_lgbm_contrastive | -0.546 | regime_lgbm_contrastive |
 | BTCUSDT | tb_label_24h | regime_lgbm_kmeans | 0.0175 | regime_lgbm_contrastive_hmm | -0.211 | regime_lgbm_kmeans |
 | ETHUSDT | tb_label_4h | regime_lgbm_vol_bucket | 0.0208 | regime_lgbm_vol_bucket | 0.315 | regime_lgbm_vol_bucket |
 | ETHUSDT | tb_label_8h | global_lgbm | 0.0095 | regime_lgbm_contrastive | -0.201 | regime_lgbm_hmm |
 | ETHUSDT | tb_label_24h | global_lgbm | 0.0348 | global_lgbm | 0.354 | regime_lgbm_vol_bucket |
-| BTCUSDT+ETHUSDT | tb_label_4h | regime_lgbm_vol_bucket | 0.0103 | regime_lgbm_hmm | -0.205 | regime_lgbm_hmm |
-| BTCUSDT+ETHUSDT | tb_label_8h | regime_lgbm_kmeans | 0.0072 | regime_lgbm_hmm | -0.340 | global_lgbm |
+| BTCUSDT+ETHUSDT | tb_label_4h | regime_lgbm_hmm_guided_hmm | 0.0106 | regime_lgbm_hmm | -0.205 | regime_lgbm_hmm |
+| BTCUSDT+ETHUSDT | tb_label_8h | regime_lgbm_hmm_guided_hmm | 0.0094 | regime_lgbm_hmm_guided_hmm | 0.099 | regime_lgbm_hmm_guided_hmm |
 | BTCUSDT+ETHUSDT | tb_label_24h | regime_lgbm_contrastive_hmm | 0.0311 | regime_lgbm_vol_bucket | 0.321 | regime_lgbm_vol_bucket |
 
-Across the grid, KMeans wins IC most often, HMM wins Sharpe most often, and volatility buckets most often win drawdown. This is stronger research evidence than a single headline result: it shows regime awareness can help, but the best regime method depends on the asset, horizon, and metric being optimized.
+Phase 21 refreshes this matrix with the guided methods included. `regime_lgbm_hmm_guided_hmm` now wins the most IC cells (3 of 9), including the primary BTC+ETH 8-hour setting, and also wins 2 Sharpe and 2 drawdown cells. The grid is still mixed: global, KMeans, volatility buckets, and contrastive-HMM each win in some scopes. That is the right research read: guided-HMM is now a serious contender, but asset/horizon context still matters.
 
 ## Phase 14B Stress Robustness
 
@@ -320,16 +320,16 @@ Phase 14B reuses the strict fold-local `tb_label_8h` prediction file and stresse
 | Transaction cost | 5 bps, 10 bps, 20 bps |
 | Market period | all, bull, sideways, bear |
 
-That creates 48 stress cells and 288 method/cell rows. The goal is not to find a new best backtest; it is to see whether the existing conclusion breaks when practical assumptions change.
+That creates 48 stress cells and 384 method/cell rows after the Phase 21 guided-method refresh. The goal is not to find a new best backtest; it is to see whether the existing conclusion breaks when practical assumptions change.
 
 | Metric | Most Frequent Winner | Wins |
 |---|---|---:|
-| Signal IC | regime_lgbm_hmm | 24 |
-| Sharpe | regime_lgbm_hmm | 22 |
-| Drawdown | global_lgbm | 24 |
-| Total return | regime_lgbm_hmm | 18 |
+| Signal IC | regime_lgbm_hmm_guided_hmm | 30 |
+| Sharpe | regime_lgbm_hmm_guided_hmm | 36 |
+| Drawdown | regime_lgbm_hmm_guided_hmm | 28 |
+| Total return | regime_lgbm_hmm_guided_hmm | 34 |
 
-The stress test strengthens the interpretation around HMM regimes: raw-feature HMM is the most robust winner for signal IC, Sharpe, and total return across practical cost/threshold/market-period settings. The global model is the most defensive drawdown winner, especially when transaction costs rise. Contrastive-HMM remains useful in sideways regimes, but it is not yet the dominant learned-regime method.
+The refreshed stress test is the strongest Phase 21 evidence. Under cost, threshold, and market-period variation, guided-HMM becomes the dominant winner on all four stress metrics. This does not erase the mixed symbol/horizon matrix, but it changes the paper framing: guided-HMM is not only the best primary point estimate; it is also the most stress-robust method on the primary fold-local prediction file.
 
 ## Phase 15A/15B Statistical Tests
 
@@ -371,20 +371,20 @@ Phase 17 prevents scope creep before the encoder-upgrade phases. The project now
 | Training windows | 34,798 | Sliding windows across BTCUSDT and ETHUSDT |
 | Batches per epoch | 271 | Batch size 128, drop-last |
 | Encoder parameters | 139,408 | Current `TemporalEncoder` size |
-| Measured step time | 0.734 sec | Synthetic CPU forward/backward step |
-| Estimated 30-epoch retrain | 99.45 min | One encoder experiment |
-| Initial 12-run grid | 21.49 hours | 3 losses x 2 augmentations x 2 assignment methods |
-| Budget status | green | Under the 24-hour local budget |
+| Measured step time | 0.915 sec | Synthetic CPU forward/backward step |
+| Estimated 30-epoch retrain | 124.03 min | One encoder experiment |
+| Initial 12-run grid | 26.41 hours | 3 losses x 2 augmentations x 2 assignment methods |
+| Budget status | yellow | Slightly above the 24-hour local budget |
 
 The first three runs are:
 
 | Priority | Loss | Augmentation | Assignment | Decision |
 |---:|---|---|---|---|
-| 1 | hmm_guided | time_only | hmm | run_first |
-| 2 | hmm_guided | time_only | gmm | run_first |
-| 3 | hmm_guided | time_frequency | hmm | run_first |
+| 1 | hmm_guided | time_only | hmm | complete |
+| 2 | hmm_guided | time_only | gmm | complete |
+| 3 | hmm_guided | time_frequency | hmm | active_next |
 
-This makes Phase 18 practical: start with HMM-guided objectives and only expand to the full ablation grid if the early runs improve the learned-regime path.
+This keeps the next step focused: the time-only guided runs are complete, so the active model-side experiment is the time-frequency guided-HMM variant. The rest of the ablation grid stays on hold until that run earns the extra compute.
 
 ## Phase 18 HMM-Guided Encoder
 
@@ -435,5 +435,5 @@ The result is highly useful even though it is not a final victory lap. It says t
 
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, and a Streamlit research dashboard. The next important work is ablation and interpretability: test time-frequency augmentation, verify whether the Phase 20 edge survives robustness grids, and explain which features drive alpha inside the guided-HMM regimes.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, and a Streamlit research dashboard. The next important work is ablation and interpretability: test time-frequency augmentation and explain which features drive alpha inside the guided-HMM regimes.
 

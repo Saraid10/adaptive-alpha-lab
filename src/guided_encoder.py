@@ -134,7 +134,7 @@ class HMMGuidedContrastiveLoss(nn.Module):
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train a Phase 19B HMM-guided contrastive encoder.")
+    parser = argparse.ArgumentParser(description="Train an HMM-guided contrastive encoder.")
     parser.add_argument("--symbols", nargs="*", default=SYMBOLS)
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
@@ -538,7 +538,7 @@ def save_guided_comparison(summary: pd.DataFrame) -> pd.DataFrame:
 def save_loss_plot(loss_history: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.plot(loss_history["epoch"], loss_history["loss"], color="#2563EB", marker="o")
-    ax.set_title("Phase 19B - HMM-Guided Encoder Loss")
+    ax.set_title("HMM-Guided Encoder Loss")
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Loss")
     ax.grid(True, alpha=0.25)
@@ -553,7 +553,7 @@ def save_transition_plot(method: str, frame: pd.DataFrame) -> None:
     matrix = np.divide(counts, row_sum, out=np.zeros_like(counts), where=row_sum != 0)
     fig, ax = plt.subplots(figsize=(6, 5))
     image = ax.imshow(matrix, cmap="Blues", vmin=0, vmax=1)
-    ax.set_title(f"Phase 19B Transition Matrix - {method}")
+    ax.set_title(f"HMM-Guided Encoder Transition Matrix - {method}")
     ax.set_xlabel("Next regime")
     ax.set_ylabel("Current regime")
     ax.set_xticks(range(N_REGIMES))
@@ -584,9 +584,9 @@ def main() -> None:
     for method in GUIDED_METHODS:
         save_transition_plot(method, assignments[assignments["method"] == method])
 
-    print("\nPhase 19B guided encoder summary:")
+    print("\nHMM-guided encoder summary:")
     print(summary.to_string(index=False))
-    print("\nPhase 19B guided encoder comparison:")
+    print("\nHMM-guided encoder comparison:")
     print(comparison.to_string(index=False))
     print("\nOK: HMM-guided encoder artifacts saved.")
 

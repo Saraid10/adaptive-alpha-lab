@@ -35,10 +35,10 @@ def main() -> None:
         "baselines, purged validation, and transaction-cost-aware evaluation."
     )
     st.info(
-        "Key finding: contrastive-HMM improves the learned-regime path, "
-        "but the raw-feature Gaussian HMM still leads on IC and Sharpe. "
-        "The current evidence says HMM-style temporal state structure helps "
-        "learned embeddings, while representation capacity alone is not enough."
+        "Phase 20 result: HMM-guided learned regimes with fold-local HMM assignment "
+        "beat the raw-feature Gaussian HMM on point-estimate IC, Sharpe, drawdown, "
+        "and total return for the first time. The edge is promising but not yet "
+        "statistically significant at the fold level."
     )
 
     results = read_csv("experiment_results.csv")

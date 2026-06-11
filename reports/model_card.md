@@ -202,6 +202,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 19A | Literature positioning and paper contribution map |
 | Phase 19B | Full 30-epoch HMM-guided encoder run and baseline structural comparison |
 | Phase 20 | Fold-local downstream alpha retest for HMM-guided embeddings |
+| Phase 21 | Guided-method refresh of symbol/horizon robustness and cost/threshold/period stress robustness |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -215,12 +216,12 @@ Phase 17 records local compute estimates before starting encoder-upgrade work.
 | Ablation queue | `models/ablation_budget.csv` |
 | Visual plan | `models/compute_budget_plan.png` |
 | Device measured | CPU |
-| Synthetic step time | 0.734 seconds |
-| Estimated encoder retrain | 99.45 minutes |
-| Estimated 12-run grid | 21.49 hours |
-| Budget status | green |
+| Synthetic step time | 0.915 seconds |
+| Estimated encoder retrain | 124.03 minutes |
+| Estimated 12-run grid | 26.41 hours |
+| Budget status | yellow |
 
-The completed guided-encoder experiments now include a structural run and a fold-local downstream alpha retest. The next queued experiment is the time-frequency guided variant; broader ablations should expand only after the guided-HMM result is stress-tested.
+The completed guided-encoder experiments now include a structural run, a fold-local downstream alpha retest, and a guided-method robustness/stress refresh. The next queued experiment is the time-frequency guided variant; broader ablations should expand only after that focused run is evaluated.
 
 ## HMM-Guided Encoder Variant
 
@@ -286,9 +287,12 @@ The current frozen baseline supports a cautious conclusion:
 
 ```text
 HMM-guided embeddings with fold-local HMM assignment are the strongest current
-point-estimate method for IC, Sharpe, drawdown, and total return. The result is
-promising but not yet a statistically significant dominance claim over the
-raw-feature HMM. The GMM assignment layer on guided embeddings remains weak.
+point-estimate method for IC, Sharpe, drawdown, and total return, and Phase 21
+shows that the same method is the strongest stress-grid winner on the primary
+BTC+ETH 8h prediction file. The result is promising but not yet a statistically
+significant dominance claim over the raw-feature HMM, and symbol/horizon
+robustness remains mixed. The GMM assignment layer on guided embeddings remains
+weak.
 ```
 
 Future encoder phases must be evaluated against this frozen run, not against overwritten latest CSVs.

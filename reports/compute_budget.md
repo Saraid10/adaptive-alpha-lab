@@ -36,6 +36,7 @@ These are practical local observations, not formal benchmarks:
 | Phase 18 one-epoch guided encoder smoke run | about 4 minutes |
 | Phase 19B 30-epoch guided encoder full run | about 61 minutes |
 | Phase 20 guided downstream alpha retest | about 12 minutes |
+| Phase 21 guided robustness refresh | about 78 minutes total across chunked robustness runs plus stress refresh |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
@@ -47,12 +48,12 @@ Phase 17 measured the current encoder training cost with a synthetic CPU forward
 | Encoder parameters | 139,408 |
 | Training windows | 34,798 |
 | Batches per epoch | 271 |
-| Synthetic step time | 0.734 seconds |
-| Estimated epoch time | 3.32 minutes |
-| Estimated 30-epoch encoder run | 99.45 minutes |
-| Estimated 12-run ablation grid | 21.49 hours |
+| Synthetic step time | 0.915 seconds |
+| Estimated epoch time | 4.13 minutes |
+| Estimated 30-epoch encoder run | 124.03 minutes |
+| Estimated 12-run ablation grid | 26.41 hours |
 | Local budget | 24 hours |
-| Budget status | green |
+| Budget status | yellow |
 
 ## Mandatory Next Experiments
 
@@ -67,8 +68,9 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 18 HMM-guided encoder | 1 smoke encoder run | Complete; validated artifact path |
 | Phase 19B full HMM-guided encoder | 1 full encoder run | Complete; 30 epochs, time-only, HMM/GMM assignments |
 | Phase 20 guided downstream alpha re-test | 0 encoder runs | Complete; uses Phase 19B guided embeddings in fold-local alpha/statistical benchmark |
-| Phase 21 time-frequency augmentation | 2-3 encoder runs | Next model-side experiment; time-only baseline is complete, compare frequency-only and time+frequency |
-| Phase 22 hard negatives and ablations | capped matrix | Expand only if early results justify it |
+| Phase 21 guided robustness refresh | 0 encoder runs | Complete; refreshes symbol/horizon and stress robustness with guided methods |
+| Phase 22 time-frequency augmentation | 2-3 encoder runs | Next model-side experiment; time-only baseline is complete, compare frequency-only and time+frequency |
+| Phase 23 hard negatives and ablations | capped matrix | Expand only if early results justify it |
 
 ## Initial Ablation Cap
 
