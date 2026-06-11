@@ -87,7 +87,7 @@ The audit result is:
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 14A robustness matrix contains all 54 expected method/cell rows across 9 grid cells, that the Phase 14B stress matrix contains all 288 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -131,19 +131,19 @@ Phase 14A tests whether the fold-local result is stable across assets and horizo
 
 | Scope | Target | Best IC Method | Best IC | Best Sharpe Method | Best Sharpe | Lowest Drawdown Method | Lowest Drawdown |
 |---|---|---|---:|---|---:|---|---:|
-| BTCUSDT | tb_label_4h | regime_lgbm_hmm | 0.0016 | regime_lgbm_hmm | -0.993 | regime_lgbm_contrastive | -0.755 |
-| BTCUSDT | tb_label_8h | regime_lgbm_kmeans | -0.0034 | regime_lgbm_contrastive | -0.546 | regime_lgbm_contrastive | -0.812 |
+| BTCUSDT | tb_label_4h | regime_lgbm_hmm_guided_hmm | 0.0058 | regime_lgbm_hmm_guided_hmm | -0.837 | regime_lgbm_hmm_guided_hmm | -0.702 |
+| BTCUSDT | tb_label_8h | regime_lgbm_hmm_guided_gmm | 0.0004 | regime_lgbm_contrastive | -0.546 | regime_lgbm_contrastive | -0.812 |
 | BTCUSDT | tb_label_24h | regime_lgbm_kmeans | 0.0175 | regime_lgbm_contrastive_hmm | -0.211 | regime_lgbm_kmeans | -0.990 |
 | ETHUSDT | tb_label_4h | regime_lgbm_vol_bucket | 0.0208 | regime_lgbm_vol_bucket | 0.315 | regime_lgbm_vol_bucket | -0.449 |
 | ETHUSDT | tb_label_8h | global_lgbm | 0.0095 | regime_lgbm_contrastive | -0.201 | regime_lgbm_hmm | -0.874 |
 | ETHUSDT | tb_label_24h | global_lgbm | 0.0348 | global_lgbm | 0.354 | regime_lgbm_vol_bucket | -0.987 |
-| BTCUSDT+ETHUSDT | tb_label_4h | regime_lgbm_vol_bucket | 0.0103 | regime_lgbm_hmm | -0.205 | regime_lgbm_hmm | -0.436 |
-| BTCUSDT+ETHUSDT | tb_label_8h | regime_lgbm_kmeans | 0.0072 | regime_lgbm_hmm | -0.340 | global_lgbm | -0.688 |
+| BTCUSDT+ETHUSDT | tb_label_4h | regime_lgbm_hmm_guided_hmm | 0.0106 | regime_lgbm_hmm | -0.205 | regime_lgbm_hmm | -0.436 |
+| BTCUSDT+ETHUSDT | tb_label_8h | regime_lgbm_hmm_guided_hmm | 0.0094 | regime_lgbm_hmm_guided_hmm | 0.099 | regime_lgbm_hmm_guided_hmm | -0.614 |
 | BTCUSDT+ETHUSDT | tb_label_24h | regime_lgbm_contrastive_hmm | 0.0311 | regime_lgbm_vol_bucket | 0.321 | regime_lgbm_vol_bucket | -0.915 |
 
-The robustness matrix weakens any simple claim that one regime method is universally best. KMeans wins IC most often, HMM wins Sharpe most often, and volatility buckets win drawdown most often. The contrastive-HMM hybrid wins the BTC+ETH 24-hour IC cell, which is useful but not enough to claim learned regimes dominate globally.
+Phase 21 refreshes this matrix with both guided methods included, expanding the robustness artifact from 54 to 72 method/cell rows. `regime_lgbm_hmm_guided_hmm` now wins the most IC cells (3 of 9), including BTC 4h, BTC+ETH 4h, and the primary BTC+ETH 8h setting. It also wins 2 Sharpe cells and 2 drawdown cells. `regime_lgbm_hmm_guided_gmm` wins only one IC cell, so the useful guided result remains specific to guided embeddings plus sequential HMM assignment.
 
-The research conclusion becomes more precise: regime conditioning can help, but the choice of regime model is metric-, horizon-, and asset-dependent. This is a stronger and more honest result than a single headline Sharpe because it shows where each method is fragile.
+The research conclusion becomes more precise: guided-HMM is now the strongest learned-regime candidate, but not a universal winner. ETH-only cells still favor global or volatility-bucket models, and BTC 24h still favors KMeans on IC. This is stronger and more honest evidence than a single headline Sharpe because it shows exactly where the new method is robust and where it remains fragile.
 
 ## Phase 14B Stress Robustness
 
@@ -155,18 +155,18 @@ Phase 14B tests whether the fold-local `tb_label_8h` conclusion survives practic
 | Transaction cost | 5 bps, 10 bps, 20 bps |
 | Market period | all, bull, sideways, bear |
 
-Bull, sideways, and bear periods are defined from rolling 30-day returns in the feature store. This creates 48 stress cells and 288 method/cell rows.
+Bull, sideways, and bear periods are defined from rolling 30-day returns in the feature store. Phase 21 refreshes this grid with the guided methods included, creating 48 stress cells and 384 method/cell rows.
 
 | Metric | Most Frequent Winner | Wins |
 |---|---|---:|
-| Signal IC | regime_lgbm_hmm | 24 |
-| Sharpe | regime_lgbm_hmm | 22 |
-| Drawdown | global_lgbm | 24 |
-| Total return | regime_lgbm_hmm | 18 |
+| Signal IC | regime_lgbm_hmm_guided_hmm | 30 |
+| Sharpe | regime_lgbm_hmm_guided_hmm | 36 |
+| Drawdown | regime_lgbm_hmm_guided_hmm | 28 |
+| Total return | regime_lgbm_hmm_guided_hmm | 34 |
 
-The stress grid strengthens the HMM interpretation. Raw-feature HMM wins the most signal-IC, Sharpe, and total-return cells across cost, threshold, and market-period settings. The global model is the most defensive drawdown winner, which is expected because fewer regime-conditioned switches can reduce downside under higher costs. Contrastive-HMM remains useful in sideways regimes, but it is not the dominant learned-regime method.
+The refreshed stress grid is the strongest support for the guided-HMM path. Under practical cost, threshold, and market-period perturbations, `regime_lgbm_hmm_guided_hmm` wins the most cells for signal IC, Sharpe, drawdown, and total return. This is a meaningful upgrade from Phase 14B: the method that looked best in the primary Phase 20 point estimate also survives the primary stress grid.
 
-The important result is not that a strategy is profitable. The important result is that the relative conclusion is stress-tested: HMM-style temporal state structure is the most robust regime-aware layer in the current implementation, while learned embeddings still need a stronger objective or stricter fold-local representation training to dominate.
+The important result is not that a strategy is profitable. The important result is that the relative conclusion is stress-tested: HMM-guided representation learning plus HMM assignment is now the most stress-robust regime-aware layer on the primary prediction file. The symbol/horizon robustness matrix remains mixed, so the broad claim should be "stress-robust on the primary BTC+ETH 8h benchmark" rather than "universally dominant across all assets and horizons."
 
 ## Phase 15A/15B Statistical Rigor
 
@@ -226,22 +226,22 @@ The current profile uses synthetic forward/backward timing for the existing `Tem
 | Encoder parameters | 139,408 |
 | Training windows | 34,798 |
 | Batches per epoch | 271 |
-| Profiled step time | 0.734 seconds |
-| Estimated epoch time | 3.32 minutes |
-| Estimated 30-epoch retrain | 99.45 minutes |
-| Estimated 12-run initial grid | 21.49 hours |
+| Profiled step time | 0.915 seconds |
+| Estimated epoch time | 4.13 minutes |
+| Estimated 30-epoch retrain | 124.03 minutes |
+| Estimated 12-run initial grid | 26.41 hours |
 | Local budget | 24 hours |
-| Budget status | green |
+| Budget status | yellow |
 
-The initial ablation cap remains 12 runs: 3 losses by 2 augmentations by 2 assignment methods. Phase 17 marks only three runs as `run_first`:
+The initial ablation cap remains 12 runs: 3 losses by 2 augmentations by 2 assignment methods. The queue is now staged rather than wide-open:
 
-| Priority | Loss | Augmentation | Assignment |
-|---:|---|---|---|
-| 1 | `hmm_guided` | `time_only` | `hmm` |
-| 2 | `hmm_guided` | `time_only` | `gmm` |
-| 3 | `hmm_guided` | `time_frequency` | `hmm` |
+| Priority | Loss | Augmentation | Assignment | Decision |
+|---:|---|---|---|---|
+| 1 | `hmm_guided` | `time_only` | `hmm` | complete |
+| 2 | `hmm_guided` | `time_only` | `gmm` | complete |
+| 3 | `hmm_guided` | `time_frequency` | `hmm` | active next |
 
-This matters for paper execution because it prevents an uncontrolled ablation explosion. The project should first test whether HMM-guided supervision improves the learned-regime path. Only if the priority runs improve the fold-local learned-regime benchmark should the remaining grid be launched.
+This matters for paper execution because it prevents an uncontrolled ablation explosion. The time-only guided runs are complete; the next model-side experiment should be the time-frequency guided-HMM variant. The remaining grid should stay on hold until that run produces evidence worth the extra compute.
 
 ## Phase 18 HMM-Guided Encoder
 
@@ -342,7 +342,7 @@ The project now has a clean scientific progression: dense contrastive regimes un
 - Regime-quality agreement metrics are diagnostic; agreement with HMM does not prove economic correctness.
 - Phase 20 tests guided embeddings downstream, but the guided encoder itself is still trained as a frozen/offline representation. A stricter future version would retrain or update the encoder inside each walk-forward fold.
 - The Phase 20 guided-HMM edge over raw-feature HMM is promising but not statistically significant at the 5% level on fold-level IC.
-- Guided-HMM improves IC, Sharpe, drawdown, and total return point estimates, but the guided methods still need robustness-grid and stress-grid coverage before any broad robustness claim.
+- Phase 21 adds guided-method robustness and stress coverage. Guided-HMM is stress-robust on the primary BTC+ETH 8h prediction file, but symbol/horizon robustness remains mixed.
 - Calibration/NLL diagnostics do not uniformly favor the guided methods, so probability quality and trading-score quality should be discussed separately.
 - Phase 19A is a positioning phase, not an empirical result. It clarifies contribution language but does not prove a new model improvement.
 - Literature positioning depends on describing HMM states as proxy/reference states, not ground truth labels.
@@ -354,9 +354,9 @@ The project now has a clean scientific progression: dense contrastive regimes un
 
 ## Next Steps
 
-1. Extend Phase 20 guided methods into robustness and stress testing before making a broad robustness claim.
-2. Add feature importance and SHAP summaries for global, raw-HMM, and guided-HMM LightGBM models.
-3. Add time-frequency augmentation and hard-negative ablations, but keep the grid capped by the compute budget.
-4. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
-5. Use the Phase 19A literature matrix to write the formal related-work section before paper drafting.
+1. Add feature importance and SHAP summaries for global, raw-HMM, and guided-HMM LightGBM models.
+2. Add time-frequency augmentation and hard-negative ablations, but keep the grid capped by the compute budget.
+3. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
+4. Use the Phase 19A literature matrix to write the formal related-work section before paper drafting.
+5. Expand beyond BTC/ETH only if the written statistical gate is met.
 6. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.

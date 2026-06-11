@@ -516,7 +516,7 @@ def audit_robustness_artifacts(rows: list[AuditRecord]) -> None:
 
     results = pd.read_csv(results_path)
     summary = pd.read_csv(summary_path) if summary_path.exists() else pd.DataFrame()
-    required_methods = ["global_lgbm"] + [f"regime_lgbm_{method}" for method in REGIME_METHODS]
+    required_methods = FOLD_LOCAL_METHODS
     expected_cells = 9
     expected_rows = expected_cells * len(required_methods)
     missing_files = [str(path.name) for path in [summary_path, wins_path] if not path.exists()]
@@ -579,7 +579,7 @@ def audit_robustness_stress_artifacts(rows: list[AuditRecord]) -> None:
 
     results = pd.read_csv(results_path)
     summary = pd.read_csv(summary_path) if summary_path.exists() else pd.DataFrame()
-    required_methods = ["global_lgbm"] + [f"regime_lgbm_{method}" for method in REGIME_METHODS]
+    required_methods = FOLD_LOCAL_METHODS
     expected_cells = 4 * 3 * 4
     expected_rows = expected_cells * len(required_methods)
     missing_files = [str(path.name) for path in [summary_path, wins_path] if not path.exists()]
@@ -824,11 +824,16 @@ def audit_compute_plan_artifacts(rows: list[AuditRecord]) -> None:
         if len(budget) != expected_rows:
             failures += 1
             detail_parts.append(f"unexpected_budget_row_count={len(budget)} expected={expected_rows}")
-        first_run_count = int((budget["decision"] == "run_first").sum())
-        detail_parts.append(f"run_first={first_run_count}")
-        if first_run_count < 1:
+        active_next_count = int((budget["decision"] == "active_next").sum())
+        complete_count = int((budget["decision"] == "complete").sum())
+        priority_count = active_next_count + complete_count
+        detail_parts.append(f"complete={complete_count}; active_next={active_next_count}")
+        if active_next_count < 1:
             failures += 1
-            detail_parts.append("no_priority_runs_marked")
+            detail_parts.append("no_active_next_run_marked")
+        if priority_count < 3:
+            failures += 1
+            detail_parts.append("missing_completed_or_priority_runs")
 
     if not missing_profile_cols and not profile.empty:
         numeric_checks = [

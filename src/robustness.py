@@ -20,9 +20,11 @@ from alpha_models import (
 )
 from config import DB_PATH
 from walkforward_regimes import (
+    PHASE20_REGIME_METHODS,
     fit_fold_assignments,
     finite_matrix,
     load_dense_contrastive_universe,
+    load_guided_embedding_matrix,
 )
 from baselines import HMM_FEATURES
 
@@ -31,11 +33,12 @@ LABEL_TO_CLASS = {-1: 0, 0: 1, 1: 2}
 HORIZONS = [4, 8, 24]
 SYMBOL_SCOPES = [["BTCUSDT"], ["ETHUSDT"], ["BTCUSDT", "ETHUSDT"]]
 TC_PER_TRADE = 0.001
+PARTIAL_RESULTS_FILE = "robustness_partial_results.csv"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run Phase 14A compact robustness matrix across symbol scopes and horizons."
+        description="Run robustness matrix across symbol scopes and horizons."
     )
     parser.add_argument("--horizons", nargs="*", type=int, default=HORIZONS)
     parser.add_argument(
@@ -43,6 +46,16 @@ def parse_args() -> argparse.Namespace:
         nargs="*",
         default=["BTCUSDT", "ETHUSDT", "BTCUSDT+ETHUSDT"],
         help="Scopes as symbols joined by '+', e.g. BTCUSDT ETHUSDT BTCUSDT+ETHUSDT.",
+    )
+    parser.add_argument(
+        "--skip-guided",
+        action="store_true",
+        help="Run only the pre-Phase-20 regime methods.",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from models/robustness_partial_results.csv and skip completed scope/horizon cells.",
     )
     return parser.parse_args()
 
@@ -295,7 +308,12 @@ def summarize_predictions(pred: pd.DataFrame, method: str, regime_method: str, s
     }
 
 
-def fit_scope_assignments(base_df: pd.DataFrame, embeddings: np.ndarray, folds: list[tuple[int, int, int]]) -> pd.DataFrame:
+def fit_scope_assignments(
+    base_df: pd.DataFrame,
+    embeddings: np.ndarray,
+    folds: list[tuple[int, int, int]],
+    guided_embeddings: np.ndarray | None = None,
+) -> pd.DataFrame:
     df_by_row = base_df.set_index("row_id", drop=False)
     raw_matrix = finite_matrix(df_by_row.sort_index(), FEATURE_COLS)
     hmm_matrix = finite_matrix(df_by_row.sort_index(), HMM_FEATURES)
@@ -306,23 +324,79 @@ def fit_scope_assignments(base_df: pd.DataFrame, embeddings: np.ndarray, folds: 
         if not train_ids or not test_ids:
             continue
         print(f"    fold {fold:02d}: refitting regime assignments")
-        fold_outputs = fit_fold_assignments(df_by_row, embeddings, raw_matrix, hmm_matrix, train_ids, test_ids, fold)
+        fold_outputs = fit_fold_assignments(
+            df_by_row,
+            embeddings,
+            raw_matrix,
+            hmm_matrix,
+            train_ids,
+            test_ids,
+            fold,
+            guided_embeddings=guided_embeddings,
+        )
         assignments.extend(output.assignments for output in fold_outputs)
 
     return pd.concat(assignments, ignore_index=True)
 
 
-def run_scope(scope: list[str], horizons: list[int]) -> pd.DataFrame:
+def cell_key(symbol_scope: str, horizon: int) -> tuple[str, str]:
+    return symbol_scope, f"{horizon}h"
+
+
+def save_partial_results(partial_path: Path, frame: pd.DataFrame) -> None:
+    if frame.empty:
+        return
+    if partial_path.exists():
+        existing = pd.read_csv(partial_path)
+        combined = pd.concat([existing, frame], ignore_index=True)
+    else:
+        combined = frame.copy()
+    combined = combined.drop_duplicates(
+        ["symbol_scope", "target", "horizon", "method"],
+        keep="last",
+    ).sort_values(["symbol_scope", "horizon", "method"])
+    combined.to_csv(partial_path, index=False)
+
+
+def load_completed_cells(partial_path: Path) -> set[tuple[str, str]]:
+    if not partial_path.exists():
+        return set()
+    partial = pd.read_csv(partial_path)
+    if partial.empty or not {"symbol_scope", "horizon", "method"}.issubset(partial.columns):
+        return set()
+    methods_by_cell = partial.groupby(["symbol_scope", "horizon"])["method"].nunique()
+    return {tuple(key) for key, count in methods_by_cell.items() if count >= 8}
+
+
+def run_scope(
+    scope: list[str],
+    horizons: list[int],
+    include_guided: bool = True,
+    completed_cells: set[tuple[str, str]] | None = None,
+    partial_path: Path | None = None,
+) -> pd.DataFrame:
     symbol_scope = "+".join(scope)
+    completed_cells = completed_cells or set()
+    remaining_horizons = [
+        horizon
+        for horizon in horizons
+        if cell_key(symbol_scope, horizon) not in completed_cells
+    ]
+    if not remaining_horizons:
+        print(f"\n=== Robustness scope: {symbol_scope} already complete; skipping ===")
+        return pd.DataFrame()
+
     print(f"\n=== Robustness scope: {symbol_scope} ===")
     base_df, embeddings = load_dense_contrastive_universe(scope)
+    guided_embeddings = load_guided_embedding_matrix(base_df) if include_guided else None
+    regime_methods = PHASE20_REGIME_METHODS if include_guided else REGIME_METHODS
     folds = fold_ranges(base_df)
     if not folds:
         raise RuntimeError(f"Not enough rows for folds in scope {symbol_scope}.")
 
-    assignments = fit_scope_assignments(base_df, embeddings, folds)
+    assignments = fit_scope_assignments(base_df, embeddings, folds, guided_embeddings=guided_embeddings)
     summaries = []
-    for horizon in horizons:
+    for horizon in remaining_horizons:
         target, _ = target_columns(horizon)
         print(f"  horizon {horizon}h: training/evaluating alpha models")
         horizon_df = align_horizon_frame(base_df, horizon)
@@ -330,7 +404,7 @@ def run_scope(scope: list[str], horizons: list[int]) -> pd.DataFrame:
         horizon_folds = fold_ranges(horizon_df)
 
         frames = {"global_lgbm": run_global_model(df_by_row, horizon_folds, target, horizon)}
-        for method in REGIME_METHODS:
+        for method in regime_methods:
             frames[f"regime_lgbm_{method}"] = run_regime_model(df_by_row, assignments, method, horizon_folds, target, horizon)
 
         result = pd.DataFrame(
@@ -338,12 +412,15 @@ def run_scope(scope: list[str], horizons: list[int]) -> pd.DataFrame:
                 summarize_predictions(frames["global_lgbm"], "global_lgbm", "none", symbol_scope, target, horizon),
                 *[
                     summarize_predictions(frames[f"regime_lgbm_{method}"], f"regime_lgbm_{method}", method, symbol_scope, target, horizon)
-                    for method in REGIME_METHODS
+                    for method in regime_methods
                 ],
             ]
         )
         validate_test_coverage(result)
         summaries.append(result)
+        if partial_path is not None:
+            save_partial_results(partial_path, result)
+            print(f"  saved partial robustness results: {partial_path}")
 
     return pd.concat(summaries, ignore_index=True)
 
@@ -409,11 +486,34 @@ def save_heatmap(summary: pd.DataFrame) -> None:
 def main() -> None:
     args = parse_args()
     scopes = [parse_symbol_scope(scope) for scope in args.symbol_scopes]
+    partial_path = Path(SAVE_DIR) / PARTIAL_RESULTS_FILE
+    if not args.resume and partial_path.exists():
+        partial_path.unlink()
+    completed_cells = load_completed_cells(partial_path) if args.resume else set()
+
     all_results = []
     for scope in scopes:
-        all_results.append(run_scope(scope, args.horizons))
+        result = run_scope(
+            scope,
+            args.horizons,
+            include_guided=not args.skip_guided,
+            completed_cells=completed_cells,
+            partial_path=partial_path,
+        )
+        if not result.empty:
+            all_results.append(result)
+            completed_cells.update(
+                cell_key(str(row.symbol_scope), int(str(row.horizon).replace("h", "")))
+                for row in result[["symbol_scope", "horizon"]].drop_duplicates().itertuples(index=False)
+            )
 
-    results = pd.concat(all_results, ignore_index=True)
+    if partial_path.exists():
+        results = pd.read_csv(partial_path)
+    elif all_results:
+        results = pd.concat(all_results, ignore_index=True)
+    else:
+        raise RuntimeError("No robustness results were produced.")
+
     summary, wins = build_summary(results)
     results.to_csv(os.path.join(SAVE_DIR, "robustness_results.csv"), index=False)
     summary.to_csv(os.path.join(SAVE_DIR, "robustness_summary.csv"), index=False)

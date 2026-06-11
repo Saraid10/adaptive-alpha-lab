@@ -197,9 +197,17 @@ def build_ablation_budget(profile: pd.DataFrame) -> pd.DataFrame:
                 priority = priority_order.get((loss, augmentation, assignment), 99)
                 planned_phase = "phase18" if loss == "hmm_guided" else "phase21"
                 if augmentation == "time_frequency":
-                    planned_phase = "phase19"
+                    planned_phase = "phase21"
                 if loss == "info_nce":
                     planned_phase = "phase21"
+                decision = "hold_until_signal"
+                if (loss, augmentation, assignment) in {
+                    ("hmm_guided", "time_only", "hmm"),
+                    ("hmm_guided", "time_only", "gmm"),
+                }:
+                    decision = "complete"
+                elif (loss, augmentation, assignment) == ("hmm_guided", "time_frequency", "hmm"):
+                    decision = "active_next"
                 total_minutes = full_train_minutes + eval_minutes if pd.notna(full_train_minutes) else float("nan")
                 rows.append(
                     {
@@ -212,7 +220,7 @@ def build_ablation_budget(profile: pd.DataFrame) -> pd.DataFrame:
                         "estimated_train_minutes": full_train_minutes,
                         "estimated_eval_minutes": eval_minutes,
                         "estimated_total_minutes": total_minutes,
-                        "decision": "run_first" if priority <= 3 else "hold_until_signal",
+                        "decision": decision,
                     }
                 )
 
@@ -285,7 +293,9 @@ def plot_budget(budget: pd.DataFrame, output_path: Path) -> None:
         + " | "
         + plot_data["assignment_method"]
     )
-    colors = plot_data["decision"].map({"run_first": "#2563EB", "hold_until_signal": "#94A3B8"}).fillna("#94A3B8")
+    colors = plot_data["decision"].map(
+        {"complete": "#16A34A", "active_next": "#2563EB", "hold_until_signal": "#94A3B8"}
+    ).fillna("#94A3B8")
 
     fig, ax = plt.subplots(figsize=(12, 7))
     ax.barh(labels, plot_data["estimated_total_minutes"], color=colors)
