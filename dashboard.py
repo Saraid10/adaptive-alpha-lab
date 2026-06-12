@@ -71,6 +71,9 @@ def main() -> None:
     time_frequency_summary = read_csv("time_frequency_encoder_summary.csv")
     time_frequency_loss = read_csv("time_frequency_encoder_loss.csv")
     time_frequency_comparison = read_csv("time_frequency_encoder_comparison.csv")
+    feature_importance_global = read_csv("feature_importance_global.csv")
+    feature_importance_by_regime = read_csv("feature_importance_by_regime.csv")
+    feature_family_summary = read_csv("feature_family_summary.csv")
     per_regime = read_csv("per_regime_stats.csv")
     validation_audit = read_csv("validation_audit.csv")
     fold_audit = read_csv("fold_audit.csv")
@@ -356,6 +359,49 @@ def main() -> None:
                     st.image(str(path))
                 else:
                     st.info("missing")
+
+    st.header("Interpretability")
+    if feature_importance_global.empty or feature_importance_by_regime.empty:
+        st.info("Run python src/interpretability.py to generate Phase 23 interpretability artifacts.")
+    else:
+        st.caption(
+            "Phase 23 aggregates fold-local LightGBM feature importance for the global, raw-HMM, "
+            "and guided-HMM models. This explains which market features drive each regime-conditioned alpha model."
+        )
+        guided = feature_importance_by_regime[
+            feature_importance_by_regime["method"] == "regime_lgbm_hmm_guided_hmm"
+        ].copy()
+        metric = (
+            "mean_shap_share"
+            if "mean_shap_share" in guided.columns and guided["mean_shap_share"].notna().any()
+            else "mean_gain_share"
+        )
+        c1, c2, c3, c4 = st.columns(4)
+        if not guided.empty:
+            top_guided = guided.sort_values(metric, ascending=False).iloc[0]
+            c1.metric("Top Guided Feature", top_guided["feature"], f"regime {top_guided['regime']}")
+            c2.metric("Feature Family", top_guided["feature_family"])
+            c3.metric("Explained Regimes", guided["regime"].nunique())
+            c4.metric("Features Tracked", guided["feature"].nunique())
+        else:
+            c1.metric("Guided Rows", 0)
+            c2.metric("Feature Family", "missing")
+            c3.metric("Explained Regimes", 0)
+            c4.metric("Features Tracked", 0)
+        st.subheader("Global Feature Importance")
+        st.dataframe(feature_importance_global.sort_values("rank_within_model_regime").head(12), width="stretch")
+        st.subheader("Guided-HMM Top Features by Regime")
+        top_guided = guided.sort_values(["regime", "rank_within_model_regime"]).groupby("regime").head(5)
+        st.dataframe(top_guided, width="stretch")
+        if not feature_family_summary.empty:
+            st.subheader("Feature Family Summary")
+            st.dataframe(feature_family_summary, width="stretch")
+        importance_img = MODELS_DIR / "feature_importance_by_regime.png"
+        if importance_img.exists():
+            st.image(str(importance_img), width="stretch")
+        family_img = MODELS_DIR / "feature_family_importance.png"
+        if family_img.exists():
+            st.image(str(family_img), width="stretch")
 
     st.header("Research Positioning")
     st.caption(

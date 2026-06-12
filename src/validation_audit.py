@@ -1161,6 +1161,108 @@ def audit_time_frequency_encoder_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_interpretability_artifacts(rows: list[AuditRecord]) -> None:
+    global_path = Path(SAVE_DIR) / "feature_importance_global.csv"
+    regime_path = Path(SAVE_DIR) / "feature_importance_by_regime.csv"
+    family_path = Path(SAVE_DIR) / "feature_family_summary.csv"
+    regime_plot_path = Path(SAVE_DIR) / "feature_importance_by_regime.png"
+    family_plot_path = Path(SAVE_DIR) / "feature_family_importance.png"
+
+    if not global_path.exists() or not regime_path.exists() or not family_path.exists():
+        missing = [
+            path.name
+            for path in [global_path, regime_path, family_path]
+            if not path.exists()
+        ]
+        record(
+            rows,
+            "interpretability_artifacts",
+            WARN,
+            "artifact",
+            f"Missing Phase 23 interpretability artifacts: {missing}",
+        )
+        return
+
+    global_imp = pd.read_csv(global_path)
+    regime_imp = pd.read_csv(regime_path)
+    family_imp = pd.read_csv(family_path)
+    required_cols = {
+        "method",
+        "regime_method",
+        "regime",
+        "feature",
+        "feature_family",
+        "mean_gain_share",
+        "mean_split_share",
+        "mean_shap_share",
+        "folds_seen",
+        "rank_within_model_regime",
+    }
+    missing_global_cols = sorted(required_cols - set(global_imp.columns))
+    missing_regime_cols = sorted(required_cols - set(regime_imp.columns))
+    missing_family_cols = sorted(
+        {"method", "regime_method", "regime", "feature_family", "mean_gain_share", "mean_shap_share"}
+        - set(family_imp.columns)
+    )
+    missing_files = [
+        path.name
+        for path in [regime_plot_path, family_plot_path]
+        if not path.exists()
+    ]
+
+    failures = len(missing_global_cols) + len(missing_regime_cols) + len(missing_family_cols) + len(missing_files)
+    detail_parts = [
+        f"global_rows={len(global_imp)}",
+        f"regime_rows={len(regime_imp)}",
+        f"family_rows={len(family_imp)}",
+    ]
+
+    if not missing_global_cols:
+        global_features = set(global_imp["feature"])
+        missing_features = sorted(set(FEATURE_COLS) - global_features)
+        failures += len(missing_features)
+        if missing_features:
+            detail_parts.append(f"missing_global_features={missing_features}")
+
+    if not missing_regime_cols:
+        required_methods = {"regime_lgbm_hmm", "regime_lgbm_hmm_guided_hmm"}
+        method_set = set(regime_imp["method"])
+        missing_methods = sorted(required_methods - method_set)
+        failures += len(missing_methods)
+        if missing_methods:
+            detail_parts.append(f"missing_methods={missing_methods}")
+
+        guided = regime_imp[regime_imp["method"] == "regime_lgbm_hmm_guided_hmm"]
+        if guided.empty:
+            failures += 1
+            detail_parts.append("missing_guided_hmm_rows")
+        else:
+            regimes = sorted(guided["regime"].astype(str).unique())
+            detail_parts.append(f"guided_regimes={regimes}")
+            top = guided.sort_values(["regime", "rank_within_model_regime"]).groupby("regime").head(1)
+            top_features = ",".join(top["feature"].astype(str).tolist())
+            detail_parts.append(f"guided_top_features={top_features}")
+
+    if missing_global_cols:
+        detail_parts.append(f"missing_global_columns={missing_global_cols}")
+    if missing_regime_cols:
+        detail_parts.append(f"missing_regime_columns={missing_regime_cols}")
+    if missing_family_cols:
+        detail_parts.append(f"missing_family_columns={missing_family_cols}")
+    if missing_files:
+        detail_parts.append(f"missing_plots={missing_files}")
+
+    record(
+        rows,
+        "interpretability_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(len(global_imp) + len(regime_imp) + len(family_imp), 1),
+        rows_failed=failures,
+    )
+
+
 def audit_literature_positioning_artifacts(rows: list[AuditRecord]) -> None:
     related_work_path = Path(BASE_DIR) / "reports" / "related_work.md"
     matrix_path = Path(BASE_DIR) / "reports" / "literature_matrix.csv"
@@ -1519,6 +1621,7 @@ def main() -> None:
     audit_compute_plan_artifacts(rows)
     audit_guided_encoder_artifacts(rows)
     audit_time_frequency_encoder_artifacts(rows)
+    audit_interpretability_artifacts(rows)
     audit_literature_positioning_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)

@@ -29,6 +29,9 @@ models/*.csv
 !models/time_frequency_encoder_summary.csv
 !models/time_frequency_encoder_loss.csv
 !models/time_frequency_encoder_comparison.csv
+!models/feature_importance_global.csv
+!models/feature_importance_by_regime.csv
+!models/feature_family_summary.csv
 !models/per_regime_stats.csv
 !models/validation_audit.csv
 !models/fold_audit.csv

@@ -38,6 +38,7 @@ These are practical local observations, not formal benchmarks:
 | Phase 20 guided downstream alpha retest | about 12 minutes |
 | Phase 21 guided robustness refresh | about 78 minutes total across chunked robustness runs plus stress refresh |
 | Phase 22A 3-epoch time-frequency guided encoder prototype | about 11 minutes |
+| Phase 23 fold-local interpretability | about 6 minutes with capped SHAP sampling |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
@@ -71,7 +72,8 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 20 guided downstream alpha re-test | 0 encoder runs | Complete; uses Phase 19B guided embeddings in fold-local alpha/statistical benchmark |
 | Phase 21 guided robustness refresh | 0 encoder runs | Complete; refreshes symbol/horizon and stress robustness with guided methods |
 | Phase 22 time-frequency augmentation | 2-3 encoder runs | Prototype complete; full 30-epoch run remains conditional |
-| Phase 23 hard negatives and ablations | capped matrix | Expand only if early results justify it |
+| Phase 23 interpretability | 0 encoder runs | Complete; fold-local LightGBM feature-importance and capped SHAP summaries |
+| Phase 24 hard negatives and ablations | capped matrix | Expand only if the paper needs another model-side ablation |
 
 ## Initial Ablation Cap
 
@@ -150,7 +152,7 @@ This prototype does not yet justify a downstream alpha retest. The full 30-epoch
 
 ## Multi-Asset Gate
 
-Phase 23 multi-asset generalization is conditional.
+Phase 25 multi-asset generalization is conditional.
 
 Proceed to multi-asset only if:
 

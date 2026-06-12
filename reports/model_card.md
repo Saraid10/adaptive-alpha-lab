@@ -184,7 +184,7 @@ random_state=42
 | Embargo | 5 days, 120 hourly bars |
 | Primary label horizon purge | 8 bars |
 | Main OOS rows | 25,920 per method |
-| Critical audit status | 27 PASS, 1 methodological WARN, 0 FAIL |
+| Critical audit status | 28 PASS, 1 methodological WARN, 0 FAIL |
 
 The current methodological warning is that the legacy `regime_assignments.csv` artifact is offline/global. Predictive regime claims should use the fold-local Phase 13 artifacts.
 
@@ -204,6 +204,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 20 | Fold-local downstream alpha retest for HMM-guided embeddings |
 | Phase 21 | Guided-method refresh of symbol/horizon robustness and cost/threshold/period stress robustness |
 | Phase 22A | 3-epoch time-frequency HMM-guided encoder prototype |
+| Phase 23 | Fold-local LightGBM feature-importance and SHAP interpretability diagnostics |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -282,6 +283,22 @@ Phase 20 evaluates the Phase 19B guided embeddings inside the strict fold-local 
 | `regime_lgbm_hmm_guided_hmm` | 0.0094 | 0.099 | -0.614 | 0.031 | 25,920 |
 
 The useful finding is narrow but real: guided embeddings help downstream alpha only when paired with an HMM assignment layer. The GMM assignment layer on the same guided embedding space remains weak. Fold-level IC improvement versus raw-feature HMM is positive but not statistically significant at the 5% level.
+
+## Interpretability Outputs
+
+Phase 23 adds fold-local interpretation for the alpha models. The script trains explanation models inside the same expanding walk-forward folds and aggregates LightGBM gain/split importance plus capped SHAP summaries.
+
+| Field | Value |
+|---|---|
+| CLI | `python src/interpretability.py --symbols BTCUSDT ETHUSDT` |
+| Explained methods | `global_lgbm`, `regime_lgbm_hmm`, `regime_lgbm_hmm_guided_hmm` |
+| SHAP cap | 256 training rows per fold/model by default |
+| Main committed outputs | `feature_importance_global.csv`, `feature_importance_by_regime.csv`, `feature_family_summary.csv`, interpretability PNGs |
+| Raw local output | `models/feature_importance_raw.csv`; ignored by Git |
+
+Top guided-HMM regime-conditioned features are dominated by `vol_20h`, `vol_of_vol`, `atr_14`, `kurtosis`, `skewness`, `ret_autocorr`, and `ret_60h`. At the family level, guided-HMM regimes are mostly volatility driven, with momentum/autocorrelation and distribution-shape features providing the next largest attribution shares.
+
+Interpretation boundary: these diagnostics show which features the trained LightGBM models used inside the validation design. They do not establish causal feature effects or prove that HMM reference states are ground-truth regimes.
 
 ## Statistical Testing
 
