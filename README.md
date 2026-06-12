@@ -76,6 +76,7 @@ Binance OHLCV
 - Phase 19B full 30-epoch HMM-guided encoder run with guided-vs-baseline structural comparison.
 - Phase 20 guided downstream alpha retest with fold-local GMM/HMM assignment layers on the guided embedding space.
 - Phase 22A time-frequency guided encoder prototype with FFT magnitude bands appended to each time window.
+- Phase 23 fold-local LightGBM feature-importance and SHAP diagnostics for paper interpretability.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -105,6 +106,7 @@ python src/walkforward_regimes.py --symbols BTCUSDT ETHUSDT
 python src/robustness.py
 python src/robustness_stress.py
 python src/statistical_tests.py
+python src/interpretability.py --symbols BTCUSDT ETHUSDT
 python src/validation_audit.py --symbols BTCUSDT ETHUSDT
 python src/archive_run.py --phase phase14b_baseline --run-id 20260522_phase14b_baseline --source-ref v1.3-phase14b --notes "Frozen Phase 14B baseline before Phase 15 statistical and encoder work."
 python src/backtest.py
@@ -151,6 +153,11 @@ python -m pip install -r requirements-research.txt
 | `models/time_frequency_encoder_loss.csv` | Phase 22A time-frequency guided training loss diagnostics |
 | `models/time_frequency_encoder_comparison.csv` | Phase 22A comparison against baseline regime-quality methods |
 | `models/time_frequency_encoder_loss_curve.png` | Visual Phase 22A time-frequency training loss curve |
+| `models/feature_importance_global.csv` | Phase 23 fold-local global LightGBM importance summary |
+| `models/feature_importance_by_regime.csv` | Phase 23 fold-local raw-HMM and guided-HMM regime-conditioned importance summary |
+| `models/feature_family_summary.csv` | Phase 23 feature-family attribution summary for paper interpretation |
+| `models/feature_importance_by_regime.png` | Visual Phase 23 top features by regime-conditioned model |
+| `models/feature_family_importance.png` | Visual Phase 23 feature-family attribution by regime |
 | `models/per_regime_stats.csv` | Volatility, return, liquidity, and IC diagnostics by regime |
 | `models/experiment_results.csv` | Master model comparison table |
 | `models/alpha_oos_predictions.csv` | Out-of-sample model predictions |
@@ -211,6 +218,7 @@ adaptive-alpha-lab/
 │   ├── regime_quality.py
 │   ├── compute_plan.py
 │   ├── guided_encoder.py
+│   ├── interpretability.py
 │   ├── validation_audit.py
 │   ├── walkforward_regimes.py
 │   ├── robustness.py
@@ -450,7 +458,28 @@ Phase 22A tests whether adding a simple frequency-domain view helps the guided e
 
 The result is useful but not a new winner yet. The time-frequency prototype is far stronger than the original vanilla contrastive regime path from Phase 16 (`HMM NMI = 0.032`), but it is still weaker than the full 30-epoch time-only HMM-guided encoder (`HMM NMI = 0.869`). The current conclusion is that frequency information is worth tracking as an ablation, but the project should not spend downstream alpha compute on it until a full-length time-frequency run closes the structural gap.
 
+## Phase 23 Fold-Local Interpretability
+
+Phase 23 adds the first paper-grade explanation layer. `src/interpretability.py` trains the same LightGBM families inside the walk-forward folds, aggregates gain/split importance, and computes capped SHAP summaries for:
+
+- `global_lgbm`
+- `regime_lgbm_hmm`
+- `regime_lgbm_hmm_guided_hmm`
+
+The important discipline is that this is fold-local interpretability. The explanation models are fit only on the training side of each fold, then aggregated across folds and regimes. That keeps the interpretation aligned with the validation setup instead of explaining a single full-sample model that has seen the future.
+
+Top guided-HMM regime-conditioned alpha features:
+
+| Guided-HMM Regime | Top Features | Dominant Family Read |
+|---|---|---|
+| 0 | `vol_20h`, `vol_of_vol`, `kurtosis`, `atr_14`, `ret_autocorr` | volatility + distribution shape |
+| 1 | `vol_20h`, `vol_of_vol`, `kurtosis`, `atr_14`, `ret_autocorr` | volatility + distribution shape |
+| 2 | `vol_20h`, `vol_of_vol`, `atr_14`, `kurtosis`, `ret_60h` | volatility + medium-horizon momentum |
+| 3 | `vol_20h`, `vol_of_vol`, `ret_autocorr`, `skewness`, `ret_60h` | volatility + momentum/autocorrelation |
+
+The feature-family summary is economically sensible. Guided-HMM regimes are mostly volatility-state driven, with volatility explaining about 35%-39% of SHAP share by regime, momentum about 28%-32%, and distribution shape about 11%-12%. That supports the paper narrative that the guided regimes are not arbitrary cluster IDs: the downstream alpha models mostly respond to volatility persistence, volatility-of-volatility, return autocorrelation, and return-distribution shape.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, and a Streamlit research dashboard. The next important work is full-length ablation and interpretability: decide whether the time-frequency path deserves a 30-epoch run, then explain which features drive alpha inside the guided-HMM regimes.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, and a Streamlit research dashboard. The next important work is to turn the existing evidence into a formal paper draft, then decide whether a full-length time-frequency or hard-negative ablation is worth the compute.
 

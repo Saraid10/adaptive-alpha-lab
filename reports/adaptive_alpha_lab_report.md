@@ -83,11 +83,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 27 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, literature-positioning artifact, and run-registry checks passed |
+| PASS | 28 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, literature-positioning artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 23 interpretability artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -347,6 +347,25 @@ This is a useful but mixed result. Compared with the original vanilla contrastiv
 
 The paper-safe interpretation is therefore cautious: frequency-domain information may be useful as an ablation, but the current 3-epoch prototype does not justify a downstream alpha claim. A full time-frequency run is only worth doing if the next compute budget allows it, and it should be evaluated against the frozen Phase 19B/20/21 guided-HMM baseline rather than against the old vanilla contrastive baseline.
 
+## Phase 23 Fold-Local Interpretability
+
+Phase 23 adds interpretability evidence for the alpha models. The goal is not to prove causality. The goal is to check whether the features driving the best guided-HMM downstream model are economically plausible and whether the regime-conditioned models are reacting to coherent market-state information.
+
+The script `src/interpretability.py` trains explanation models inside the same expanding walk-forward folds used by the alpha benchmark. It aggregates LightGBM gain/split importance and capped SHAP summaries for the global LightGBM, raw-feature HMM regime LightGBM, and guided-HMM regime LightGBM. This avoids explaining a single full-sample model that has seen all dates.
+
+Top guided-HMM regime-conditioned alpha features:
+
+| Guided-HMM Regime | Top Features | Interpretation |
+|---|---|---|
+| 0 | `vol_20h`, `vol_of_vol`, `kurtosis`, `atr_14`, `ret_autocorr` | volatility persistence with distribution-shape sensitivity |
+| 1 | `vol_20h`, `vol_of_vol`, `kurtosis`, `atr_14`, `ret_autocorr` | volatility persistence with distribution-shape sensitivity |
+| 2 | `vol_20h`, `vol_of_vol`, `atr_14`, `kurtosis`, `ret_60h` | volatility state plus medium-horizon return context |
+| 3 | `vol_20h`, `vol_of_vol`, `ret_autocorr`, `skewness`, `ret_60h` | volatility state plus autocorrelation and skew-sensitive momentum |
+
+The feature-family summary is consistent with the regime narrative. Across guided-HMM regimes, volatility features explain roughly 35%-39% of SHAP share, momentum features roughly 28%-32%, and distribution-shape features roughly 11%-12%. Liquidity/volume and microstructure proxies contribute smaller but nonzero shares. This is paper-useful because it shows that the guided-HMM alpha model is not driven by arbitrary identifiers alone; its predictions are mostly tied to volatility state, volatility-of-volatility, return autocorrelation, and distribution shape.
+
+The limitation is equally important: feature importance is diagnostic and model-specific, not causal evidence. These results support economic plausibility, but they do not prove that the regimes are true latent market states.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
@@ -359,6 +378,7 @@ The paper-safe interpretation is therefore cautious: frequency-domain informatio
 - The Phase 20 guided-HMM edge over raw-feature HMM is promising but not statistically significant at the 5% level on fold-level IC.
 - Phase 21 adds guided-method robustness and stress coverage. Guided-HMM is stress-robust on the primary BTC+ETH 8h prediction file, but symbol/horizon robustness remains mixed.
 - Phase 22A is a 3-epoch structural prototype. It does not replace the full 30-epoch time-only guided baseline and has not been retested downstream.
+- Phase 23 interpretability is diagnostic. Fold-local SHAP and feature-importance summaries improve economic plausibility, but they are not causal explanations.
 - Calibration/NLL diagnostics do not uniformly favor the guided methods, so probability quality and trading-score quality should be discussed separately.
 - Phase 19A is a positioning phase, not an empirical result. It clarifies contribution language but does not prove a new model improvement.
 - Literature positioning depends on describing HMM states as proxy/reference states, not ground truth labels.
@@ -370,9 +390,9 @@ The paper-safe interpretation is therefore cautious: frequency-domain informatio
 
 ## Next Steps
 
-1. Add feature importance and SHAP summaries for global, raw-HMM, and guided-HMM LightGBM models.
+1. Draft the formal paper skeleton with methodology, experiment design, results, limitations, and related work.
 2. Decide whether Phase 22A earns a full 30-epoch time-frequency run; keep hard-negative ablations capped by the compute budget.
 3. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
-4. Use the Phase 19A literature matrix to write the formal related-work section before paper drafting.
+4. Convert the Phase 19A literature matrix into a full related-work section with explicit contribution boundaries.
 5. Expand beyond BTC/ETH only if the written statistical gate is met.
 6. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.
