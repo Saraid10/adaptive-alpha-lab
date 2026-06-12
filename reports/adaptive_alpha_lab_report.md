@@ -83,11 +83,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 26 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, literature-positioning artifact, and run-registry checks passed |
+| PASS | 27 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, literature-positioning artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -226,12 +226,12 @@ The current profile uses synthetic forward/backward timing for the existing `Tem
 | Encoder parameters | 139,408 |
 | Training windows | 34,798 |
 | Batches per epoch | 271 |
-| Profiled step time | 0.915 seconds |
-| Estimated epoch time | 4.13 minutes |
-| Estimated 30-epoch retrain | 124.03 minutes |
-| Estimated 12-run initial grid | 26.41 hours |
+| Profiled step time | 0.739 seconds |
+| Estimated epoch time | 3.34 minutes |
+| Estimated 30-epoch retrain | 100.10 minutes |
+| Estimated 12-run initial grid | 21.62 hours |
 | Local budget | 24 hours |
-| Budget status | yellow |
+| Budget status | green |
 
 The initial ablation cap remains 12 runs: 3 losses by 2 augmentations by 2 assignment methods. The queue is now staged rather than wide-open:
 
@@ -239,9 +239,9 @@ The initial ablation cap remains 12 runs: 3 losses by 2 augmentations by 2 assig
 |---:|---|---|---|---|
 | 1 | `hmm_guided` | `time_only` | `hmm` | complete |
 | 2 | `hmm_guided` | `time_only` | `gmm` | complete |
-| 3 | `hmm_guided` | `time_frequency` | `hmm` | active next |
+| 3 | `hmm_guided` | `time_frequency` | `hmm` | 3-epoch prototype complete |
 
-This matters for paper execution because it prevents an uncontrolled ablation explosion. The time-only guided runs are complete; the next model-side experiment should be the time-frequency guided-HMM variant. The remaining grid should stay on hold until that run produces evidence worth the extra compute.
+This matters for paper execution because it prevents an uncontrolled ablation explosion. The time-only guided runs are complete, and the first time-frequency prototype now exists as a capped structural test. The remaining grid should stay on hold until a full-length time-frequency run produces evidence worth downstream alpha compute.
 
 ## Phase 18 HMM-Guided Encoder
 
@@ -332,6 +332,21 @@ The statistical interpretation stays cautious. At the fold level, the guided-HMM
 
 The project now has a clean scientific progression: dense contrastive regimes underperform, stability diagnostics identify the assignment-layer weakness, contrastive-HMM partly fixes temporal consistency, HMM-guided weak supervision repairs structural alignment, and Phase 20 shows that the guided-HMM path can become the strongest downstream point-estimate method under strict fold-local validation.
 
+## Phase 22A Time-Frequency Guided Encoder
+
+Phase 22A adds the first augmentation-side encoder test. The guided encoder still uses HMM states as weak supervision, but each 60-bar feature window now includes both the original time-domain features and six low-frequency FFT magnitude bands per feature. This increases the encoder input from 22 to 154 features.
+
+The run is intentionally capped at 3 epochs. Its purpose is to test whether the time-frequency view is structurally promising enough to justify a full 30-epoch run and downstream alpha retest.
+
+| Method | Epochs | Input Features | Silhouette | Avg Duration | Transition Diagonal | Mean Confidence | HMM NMI | HMM ARI | HMM Purity |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `tf_hmm_guided_gmm` | 3 | 154 | 0.326 | 6.47 | 0.845 | 0.967 | 0.504 | 0.372 | 0.682 |
+| `tf_hmm_guided_hmm` | 3 | 154 | 0.338 | 8.39 | 0.881 | 0.986 | 0.528 | 0.416 | 0.704 |
+
+This is a useful but mixed result. Compared with the original vanilla contrastive path from Phase 16 (`HMM NMI = 0.032`, `HMM purity = 0.379`), the time-frequency guided encoder is clearly more aligned with the raw-feature HMM reference. Compared with the full 30-epoch time-only HMM-guided encoder (`HMM NMI = 0.869`, `HMM purity = 0.957`), it is still weaker.
+
+The paper-safe interpretation is therefore cautious: frequency-domain information may be useful as an ablation, but the current 3-epoch prototype does not justify a downstream alpha claim. A full time-frequency run is only worth doing if the next compute budget allows it, and it should be evaluated against the frozen Phase 19B/20/21 guided-HMM baseline rather than against the old vanilla contrastive baseline.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
@@ -343,6 +358,7 @@ The project now has a clean scientific progression: dense contrastive regimes un
 - Phase 20 tests guided embeddings downstream, but the guided encoder itself is still trained as a frozen/offline representation. A stricter future version would retrain or update the encoder inside each walk-forward fold.
 - The Phase 20 guided-HMM edge over raw-feature HMM is promising but not statistically significant at the 5% level on fold-level IC.
 - Phase 21 adds guided-method robustness and stress coverage. Guided-HMM is stress-robust on the primary BTC+ETH 8h prediction file, but symbol/horizon robustness remains mixed.
+- Phase 22A is a 3-epoch structural prototype. It does not replace the full 30-epoch time-only guided baseline and has not been retested downstream.
 - Calibration/NLL diagnostics do not uniformly favor the guided methods, so probability quality and trading-score quality should be discussed separately.
 - Phase 19A is a positioning phase, not an empirical result. It clarifies contribution language but does not prove a new model improvement.
 - Literature positioning depends on describing HMM states as proxy/reference states, not ground truth labels.
@@ -355,7 +371,7 @@ The project now has a clean scientific progression: dense contrastive regimes un
 ## Next Steps
 
 1. Add feature importance and SHAP summaries for global, raw-HMM, and guided-HMM LightGBM models.
-2. Add time-frequency augmentation and hard-negative ablations, but keep the grid capped by the compute budget.
+2. Decide whether Phase 22A earns a full 30-epoch time-frequency run; keep hard-negative ablations capped by the compute budget.
 3. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
 4. Use the Phase 19A literature matrix to write the formal related-work section before paper drafting.
 5. Expand beyond BTC/ETH only if the written statistical gate is met.

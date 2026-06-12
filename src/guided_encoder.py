@@ -25,6 +25,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 POST_COLS = [f"post_{idx}" for idx in range(N_REGIMES)]
 ASSIGNMENT_COLS = ["method", "symbol", "open_time", "feat_idx", "regime"] + POST_COLS
 GUIDED_METHODS = ["hmm_guided_gmm", "hmm_guided_hmm"]
+TIME_FREQUENCY_METHODS = ["tf_hmm_guided_gmm", "tf_hmm_guided_hmm"]
 COMPARISON_COLS = [
     "method",
     "source_phase",
@@ -49,9 +50,17 @@ class GuidedSamples:
 
 
 class GuidedWindowDataset(Dataset):
-    def __init__(self, matrices: dict[str, np.ndarray], samples: pd.DataFrame):
+    def __init__(
+        self,
+        matrices: dict[str, np.ndarray],
+        samples: pd.DataFrame,
+        augmentation: str = "time_only",
+        fft_bins: int = 6,
+    ):
         self.matrices = matrices
         self.samples = samples.reset_index(drop=True)
+        self.augmentation = augmentation
+        self.fft_bins = fft_bins
         symbol_order = {symbol: idx for idx, symbol in enumerate(sorted(matrices))}
         self.samples["symbol_id"] = self.samples["symbol"].map(symbol_order).astype(int)
 
@@ -62,6 +71,7 @@ class GuidedWindowDataset(Dataset):
         row = self.samples.iloc[idx]
         start_idx = int(row.start_idx)
         window = self.matrices[row.symbol][start_idx : start_idx + WINDOW_SIZE]
+        window = transform_window(window, self.augmentation, self.fft_bins)
         return (
             torch.tensor(window, dtype=torch.float32),
             torch.tensor(int(row.hmm_regime), dtype=torch.long),
@@ -138,11 +148,96 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--symbols", nargs="*", default=SYMBOLS)
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument(
+        "--augmentation",
+        choices=["time_only", "frequency_only", "time_frequency"],
+        default="time_only",
+        help="Input view for the guided encoder. time_frequency appends FFT magnitude bands to each time step.",
+    )
+    parser.add_argument(
+        "--fft-bins",
+        type=int,
+        default=6,
+        help="Number of low-frequency FFT magnitude bins per feature for frequency/time_frequency views.",
+    )
+    parser.add_argument(
+        "--output-prefix",
+        default="",
+        help="Optional artifact prefix. Defaults to guided_encoder for time_only and time_frequency_encoder for time_frequency.",
+    )
     parser.add_argument("--min-positive-gap", type=int, default=24)
     parser.add_argument("--hard-negative-gap", type=int, default=24)
     parser.add_argument("--hard-negative-weight", type=float, default=2.0)
     parser.add_argument("--temperature", type=float, default=0.07)
     return parser.parse_args()
+
+
+def artifact_prefix(args: argparse.Namespace) -> str:
+    if args.output_prefix:
+        return args.output_prefix
+    if args.augmentation == "time_only":
+        return "guided_encoder"
+    if args.augmentation == "frequency_only":
+        return "frequency_encoder"
+    return "time_frequency_encoder"
+
+
+def artifact_path(args: argparse.Namespace, suffix: str) -> Path:
+    if args.augmentation == "time_only" and not args.output_prefix:
+        legacy_names = {
+            "model.pt": "guided_encoder.pt",
+            "embeddings.npy": "guided_embeddings.npy",
+            "assignments.csv": "guided_encoder_assignments.csv",
+            "labels.npy": "guided_labels.npy",
+        }
+        if suffix in legacy_names:
+            return Path(SAVE_DIR) / legacy_names[suffix]
+    return Path(SAVE_DIR) / f"{artifact_prefix(args)}_{suffix}"
+
+
+def active_methods(args: argparse.Namespace) -> list[str]:
+    return GUIDED_METHODS if args.augmentation == "time_only" else TIME_FREQUENCY_METHODS
+
+
+def source_phase(args: argparse.Namespace) -> str:
+    return "phase19b_full_guided_encoder" if args.augmentation == "time_only" else "phase22_time_frequency_guided_encoder"
+
+
+def frequency_view(window: np.ndarray, fft_bins: int) -> np.ndarray:
+    spectrum = np.abs(np.fft.rfft(window, axis=0))[1:]
+    if spectrum.size == 0:
+        bands = np.zeros((max(fft_bins, 1), window.shape[1]), dtype=float)
+    else:
+        bins = max(1, int(fft_bins))
+        bands = spectrum[:bins]
+        if len(bands) < bins:
+            pad = np.zeros((bins - len(bands), window.shape[1]), dtype=float)
+            bands = np.vstack([bands, pad])
+    features = np.log1p(bands).T.reshape(-1)
+    features = (features - features.mean()) / (features.std() + 1e-8)
+    return np.repeat(features[None, :], window.shape[0], axis=0)
+
+
+def transform_window(window: np.ndarray, augmentation: str, fft_bins: int) -> np.ndarray:
+    if augmentation == "time_only":
+        return window
+    freq = frequency_view(window, fft_bins)
+    if augmentation == "frequency_only":
+        return freq
+    if augmentation == "time_frequency":
+        return np.concatenate([window, freq], axis=1)
+    raise ValueError(f"Unknown augmentation: {augmentation}")
+
+
+def transformed_feature_count(augmentation: str, fft_bins: int) -> int:
+    if augmentation == "time_only":
+        return N_FEATURES
+    freq_count = N_FEATURES * max(1, int(fft_bins))
+    if augmentation == "frequency_only":
+        return freq_count
+    if augmentation == "time_frequency":
+        return N_FEATURES + freq_count
+    raise ValueError(f"Unknown augmentation: {augmentation}")
 
 
 def load_hmm_labels(symbols: list[str]) -> pd.DataFrame:
@@ -162,16 +257,25 @@ def load_hmm_labels(symbols: list[str]) -> pd.DataFrame:
     return labels.drop(columns="regime")
 
 
-def fit_guided_scaler(matrices: dict[str, np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
+def fit_guided_scaler(
+    matrices: dict[str, np.ndarray],
+    args: argparse.Namespace,
+) -> tuple[np.ndarray, np.ndarray]:
     combined = np.vstack(list(matrices.values()))
     mean = combined.mean(axis=0)
     std = combined.std(axis=0) + 1e-8
-    np.save(Path(SAVE_DIR) / "guided_norm_mean.npy", mean)
-    np.save(Path(SAVE_DIR) / "guided_norm_std.npy", std)
+    if args.augmentation == "time_only" and not args.output_prefix:
+        mean_path = Path(SAVE_DIR) / "guided_norm_mean.npy"
+        std_path = Path(SAVE_DIR) / "guided_norm_std.npy"
+    else:
+        mean_path = artifact_path(args, "norm_mean.npy")
+        std_path = artifact_path(args, "norm_std.npy")
+    np.save(mean_path, mean)
+    np.save(std_path, std)
     return mean, std
 
 
-def load_guided_samples(symbols: list[str]) -> GuidedSamples:
+def load_guided_samples(symbols: list[str], args: argparse.Namespace) -> GuidedSamples:
     raw = {}
     for symbol in symbols:
         matrix = load_feature_matrix(symbol)
@@ -182,7 +286,7 @@ def load_guided_samples(symbols: list[str]) -> GuidedSamples:
     if not raw:
         raise RuntimeError("No feature matrices loaded. Run features.py first.")
 
-    mean, std = fit_guided_scaler(raw)
+    mean, std = fit_guided_scaler(raw, args)
     matrices = {symbol: (matrix - mean) / std for symbol, matrix in raw.items()}
     hmm_labels = load_hmm_labels(list(matrices))
 
@@ -226,12 +330,18 @@ def load_feature_times(symbol: str) -> pd.DataFrame:
 
 
 def train_guided_encoder(samples: GuidedSamples, args: argparse.Namespace) -> tuple[TemporalEncoder, pd.DataFrame]:
-    dataset = GuidedWindowDataset(samples.matrices, samples.samples)
+    dataset = GuidedWindowDataset(
+        samples.matrices,
+        samples.samples,
+        augmentation=args.augmentation,
+        fft_bins=args.fft_bins,
+    )
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
     if len(dataloader) == 0:
         raise RuntimeError("Guided dataloader is empty; reduce batch size or check feature rows.")
 
-    model = TemporalEncoder(n_features=N_FEATURES, latent_dim=LATENT_DIM).to(DEVICE)
+    input_features = transformed_feature_count(args.augmentation, args.fft_bins)
+    model = TemporalEncoder(n_features=input_features, latent_dim=LATENT_DIM).to(DEVICE)
     criterion = HMMGuidedContrastiveLoss(
         temperature=args.temperature,
         min_positive_gap=args.min_positive_gap,
@@ -242,7 +352,10 @@ def train_guided_encoder(samples: GuidedSamples, args: argparse.Namespace) -> tu
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
     print(f"Training HMM-guided encoder on {DEVICE}")
-    print(f"Guided windows: {len(dataset):,} | batches/epoch: {len(dataloader):,}")
+    print(
+        f"Guided windows: {len(dataset):,} | batches/epoch: {len(dataloader):,} | "
+        f"augmentation={args.augmentation} | input_features={input_features}"
+    )
 
     rows = []
     for epoch in range(1, args.epochs + 1):
@@ -287,13 +400,17 @@ def train_guided_encoder(samples: GuidedSamples, args: argparse.Namespace) -> tu
             f"valid={row['valid_anchor_pct']:.3f} | hard_neg={row['hard_negative_pairs_per_batch']:.1f}"
         )
 
-    torch.save(model.state_dict(), Path(SAVE_DIR) / "guided_encoder.pt")
+    torch.save(model.state_dict(), artifact_path(args, "model.pt"))
     loss_history = pd.DataFrame(rows)
-    loss_history.to_csv(Path(SAVE_DIR) / "guided_encoder_loss.csv", index=False)
+    loss_history.to_csv(artifact_path(args, "loss.csv"), index=False)
     return model, loss_history
 
 
-def extract_guided_embeddings(model: TemporalEncoder, matrices: dict[str, np.ndarray]) -> tuple[np.ndarray, pd.DataFrame]:
+def extract_guided_embeddings(
+    model: TemporalEncoder,
+    matrices: dict[str, np.ndarray],
+    args: argparse.Namespace,
+) -> tuple[np.ndarray, pd.DataFrame]:
     model.eval()
     embeddings = []
     rows = []
@@ -303,9 +420,12 @@ def extract_guided_embeddings(model: TemporalEncoder, matrices: dict[str, np.nda
             print(f"Extracting guided dense embeddings for {symbol}...")
             for start_idx in range(0, len(matrix) - WINDOW_SIZE):
                 feat_idx = start_idx + WINDOW_SIZE - 1
-                window = torch.tensor(
-                    matrix[start_idx : start_idx + WINDOW_SIZE], dtype=torch.float32
-                ).unsqueeze(0).to(DEVICE)
+                window_np = transform_window(
+                    matrix[start_idx : start_idx + WINDOW_SIZE],
+                    args.augmentation,
+                    args.fft_bins,
+                )
+                window = torch.tensor(window_np, dtype=torch.float32).unsqueeze(0).to(DEVICE)
                 z = model(window)
                 embeddings.append(z.cpu().numpy())
                 rows.append(
@@ -317,7 +437,7 @@ def extract_guided_embeddings(model: TemporalEncoder, matrices: dict[str, np.nda
                     }
                 )
     embedding_matrix = np.vstack(embeddings)
-    np.save(Path(SAVE_DIR) / "guided_embeddings.npy", embedding_matrix)
+    np.save(artifact_path(args, "embeddings.npy"), embedding_matrix)
     return embedding_matrix, pd.DataFrame(rows)
 
 
@@ -330,7 +450,11 @@ def probability_posts(probs: np.ndarray) -> pd.DataFrame:
     return pd.DataFrame({f"post_{idx}": posts[:, idx] for idx in range(N_REGIMES)})
 
 
-def fit_guided_assignments(embeddings: np.ndarray, meta: pd.DataFrame) -> pd.DataFrame:
+def fit_guided_assignments(
+    embeddings: np.ndarray,
+    meta: pd.DataFrame,
+    args: argparse.Namespace,
+) -> pd.DataFrame:
     outputs = []
 
     gmm = GaussianMixture(
@@ -343,7 +467,8 @@ def fit_guided_assignments(embeddings: np.ndarray, meta: pd.DataFrame) -> pd.Dat
     gmm_labels = gmm.predict(embeddings).astype(int)
     gmm_posts = probability_posts(gmm.predict_proba(embeddings))
     gmm_frame = meta[["symbol", "open_time", "feat_idx"]].copy()
-    gmm_frame["method"] = "hmm_guided_gmm"
+    methods = active_methods(args)
+    gmm_frame["method"] = methods[0]
     gmm_frame["regime"] = gmm_labels
     outputs.append(pd.concat([gmm_frame, gmm_posts], axis=1)[ASSIGNMENT_COLS])
 
@@ -370,15 +495,15 @@ def fit_guided_assignments(embeddings: np.ndarray, meta: pd.DataFrame) -> pd.Dat
         hmm_posts = gmm_posts
 
     hmm_frame = meta[["symbol", "open_time", "feat_idx"]].copy()
-    hmm_frame["method"] = "hmm_guided_hmm"
+    hmm_frame["method"] = methods[1]
     hmm_frame["regime"] = hmm_labels
     hmm_out = pd.concat([hmm_frame, hmm_posts], axis=1)[ASSIGNMENT_COLS]
     hmm_out["implementation"] = implementation
     outputs.append(hmm_out[ASSIGNMENT_COLS])
 
     assignments = pd.concat(outputs, ignore_index=True)
-    assignments.to_csv(Path(SAVE_DIR) / "guided_encoder_assignments.csv", index=False)
-    np.save(Path(SAVE_DIR) / "guided_labels.npy", assignments["regime"].to_numpy(dtype=int))
+    assignments.to_csv(artifact_path(args, "assignments.csv"), index=False)
+    np.save(artifact_path(args, "labels.npy"), assignments["regime"].to_numpy(dtype=int))
     return assignments
 
 
@@ -428,7 +553,7 @@ def summarize_guided(
     reference = pd.read_csv(Path(SAVE_DIR) / "regime_assignments.csv")
     reference = reference[reference["method"] == "hmm"].copy()
     rows = []
-    for method in GUIDED_METHODS:
+    for method in active_methods(args):
         frame = assignments[assignments["method"] == method].reset_index(drop=True)
         common = frame[["symbol", "feat_idx"]].merge(
             reference[["symbol", "feat_idx"]], on=["symbol", "feat_idx"], how="inner"
@@ -447,10 +572,12 @@ def summarize_guided(
         row = {
             "method": method,
             "loss": "hmm_guided_contrastive",
-            "augmentation": "time_only",
-            "assignment_method": method.replace("hmm_guided_", ""),
+            "augmentation": args.augmentation,
+            "assignment_method": "hmm" if method.endswith("_hmm") else "gmm",
             "epochs": int(args.epochs),
             "batch_size": int(args.batch_size),
+            "input_features": int(transformed_feature_count(args.augmentation, args.fft_bins)),
+            "fft_bins": int(args.fft_bins),
             "min_positive_gap": int(args.min_positive_gap),
             "hard_negative_gap": int(args.hard_negative_gap),
             "hard_negative_weight": float(args.hard_negative_weight),
@@ -469,11 +596,11 @@ def summarize_guided(
         }
         rows.append(row)
     summary = pd.DataFrame(rows)
-    summary.to_csv(Path(SAVE_DIR) / "guided_encoder_summary.csv", index=False)
+    summary.to_csv(artifact_path(args, "summary.csv"), index=False)
     return summary
 
 
-def save_guided_comparison(summary: pd.DataFrame) -> pd.DataFrame:
+def save_guided_comparison(summary: pd.DataFrame, args: argparse.Namespace) -> pd.DataFrame:
     quality_path = Path(SAVE_DIR) / "regime_quality_summary.csv"
     baseline = pd.DataFrame()
     if quality_path.exists():
@@ -509,7 +636,7 @@ def save_guided_comparison(summary: pd.DataFrame) -> pd.DataFrame:
             "hmm_reference_purity",
         ]
     ].copy()
-    guided["source_phase"] = "phase19b_full_guided_encoder"
+    guided["source_phase"] = source_phase(args)
 
     comparison = pd.concat([baseline, guided], ignore_index=True)
     if comparison.empty:
@@ -531,23 +658,26 @@ def save_guided_comparison(summary: pd.DataFrame) -> pd.DataFrame:
     comparison = comparison[COMPARISON_COLS].sort_values(
         ["hmm_reference_nmi", "hmm_reference_purity"], ascending=False
     )
-    comparison.to_csv(Path(SAVE_DIR) / "guided_encoder_comparison.csv", index=False)
+    comparison.to_csv(artifact_path(args, "comparison.csv"), index=False)
     return comparison
 
 
-def save_loss_plot(loss_history: pd.DataFrame) -> None:
+def save_loss_plot(loss_history: pd.DataFrame, args: argparse.Namespace) -> None:
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.plot(loss_history["epoch"], loss_history["loss"], color="#2563EB", marker="o")
-    ax.set_title("HMM-Guided Encoder Loss")
+    title = "HMM-Guided Encoder Loss"
+    if args.augmentation != "time_only":
+        title = f"HMM-Guided Encoder Loss ({args.augmentation})"
+    ax.set_title(title)
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Loss")
     ax.grid(True, alpha=0.25)
     plt.tight_layout()
-    fig.savefig(Path(SAVE_DIR) / "guided_encoder_loss_curve.png", dpi=150)
+    fig.savefig(artifact_path(args, "loss_curve.png"), dpi=150)
     plt.close(fig)
 
 
-def save_transition_plot(method: str, frame: pd.DataFrame) -> None:
+def save_transition_plot(method: str, frame: pd.DataFrame, args: argparse.Namespace) -> None:
     counts = transition_counts(frame)
     row_sum = counts.sum(axis=1, keepdims=True)
     matrix = np.divide(counts, row_sum, out=np.zeros_like(counts), where=row_sum != 0)
@@ -563,7 +693,7 @@ def save_transition_plot(method: str, frame: pd.DataFrame) -> None:
             ax.text(col, row, f"{matrix[row, col]:.2f}", ha="center", va="center", fontsize=8)
     fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
     plt.tight_layout()
-    fig.savefig(Path(SAVE_DIR) / f"guided_encoder_transition_{method}.png", dpi=150)
+    fig.savefig(artifact_path(args, f"transition_{method}.png"), dpi=150)
     plt.close(fig)
 
 
@@ -573,16 +703,16 @@ def main() -> None:
     torch.manual_seed(RANDOM_STATE)
     np.random.seed(RANDOM_STATE)
 
-    guided = load_guided_samples(args.symbols)
+    guided = load_guided_samples(args.symbols, args)
     model, loss_history = train_guided_encoder(guided, args)
-    embeddings, meta = extract_guided_embeddings(model, guided.matrices)
-    assignments = fit_guided_assignments(embeddings, meta)
+    embeddings, meta = extract_guided_embeddings(model, guided.matrices, args)
+    assignments = fit_guided_assignments(embeddings, meta, args)
     summary = summarize_guided(embeddings, assignments, loss_history, args)
-    comparison = save_guided_comparison(summary)
+    comparison = save_guided_comparison(summary, args)
 
-    save_loss_plot(loss_history)
-    for method in GUIDED_METHODS:
-        save_transition_plot(method, assignments[assignments["method"] == method])
+    save_loss_plot(loss_history, args)
+    for method in active_methods(args):
+        save_transition_plot(method, assignments[assignments["method"] == method], args)
 
     print("\nHMM-guided encoder summary:")
     print(summary.to_string(index=False))

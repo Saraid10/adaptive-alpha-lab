@@ -29,6 +29,7 @@ PASS = "PASS"
 WARN = "WARN"
 FAIL = "FAIL"
 GUIDED_REGIME_METHODS = ["hmm_guided_gmm", "hmm_guided_hmm"]
+TIME_FREQUENCY_METHODS = ["tf_hmm_guided_gmm", "tf_hmm_guided_hmm"]
 FOLD_LOCAL_REGIME_METHODS = REGIME_METHODS + GUIDED_REGIME_METHODS
 FOLD_LOCAL_METHODS = ["global_lgbm"] + [f"regime_lgbm_{method}" for method in FOLD_LOCAL_REGIME_METHODS]
 
@@ -825,12 +826,16 @@ def audit_compute_plan_artifacts(rows: list[AuditRecord]) -> None:
             failures += 1
             detail_parts.append(f"unexpected_budget_row_count={len(budget)} expected={expected_rows}")
         active_next_count = int((budget["decision"] == "active_next").sum())
+        prototype_pending_count = int((budget["decision"] == "prototype_complete_full_pending").sum())
         complete_count = int((budget["decision"] == "complete").sum())
-        priority_count = active_next_count + complete_count
-        detail_parts.append(f"complete={complete_count}; active_next={active_next_count}")
-        if active_next_count < 1:
+        priority_count = active_next_count + complete_count + prototype_pending_count
+        detail_parts.append(
+            f"complete={complete_count}; active_next={active_next_count}; "
+            f"prototype_pending={prototype_pending_count}"
+        )
+        if active_next_count + prototype_pending_count < 1:
             failures += 1
-            detail_parts.append("no_active_next_run_marked")
+            detail_parts.append("no_active_or_pending_run_marked")
         if priority_count < 3:
             failures += 1
             detail_parts.append("missing_completed_or_priority_runs")
@@ -1008,6 +1013,146 @@ def audit_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
     record(
         rows,
         "guided_encoder_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(len(summary) + len(loss), 1),
+        rows_failed=failures,
+    )
+
+
+def audit_time_frequency_encoder_artifacts(rows: list[AuditRecord]) -> None:
+    summary_path = Path(SAVE_DIR) / "time_frequency_encoder_summary.csv"
+    loss_path = Path(SAVE_DIR) / "time_frequency_encoder_loss.csv"
+    comparison_path = Path(SAVE_DIR) / "time_frequency_encoder_comparison.csv"
+    loss_plot_path = Path(SAVE_DIR) / "time_frequency_encoder_loss_curve.png"
+    transition_gmm_path = Path(SAVE_DIR) / "time_frequency_encoder_transition_tf_hmm_guided_gmm.png"
+    transition_hmm_path = Path(SAVE_DIR) / "time_frequency_encoder_transition_tf_hmm_guided_hmm.png"
+
+    if not summary_path.exists():
+        record(
+            rows,
+            "time_frequency_encoder_artifacts",
+            WARN,
+            "artifact",
+            "time_frequency_encoder_summary.csv is missing; run guided_encoder.py --augmentation time_frequency for Phase 22 diagnostics.",
+        )
+        return
+
+    summary = pd.read_csv(summary_path)
+    loss = pd.read_csv(loss_path) if loss_path.exists() else pd.DataFrame()
+    comparison = pd.read_csv(comparison_path) if comparison_path.exists() else pd.DataFrame()
+    missing_files = [
+        str(path.name)
+        for path in [loss_path, comparison_path, loss_plot_path, transition_gmm_path, transition_hmm_path]
+        if not path.exists()
+    ]
+    missing_summary_cols = sorted(
+        {
+            "method",
+            "loss",
+            "augmentation",
+            "assignment_method",
+            "epochs",
+            "input_features",
+            "fft_bins",
+            "n_rows",
+            "silhouette",
+            "avg_regime_duration",
+            "transition_diagonal_probability",
+            "mean_confidence",
+            "final_loss",
+            "final_valid_anchor_pct",
+            "hmm_reference_nmi",
+            "hmm_reference_ari",
+            "hmm_reference_purity",
+        }
+        - set(summary.columns)
+    )
+    missing_loss_cols = sorted(
+        {"epoch", "loss", "valid_anchor_pct", "positive_pairs_per_batch", "hard_negative_pairs_per_batch"}
+        - set(loss.columns)
+    )
+    missing_comparison_cols = sorted(
+        {
+            "method",
+            "source_phase",
+            "n_rows",
+            "hmm_reference_nmi",
+            "hmm_reference_ari",
+            "hmm_reference_purity",
+            "hmm_nmi_vs_contrastive_delta",
+            "hmm_purity_vs_contrastive_delta",
+        }
+        - set(comparison.columns)
+    )
+
+    required_methods = set(TIME_FREQUENCY_METHODS)
+    failures = len(missing_files) + len(missing_summary_cols) + len(missing_loss_cols) + len(missing_comparison_cols)
+    detail_parts = [f"summary_rows={len(summary)}", f"loss_rows={len(loss)}", f"comparison_rows={len(comparison)}"]
+
+    if not missing_summary_cols:
+        missing_methods = sorted(required_methods - set(summary["method"]))
+        failures += len(missing_methods)
+        if missing_methods:
+            detail_parts.append(f"missing_methods={missing_methods}")
+
+        if set(summary["augmentation"].unique()) != {"time_frequency"}:
+            failures += 1
+            detail_parts.append(f"unexpected_augmentations={sorted(summary['augmentation'].unique())}")
+
+        expected_features = len(FEATURE_COLS) * (1 + int(summary["fft_bins"].iloc[0]))
+        input_features = pd.to_numeric(summary["input_features"], errors="coerce")
+        bad_input_features = int((input_features != expected_features).sum())
+        failures += bad_input_features
+        if bad_input_features:
+            detail_parts.append(f"unexpected_input_features={bad_input_features}; expected={expected_features}")
+
+        bounded_cols = [
+            "transition_diagonal_probability",
+            "mean_confidence",
+            "final_valid_anchor_pct",
+            "hmm_reference_nmi",
+            "hmm_reference_purity",
+        ]
+        bad_ranges = 0
+        for column in bounded_cols:
+            values = pd.to_numeric(summary[column], errors="coerce")
+            bad_ranges += int(((values < 0) | (values > 1) | values.isna()).sum())
+        failures += bad_ranges
+        if bad_ranges:
+            detail_parts.append(f"bounded_metric_rows_out_of_range={bad_ranges}")
+
+        if not summary.empty:
+            max_epochs = int(summary["epochs"].max())
+            detail_parts.append(f"epochs={max_epochs}")
+            detail_parts.append(f"best_hmm_reference_nmi={summary['hmm_reference_nmi'].max():.3f}")
+
+    if not loss.empty and not missing_loss_cols:
+        bad_loss = int((pd.to_numeric(loss["loss"], errors="coerce") <= 0).sum())
+        failures += bad_loss
+        if bad_loss:
+            detail_parts.append(f"non_positive_loss_rows={bad_loss}")
+
+    if not comparison.empty and not missing_comparison_cols:
+        comparison_methods = set(comparison["method"])
+        missing_comparison_methods = sorted(required_methods - comparison_methods)
+        failures += len(missing_comparison_methods)
+        if missing_comparison_methods:
+            detail_parts.append(f"missing_comparison_methods={missing_comparison_methods}")
+
+    if missing_files:
+        detail_parts.append(f"missing_artifacts={missing_files}")
+    if missing_summary_cols:
+        detail_parts.append(f"missing_summary_columns={missing_summary_cols}")
+    if missing_loss_cols:
+        detail_parts.append(f"missing_loss_columns={missing_loss_cols}")
+    if missing_comparison_cols:
+        detail_parts.append(f"missing_comparison_columns={missing_comparison_cols}")
+
+    record(
+        rows,
+        "time_frequency_encoder_artifacts",
         FAIL if failures else PASS,
         "critical",
         "; ".join(detail_parts),
@@ -1373,6 +1518,7 @@ def main() -> None:
     audit_regime_quality_artifacts(rows)
     audit_compute_plan_artifacts(rows)
     audit_guided_encoder_artifacts(rows)
+    audit_time_frequency_encoder_artifacts(rows)
     audit_literature_positioning_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
