@@ -37,6 +37,7 @@ These are practical local observations, not formal benchmarks:
 | Phase 19B 30-epoch guided encoder full run | about 61 minutes |
 | Phase 20 guided downstream alpha retest | about 12 minutes |
 | Phase 21 guided robustness refresh | about 78 minutes total across chunked robustness runs plus stress refresh |
+| Phase 22A 3-epoch time-frequency guided encoder prototype | about 11 minutes |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
@@ -48,12 +49,12 @@ Phase 17 measured the current encoder training cost with a synthetic CPU forward
 | Encoder parameters | 139,408 |
 | Training windows | 34,798 |
 | Batches per epoch | 271 |
-| Synthetic step time | 0.915 seconds |
-| Estimated epoch time | 4.13 minutes |
-| Estimated 30-epoch encoder run | 124.03 minutes |
-| Estimated 12-run ablation grid | 26.41 hours |
+| Synthetic step time | 0.739 seconds |
+| Estimated epoch time | 3.34 minutes |
+| Estimated 30-epoch encoder run | 100.10 minutes |
+| Estimated 12-run ablation grid | 21.62 hours |
 | Local budget | 24 hours |
-| Budget status | yellow |
+| Budget status | green |
 
 ## Mandatory Next Experiments
 
@@ -69,7 +70,7 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 19B full HMM-guided encoder | 1 full encoder run | Complete; 30 epochs, time-only, HMM/GMM assignments |
 | Phase 20 guided downstream alpha re-test | 0 encoder runs | Complete; uses Phase 19B guided embeddings in fold-local alpha/statistical benchmark |
 | Phase 21 guided robustness refresh | 0 encoder runs | Complete; refreshes symbol/horizon and stress robustness with guided methods |
-| Phase 22 time-frequency augmentation | 2-3 encoder runs | Next model-side experiment; time-only baseline is complete, compare frequency-only and time+frequency |
+| Phase 22 time-frequency augmentation | 2-3 encoder runs | Prototype complete; full 30-epoch run remains conditional |
 | Phase 23 hard negatives and ablations | capped matrix | Expand only if early results justify it |
 
 ## Initial Ablation Cap
@@ -96,7 +97,7 @@ The first three queued runs are:
 |---:|---|---|---|---|
 | 1 | `hmm_guided` | `time_only` | `hmm` | complete; best point-estimate downstream method |
 | 2 | `hmm_guided` | `time_only` | `gmm` | complete; weak downstream method |
-| 3 | `hmm_guided` | `time_frequency` | `hmm` | run next |
+| 3 | `hmm_guided` | `time_frequency` | `hmm` | 3-epoch prototype complete; full run conditional |
 
 The rest of the 12-run grid should stay on hold until one of these runs improves the learned-regime path.
 
@@ -133,6 +134,19 @@ Phase 20 reused the Phase 19B guided embeddings and added no encoder retraining 
 | `regime_lgbm_hmm_guided_hmm` | 0.0094 | 0.099 | -0.614 | 0.031 | best point estimate, not significant versus raw HMM on fold-level IC |
 
 The result is strong enough to justify one focused next encoder experiment: add the time-frequency view to the guided-HMM path. It is not strong enough to justify multi-asset expansion yet.
+
+## Phase 22A Time-Frequency Prototype
+
+Phase 22A completed a capped 3-epoch time-frequency guided encoder run. The run appends six low-frequency FFT magnitude bands per feature to each 60-bar input window, increasing the encoder input from 22 to 154 features.
+
+Observed runtime was about 11 minutes on the current CPU environment.
+
+| Method | Epochs | Input Features | Silhouette | HMM NMI | HMM Purity | Read |
+|---|---:|---:|---:|---:|---:|---|
+| `tf_hmm_guided_gmm` | 3 | 154 | 0.326 | 0.504 | 0.682 | stronger than vanilla contrastive, weaker than full guided baseline |
+| `tf_hmm_guided_hmm` | 3 | 154 | 0.338 | 0.528 | 0.704 | best Phase 22A structural result |
+
+This prototype does not yet justify a downstream alpha retest. The full 30-epoch time-only guided-HMM run remains the active baseline with `HMM NMI = 0.869` and `HMM purity = 0.957`. A full time-frequency run should be launched only if the project has spare compute after interpretability, or if the paper needs an augmentation ablation.
 
 ## Multi-Asset Gate
 

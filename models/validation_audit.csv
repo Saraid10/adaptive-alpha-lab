@@ -1,6 +1,6 @@
 check,status,severity,rows_checked,rows_failed,detail
 regime_discovery_protocol,WARN,methodological,173770,0,Legacy regime_assignments.csv is an offline/global artifact. Use walkforward_experiment_results.csv for fold-local predictive regime claims.
-compute_plan_artifacts,PASS,critical,13,0,profile_rows=1; budget_rows=12; complete=2; active_next=1; budget_status=yellow; summary_rows=8
+compute_plan_artifacts,PASS,critical,13,0,profile_rows=1; budget_rows=12; complete=2; active_next=0; prototype_pending=1; budget_status=green; summary_rows=8
 experiment_results_match_predictions,PASS,critical,6,0,experiment_results.csv n_test_rows matches alpha_oos_predictions.csv.
 feature_columns_present,PASS,critical,22,0,All 22 configured feature columns exist.
 feature_source_no_obvious_future_ops,PASS,critical,0,0,No shift(-h) or centered rolling windows found in features.py.
@@ -25,4 +25,5 @@ run_registry_artifacts,PASS,critical,39,0,registered_runs=1; latest_run=20260522
 statistical_test_artifacts,PASS,critical,144,0,"fold_metric_rows=144, expected=144; methods=8; summary_rows=8; pairwise_rows=98; compact_rows=42; corrected_rows=98; claim_rows=42; psr_rows=8"
 target_horizon_tail_loss,PASS,critical,2,0,"BTCUSDT: feature_rows=17460, target_rows=17436, lost=24, expected_loss=24, target_latest=2026-04-25 15:30:00+05:30; ETHUSDT: feature_rows=17460, target_rows=17436, lost=24, expected_loss=24, target_latest=2026-04-25 15:30:00+05:30"
 targets_symbol_rows,PASS,critical,2,0,"targets counts: BTCUSDT=17436, ETHUSDT=17436"
+time_frequency_encoder_artifacts,PASS,critical,5,0,summary_rows=2; loss_rows=3; comparison_rows=7; epochs=3; best_hmm_reference_nmi=0.528
 walk_forward_folds_exist,PASS,critical,18,0,"18 folds generated with initial_train, step, and embargo settings."

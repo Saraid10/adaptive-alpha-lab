@@ -75,6 +75,7 @@ Binance OHLCV
 - Phase 19A literature positioning across time-series contrastive learning, financial regime switching, financial ML validation, and regime-conditioned alpha modeling.
 - Phase 19B full 30-epoch HMM-guided encoder run with guided-vs-baseline structural comparison.
 - Phase 20 guided downstream alpha retest with fold-local GMM/HMM assignment layers on the guided embedding space.
+- Phase 22A time-frequency guided encoder prototype with FFT magnitude bands appended to each time window.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -99,6 +100,7 @@ python src/regime_stability.py --symbols BTCUSDT ETHUSDT
 python src/regime_quality.py --symbols BTCUSDT ETHUSDT
 python src/compute_plan.py --symbols BTCUSDT ETHUSDT
 python src/guided_encoder.py --symbols BTCUSDT ETHUSDT --epochs 30
+python src/guided_encoder.py --symbols BTCUSDT ETHUSDT --augmentation time_frequency --epochs 3
 python src/walkforward_regimes.py --symbols BTCUSDT ETHUSDT
 python src/robustness.py
 python src/robustness_stress.py
@@ -145,6 +147,10 @@ python -m pip install -r requirements-research.txt
 | `models/guided_encoder_comparison.csv` | Phase 19B comparison of guided encoder regimes versus existing structural baselines |
 | `models/guided_alpha_comparison.csv` | Phase 20 downstream comparison of guided regime alpha models versus global/classical references |
 | `models/guided_encoder_loss_curve.png` | Visual Phase 19B training loss curve |
+| `models/time_frequency_encoder_summary.csv` | Phase 22A time-frequency guided encoder structural diagnostics |
+| `models/time_frequency_encoder_loss.csv` | Phase 22A time-frequency guided training loss diagnostics |
+| `models/time_frequency_encoder_comparison.csv` | Phase 22A comparison against baseline regime-quality methods |
+| `models/time_frequency_encoder_loss_curve.png` | Visual Phase 22A time-frequency training loss curve |
 | `models/per_regime_stats.csv` | Volatility, return, liquidity, and IC diagnostics by regime |
 | `models/experiment_results.csv` | Master model comparison table |
 | `models/alpha_oos_predictions.csv` | Out-of-sample model predictions |
@@ -244,7 +250,7 @@ Phase 15B adds multiple-testing discipline. It applies Benjamini-Hochberg and Ho
 
 Phase 16 adds structural regime-quality metrics independent of alpha returns. It measures regime balance, persistence, posterior confidence, pairwise NMI/ARI agreement, and agreement with the raw-feature HMM reference. The HMM sequence is a classical comparison proxy, not ground truth. This phase answers whether a method produces coherent state partitions before asking whether those states improve alpha models.
 
-Phase 17 adds compute planning before heavier encoder experiments. It profiles a synthetic encoder forward/backward step on the local machine, estimates full 30-epoch retraining cost, and creates a capped ablation queue. On the current CPU-only environment, one encoder retrain is estimated at about 124.03 minutes, and the full 12-run initial ablation grid is estimated at about 26.41 hours including evaluation overhead. The time-only guided runs are complete; the active next model-side run is the time-frequency guided-HMM variant.
+Phase 17 adds compute planning before heavier encoder experiments. It profiles a synthetic encoder forward/backward step on the local machine, estimates full 30-epoch retraining cost, and creates a capped ablation queue. On the latest CPU-only profile, one encoder retrain is estimated at about 100.10 minutes, and the full 12-run initial ablation grid is estimated at about 21.62 hours including evaluation overhead. The time-only guided runs are complete, and the Phase 22A time-frequency prototype is complete; a full time-frequency run is conditional rather than automatic.
 
 Phase 18 adds the first encoder-objective upgrade. Instead of treating adjacent windows as positives by default, `guided_encoder.py` uses raw-feature HMM states as weak supervision: distant windows in the same HMM state become positives, and different-state windows near each other in the same symbol become harder negatives. The script writes separate guided artifacts and does not overwrite the existing `encoder.pt`, `regime_posteriors.csv`, or canonical benchmark files.
 
@@ -371,10 +377,10 @@ Phase 17 prevents scope creep before the encoder-upgrade phases. The project now
 | Training windows | 34,798 | Sliding windows across BTCUSDT and ETHUSDT |
 | Batches per epoch | 271 | Batch size 128, drop-last |
 | Encoder parameters | 139,408 | Current `TemporalEncoder` size |
-| Measured step time | 0.915 sec | Synthetic CPU forward/backward step |
-| Estimated 30-epoch retrain | 124.03 min | One encoder experiment |
-| Initial 12-run grid | 26.41 hours | 3 losses x 2 augmentations x 2 assignment methods |
-| Budget status | yellow | Slightly above the 24-hour local budget |
+| Measured step time | 0.739 sec | Synthetic CPU forward/backward step |
+| Estimated 30-epoch retrain | 100.10 min | One encoder experiment |
+| Initial 12-run grid | 21.62 hours | 3 losses x 2 augmentations x 2 assignment methods |
+| Budget status | green | Within the 24-hour local budget |
 
 The first three runs are:
 
@@ -382,9 +388,9 @@ The first three runs are:
 |---:|---|---|---|---|
 | 1 | hmm_guided | time_only | hmm | complete |
 | 2 | hmm_guided | time_only | gmm | complete |
-| 3 | hmm_guided | time_frequency | hmm | active_next |
+| 3 | hmm_guided | time_frequency | hmm | 3-epoch prototype complete |
 
-This keeps the next step focused: the time-only guided runs are complete, so the active model-side experiment is the time-frequency guided-HMM variant. The rest of the ablation grid stays on hold until that run earns the extra compute.
+This keeps the next step focused: the time-only guided runs are complete, and the first time-frequency guided-HMM prototype has been evaluated. The rest of the ablation grid stays on hold until the time-frequency path earns a full 30-epoch downstream retest.
 
 ## Phase 18 HMM-Guided Encoder
 
@@ -433,7 +439,18 @@ Phase 20 feeds the full guided embedding space into the strict fold-local alpha 
 
 The result is highly useful even though it is not a final victory lap. It says the Phase 19B structural gain can translate into better downstream alpha when the guided embedding is paired with sequential HMM filtering. It also says GMM on the same guided embedding does not work, so the finding is specifically about learned representation plus temporal state dynamics.
 
+## Phase 22A Time-Frequency Guided Encoder
+
+Phase 22A tests whether adding a simple frequency-domain view helps the guided encoder. Each 60-bar feature window keeps the original time-domain features and appends six low-frequency FFT magnitude bands per feature, increasing the encoder input from 22 to 154 features. This prototype uses the same HMM-guided contrastive loss, but runs only 3 epochs to check whether the idea is worth a full 30-epoch run.
+
+| Method | Epochs | Input Features | Silhouette | Avg Duration | Transition Diagonal | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| tf_hmm_guided_gmm | 3 | 154 | 0.326 | 6.47 | 0.845 | 0.504 | 0.682 |
+| tf_hmm_guided_hmm | 3 | 154 | 0.338 | 8.39 | 0.881 | 0.528 | 0.704 |
+
+The result is useful but not a new winner yet. The time-frequency prototype is far stronger than the original vanilla contrastive regime path from Phase 16 (`HMM NMI = 0.032`), but it is still weaker than the full 30-epoch time-only HMM-guided encoder (`HMM NMI = 0.869`). The current conclusion is that frequency information is worth tracking as an ablation, but the project should not spend downstream alpha compute on it until a full-length time-frequency run closes the structural gap.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, and a Streamlit research dashboard. The next important work is ablation and interpretability: test time-frequency augmentation and explain which features drive alpha inside the guided-HMM regimes.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, and a Streamlit research dashboard. The next important work is full-length ablation and interpretability: decide whether the time-frequency path deserves a 30-epoch run, then explain which features drive alpha inside the guided-HMM regimes.
 

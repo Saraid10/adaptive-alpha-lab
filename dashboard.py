@@ -68,6 +68,9 @@ def main() -> None:
     guided_encoder_summary = read_csv("guided_encoder_summary.csv")
     guided_encoder_loss = read_csv("guided_encoder_loss.csv")
     guided_encoder_comparison = read_csv("guided_encoder_comparison.csv")
+    time_frequency_summary = read_csv("time_frequency_encoder_summary.csv")
+    time_frequency_loss = read_csv("time_frequency_encoder_loss.csv")
+    time_frequency_comparison = read_csv("time_frequency_encoder_comparison.csv")
     per_regime = read_csv("per_regime_stats.csv")
     validation_audit = read_csv("validation_audit.csv")
     fold_audit = read_csv("fold_audit.csv")
@@ -309,6 +312,44 @@ def main() -> None:
         matrix_cols = st.columns(2)
         for col, method in zip(matrix_cols, ["hmm_guided_gmm", "hmm_guided_hmm"]):
             path = MODELS_DIR / f"guided_encoder_transition_{method}.png"
+            with col:
+                st.caption(method)
+                if path.exists():
+                    st.image(str(path))
+                else:
+                    st.info("missing")
+
+    st.header("Time-Frequency Encoder Prototype")
+    if time_frequency_summary.empty:
+        st.info(
+            "Run python src/guided_encoder.py --augmentation time_frequency "
+            "to generate Phase 22 time-frequency encoder artifacts."
+        )
+    else:
+        st.caption(
+            "Phase 22A appends FFT magnitude bands to each guided-encoder window. "
+            "This is a structural prototype, not a downstream alpha claim yet."
+        )
+        c1, c2, c3, c4 = st.columns(4)
+        best_tf_nmi = time_frequency_summary.sort_values("hmm_reference_nmi", ascending=False).iloc[0]
+        best_tf_purity = time_frequency_summary.sort_values("hmm_reference_purity", ascending=False).iloc[0]
+        c1.metric("Best TF HMM NMI", f"{best_tf_nmi['hmm_reference_nmi']:.3f}", best_tf_nmi["method"])
+        c2.metric("Best TF Purity", f"{best_tf_purity['hmm_reference_purity']:.3f}", best_tf_purity["method"])
+        c3.metric("Epochs", int(time_frequency_summary["epochs"].max()))
+        c4.metric("Input Features", int(time_frequency_summary["input_features"].max()))
+        st.dataframe(time_frequency_summary, width="stretch")
+        if not time_frequency_comparison.empty:
+            st.subheader("Time-Frequency vs Baseline Regime Structure")
+            st.dataframe(time_frequency_comparison, width="stretch")
+        if not time_frequency_loss.empty:
+            st.subheader("Time-Frequency Training Loss")
+            st.dataframe(time_frequency_loss, width="stretch")
+        loss_img = MODELS_DIR / "time_frequency_encoder_loss_curve.png"
+        if loss_img.exists():
+            st.image(str(loss_img), width="stretch")
+        matrix_cols = st.columns(2)
+        for col, method in zip(matrix_cols, ["tf_hmm_guided_gmm", "tf_hmm_guided_hmm"]):
+            path = MODELS_DIR / f"time_frequency_encoder_transition_{method}.png"
             with col:
                 st.caption(method)
                 if path.exists():

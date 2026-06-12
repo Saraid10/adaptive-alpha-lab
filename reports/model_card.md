@@ -184,7 +184,7 @@ random_state=42
 | Embargo | 5 days, 120 hourly bars |
 | Primary label horizon purge | 8 bars |
 | Main OOS rows | 25,920 per method |
-| Critical audit status | 26 PASS, 1 methodological WARN, 0 FAIL |
+| Critical audit status | 27 PASS, 1 methodological WARN, 0 FAIL |
 
 The current methodological warning is that the legacy `regime_assignments.csv` artifact is offline/global. Predictive regime claims should use the fold-local Phase 13 artifacts.
 
@@ -203,6 +203,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 19B | Full 30-epoch HMM-guided encoder run and baseline structural comparison |
 | Phase 20 | Fold-local downstream alpha retest for HMM-guided embeddings |
 | Phase 21 | Guided-method refresh of symbol/horizon robustness and cost/threshold/period stress robustness |
+| Phase 22A | 3-epoch time-frequency HMM-guided encoder prototype |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -216,12 +217,12 @@ Phase 17 records local compute estimates before starting encoder-upgrade work.
 | Ablation queue | `models/ablation_budget.csv` |
 | Visual plan | `models/compute_budget_plan.png` |
 | Device measured | CPU |
-| Synthetic step time | 0.915 seconds |
-| Estimated encoder retrain | 124.03 minutes |
-| Estimated 12-run grid | 26.41 hours |
-| Budget status | yellow |
+| Synthetic step time | 0.739 seconds |
+| Estimated encoder retrain | 100.10 minutes |
+| Estimated 12-run grid | 21.62 hours |
+| Budget status | green |
 
-The completed guided-encoder experiments now include a structural run, a fold-local downstream alpha retest, and a guided-method robustness/stress refresh. The next queued experiment is the time-frequency guided variant; broader ablations should expand only after that focused run is evaluated.
+The completed guided-encoder experiments now include a structural run, a fold-local downstream alpha retest, a guided-method robustness/stress refresh, and a capped time-frequency prototype. Broader ablations should expand only if the time-frequency path earns additional compute.
 
 ## HMM-Guided Encoder Variant
 
@@ -247,6 +248,28 @@ Full 30-epoch Phase 19B diagnostics:
 | `hmm_guided_hmm` | 0.629 | 5.72 | 0.825 | 0.869 | 0.957 |
 
 The full run confirms that HMM-guided weak supervision strongly improves structural alignment versus the old contrastive encoder path.
+
+## Time-Frequency Guided Encoder Variant
+
+Phase 22A extends `src/guided_encoder.py` with an optional time-frequency input view. For each 60-bar window, the encoder keeps the original normalized time-domain features and appends six low-frequency FFT magnitude bands per feature.
+
+| Field | Value |
+|---|---|
+| CLI | `python src/guided_encoder.py --symbols BTCUSDT ETHUSDT --augmentation time_frequency --epochs 3` |
+| Augmentation | time-domain features plus FFT magnitude bands |
+| FFT bins | 6 |
+| Input features | 154 |
+| Output model | `models/time_frequency_encoder_model.pt` locally; ignored by Git |
+| Committed diagnostics | `time_frequency_encoder_summary.csv`, `time_frequency_encoder_loss.csv`, `time_frequency_encoder_comparison.csv`, time-frequency plots |
+
+Phase 22A diagnostics:
+
+| Method | Epochs | Silhouette | Avg Duration | Transition Diagonal | HMM NMI | HMM Purity |
+|---|---:|---:|---:|---:|---:|---:|
+| `tf_hmm_guided_gmm` | 3 | 0.326 | 6.47 | 0.845 | 0.504 | 0.682 |
+| `tf_hmm_guided_hmm` | 3 | 0.338 | 8.39 | 0.881 | 0.528 | 0.704 |
+
+The prototype is stronger than the original vanilla contrastive regime path but weaker than the full 30-epoch time-only guided-HMM baseline. It should be treated as an ablation candidate, not as a replacement model.
 
 ## Guided Alpha Retest
 

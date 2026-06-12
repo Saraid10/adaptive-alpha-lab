@@ -207,7 +207,7 @@ def build_ablation_budget(profile: pd.DataFrame) -> pd.DataFrame:
                 }:
                     decision = "complete"
                 elif (loss, augmentation, assignment) == ("hmm_guided", "time_frequency", "hmm"):
-                    decision = "active_next"
+                    decision = "prototype_complete_full_pending"
                 total_minutes = full_train_minutes + eval_minutes if pd.notna(full_train_minutes) else float("nan")
                 rows.append(
                     {
@@ -294,7 +294,12 @@ def plot_budget(budget: pd.DataFrame, output_path: Path) -> None:
         + plot_data["assignment_method"]
     )
     colors = plot_data["decision"].map(
-        {"complete": "#16A34A", "active_next": "#2563EB", "hold_until_signal": "#94A3B8"}
+        {
+            "complete": "#16A34A",
+            "active_next": "#2563EB",
+            "prototype_complete_full_pending": "#F59E0B",
+            "hold_until_signal": "#94A3B8",
+        }
     ).fillna("#94A3B8")
 
     fig, ax = plt.subplots(figsize=(12, 7))
