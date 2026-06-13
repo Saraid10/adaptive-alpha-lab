@@ -976,6 +976,92 @@ def audit_ablation_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_paper_statistical_artifacts(rows: list[AuditRecord]) -> None:
+    tests_path = Path(SAVE_DIR) / "paper_claim_tests.csv"
+    summary_path = Path(SAVE_DIR) / "paper_statistical_summary.csv"
+    plot_path = Path(SAVE_DIR) / "paper_claim_tests.png"
+
+    if not tests_path.exists() or not summary_path.exists() or not plot_path.exists():
+        missing = [
+            str(path.relative_to(Path(SAVE_DIR)))
+            for path in [tests_path, summary_path, plot_path]
+            if not path.exists()
+        ]
+        record(
+            rows,
+            "paper_statistical_artifacts",
+            WARN,
+            "artifact",
+            f"Missing Phase 26 paper statistical artifacts: {missing}",
+        )
+        return
+
+    tests = pd.read_csv(tests_path)
+    summary = pd.read_csv(summary_path)
+    failures = 0
+    required_test_cols = {
+        "ablation_family",
+        "comparison",
+        "candidate",
+        "reference",
+        "metric",
+        "mean_difference",
+        "primary_p_value",
+        "statistical_status",
+        "allowed_paper_language",
+    }
+    required_summary_cols = {
+        "ablation_family",
+        "comparison",
+        "evidence_type",
+        "candidate",
+        "reference",
+        "paper_status",
+        "allowed_paper_language",
+    }
+    missing_test_cols = sorted(required_test_cols - set(tests.columns))
+    missing_summary_cols = sorted(required_summary_cols - set(summary.columns))
+    if missing_test_cols:
+        failures += 1
+    if missing_summary_cols:
+        failures += 1
+    if len(summary) < 10:
+        failures += 1
+    if "guided_hmm_alpha_vs_raw_feature_hmm_alpha" not in set(summary.get("comparison", pd.Series(dtype=str))):
+        failures += 1
+    supported_statuses = {
+        "statistically_supported",
+        "metric_family_supported",
+        "raw_suggestive",
+        "directionally_supported",
+        "mechanism_supported_no_fold_p_value",
+    }
+    status_values = set(summary.get("paper_status", pd.Series(dtype=str)).dropna())
+    if not status_values.intersection(supported_statuses):
+        failures += 1
+
+    detail_parts = [
+        f"test_rows={len(tests)}",
+        f"summary_rows={len(summary)}",
+    ]
+    if "paper_status" in summary.columns:
+        detail_parts.append(f"statuses={summary['paper_status'].value_counts().to_dict()}")
+    if missing_test_cols:
+        detail_parts.append(f"missing_test_columns={missing_test_cols}")
+    if missing_summary_cols:
+        detail_parts.append(f"missing_summary_columns={missing_summary_cols}")
+
+    record(
+        rows,
+        "paper_statistical_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(len(tests) + len(summary), 1),
+        rows_failed=failures,
+    )
+
+
 def audit_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
     summary_path = Path(SAVE_DIR) / "guided_encoder_summary.csv"
     loss_path = Path(SAVE_DIR) / "guided_encoder_loss.csv"
@@ -1782,6 +1868,7 @@ def main() -> None:
     audit_regime_quality_artifacts(rows)
     audit_compute_plan_artifacts(rows)
     audit_ablation_artifacts(rows)
+    audit_paper_statistical_artifacts(rows)
     audit_guided_encoder_artifacts(rows)
     audit_time_frequency_encoder_artifacts(rows)
     audit_interpretability_artifacts(rows)

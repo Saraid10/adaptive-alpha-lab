@@ -83,11 +83,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 30 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, Phase 24 protocol artifact, Phase 25 ablation artifact, literature-positioning artifact, and run-registry checks passed |
+| PASS | 31 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, Phase 24 protocol artifact, Phase 25 ablation artifact, Phase 26 paper-statistical artifact, literature-positioning artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 23 interpretability artifacts are complete, that the Phase 24 paper-protocol artifacts are complete, that the Phase 25 ablation artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 23 interpretability artifacts are complete, that the Phase 24 paper-protocol artifacts are complete, that the Phase 25 ablation artifacts are complete, that the Phase 26 paper-statistical artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -394,6 +394,21 @@ Phase 25 runs the minimal paper-critical ablation suite from already completed a
 
 The main finding is that sequential assignment is the most reliable mechanism in the current project. Learned embeddings become most useful when their assignment layer respects temporal state persistence. The ablation suite also prevents overclaiming: the current time-frequency prototype is a useful negative result, not a new winner.
 
+## Phase 26 Paper Statistical Evidence Refresh
+
+Phase 26 maps the Phase 25 ablation rows onto fold-level paper claim tests. The goal is not to search for a new best result. The goal is to translate the mechanism table into paper-safe language with p-values, correction status, and allowed claims.
+
+The main paper-facing results are:
+
+| Claim Comparison | Status | Statistical Read |
+|---|---|---|
+| `guided_hmm_alpha_vs_guided_gmm_alpha` | raw-suggestive | HMM assignment improves the guided path on all focused metrics; IC `p=0.075`, not corrected significant |
+| `guided_hmm_alpha_vs_raw_feature_hmm_alpha` | directionally supported | Guided-HMM still beats raw-feature HMM on point estimates, but fold-level IC remains inconclusive |
+| `guided_hmm_alpha_vs_vanilla_contrastive_hmm_alpha` | directionally supported | HMM-guided supervision improves the vanilla contrastive-HMM path on focused point estimates |
+| `time_frequency_guided_hmm_vs_time_only_guided_hmm` | do not expand yet | Current 3-epoch time-frequency prototype should not be treated as a downstream alpha result |
+
+This phase strengthens the paper because it separates three levels of evidence: mechanism support, directional alpha support, and statistical support. The current result is strong enough to write as a disciplined benchmark finding, but not strong enough to claim statistical dominance over raw-feature HMM.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
@@ -409,6 +424,7 @@ The main finding is that sequential assignment is the most reliable mechanism in
 - Phase 23 interpretability is diagnostic. Fold-local SHAP and feature-importance summaries improve economic plausibility, but they are not causal explanations.
 - Phase 24 freezes claim language but does not add new empirical evidence.
 - Phase 25 aggregates completed artifacts into a minimal ablation table; it does not create new retrained encoder variants beyond already completed runs.
+- Phase 26 refreshes paper-facing claim tests, but the main guided-HMM versus raw-feature HMM IC edge remains directionally supported rather than statistically significant.
 - Calibration/NLL diagnostics do not uniformly favor the guided methods, so probability quality and trading-score quality should be discussed separately.
 - Phase 19A is a positioning phase, not an empirical result. It clarifies contribution language but does not prove a new model improvement.
 - Literature positioning depends on describing HMM states as proxy/reference states, not ground truth labels.
@@ -420,8 +436,8 @@ The main finding is that sequential assignment is the most reliable mechanism in
 
 ## Next Steps
 
-1. Run Phase 26 to refresh statistical evidence using the Phase 25 ablation table as the claim map.
-2. Draft the formal paper skeleton with methodology, experiment design, results, limitations, and related work.
+1. Draft the formal paper skeleton with methodology, experiment design, results, limitations, and related work.
+2. Decide whether Phase 27 should be paper writing first or a conditional multi-asset/generalization extension.
 3. Add fold-local or expanding-window encoder retraining only if required by reviewer-style critique.
 4. Expand beyond BTC/ETH only if the written statistical gate is met.
 5. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.

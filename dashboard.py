@@ -21,6 +21,13 @@ def read_repo_csv(relative_path: str) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
+def first_existing_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
+    for column in candidates:
+        if column in df.columns:
+            return column
+    return None
+
+
 def main() -> None:
     try:
         import streamlit as st
@@ -58,6 +65,8 @@ def main() -> None:
     statistical_corrections = read_csv("statistical_multiple_testing.csv")
     statistical_claims = read_csv("statistical_claims.csv")
     statistical_psr = read_csv("statistical_sharpe_diagnostics.csv")
+    paper_claim_tests = read_csv("paper_claim_tests.csv")
+    paper_statistical_summary = read_csv("paper_statistical_summary.csv")
     regime_summary = read_csv("regime_benchmark_summary.csv")
     regime_stability = read_csv("regime_stability_summary.csv")
     regime_quality = read_csv("regime_quality_summary.csv")
@@ -252,6 +261,41 @@ def main() -> None:
             st.subheader("All Pairwise Tests")
             st.dataframe(statistical_pairwise, width="stretch")
 
+    st.header("Paper Claim Tests")
+    if paper_statistical_summary.empty:
+        st.info("Run python src/paper_claim_tests.py to generate Phase 26 paper claim artifacts.")
+    else:
+        st.caption(
+            "Phase 26 maps the Phase 25 ablation suite onto fold-level statistical evidence "
+            "and assigns paper-safe claim language."
+        )
+        st.dataframe(paper_statistical_summary, width="stretch")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Paper Claims", len(paper_statistical_summary))
+        directional = paper_statistical_summary[
+            paper_statistical_summary["paper_status"].isin(
+                ["directionally_supported", "raw_suggestive", "statistically_supported", "metric_family_supported"]
+            )
+        ]
+        mechanism = paper_statistical_summary[
+            paper_statistical_summary["paper_status"] == "mechanism_supported_no_fold_p_value"
+        ]
+        c2.metric("Directional+", len(directional))
+        c3.metric("Mechanism Supported", len(mechanism))
+        if "guided_hmm_alpha_vs_raw_feature_hmm_alpha" in set(paper_statistical_summary["comparison"]):
+            main_claim = paper_statistical_summary[
+                paper_statistical_summary["comparison"] == "guided_hmm_alpha_vs_raw_feature_hmm_alpha"
+            ].iloc[0]
+            c4.metric("Main Claim", main_claim["paper_status"])
+        else:
+            c4.metric("Main Claim", "missing")
+        claim_img = MODELS_DIR / "paper_claim_tests.png"
+        if claim_img.exists():
+            st.image(str(claim_img), width="stretch")
+        if not paper_claim_tests.empty:
+            st.subheader("Metric-Level Paper Tests")
+            st.dataframe(paper_claim_tests, width="stretch")
+
     st.header("Run Registry")
     if run_index.empty:
         st.info("Run python src/archive_run.py to freeze a versioned research snapshot.")
@@ -300,10 +344,14 @@ def main() -> None:
         st.dataframe(ablation_summary, width="stretch")
         c1, c2, c3, c4 = st.columns(4)
         supported = ablation_summary[ablation_summary["phase25_decision"] == "supported"]
-        strongest = ablation_summary.sort_values("metric_win_rate", ascending=False).iloc[0]
+        win_rate_col = first_existing_column(ablation_summary, ["metric_win_rate", "candidate_win_rate"])
         c1.metric("Comparisons", len(ablation_summary))
         c2.metric("Supported", len(supported))
-        c3.metric("Best Win Rate", f"{strongest['metric_win_rate']:.2f}", strongest["comparison"])
+        if win_rate_col:
+            strongest = ablation_summary.sort_values(win_rate_col, ascending=False).iloc[0]
+            c3.metric("Best Win Rate", f"{strongest[win_rate_col]:.2f}", strongest["comparison"])
+        else:
+            c3.metric("Best Win Rate", "missing")
         c4.metric("Families", ablation_summary["ablation_family"].nunique())
         ablation_img = MODELS_DIR / "ablation_heatmap.png"
         if ablation_img.exists():

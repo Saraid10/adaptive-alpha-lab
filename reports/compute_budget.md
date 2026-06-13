@@ -41,6 +41,7 @@ These are practical local observations, not formal benchmarks:
 | Phase 23 fold-local interpretability | about 6 minutes with capped SHAP sampling |
 | Phase 24 paper protocol freeze | no model compute |
 | Phase 25 minimal ablation suite | under 1 minute; no model retraining |
+| Phase 26 paper statistical claim tests | under 1 minute; no model retraining |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
@@ -77,7 +78,8 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 23 interpretability | 0 encoder runs | Complete; fold-local LightGBM feature-importance and capped SHAP summaries |
 | Phase 24 paper protocol freeze | 0 encoder runs | Complete; freezes hypotheses, claims, experiment queue, and submission gate |
 | Phase 25 minimal ablations | 0 encoder runs | Complete; aggregates completed structural and downstream artifacts into a mechanism table |
-| Phase 26 statistical evidence refresh | 0 encoder runs | Next; refreshes claim tests using the Phase 25 ablation table as the claim map |
+| Phase 26 statistical evidence refresh | 0 encoder runs | Complete; maps the ablation table to paper-facing claim tests |
+| Phase 27 paper draft skeleton | 0 encoder runs | Next; turns the evidence stack into a submission-style manuscript |
 
 ## Initial Ablation Cap
 
