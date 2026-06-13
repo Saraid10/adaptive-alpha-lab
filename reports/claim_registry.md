@@ -19,17 +19,17 @@ This registry separates allowed paper claims from claims that are not supported 
 | Claim | Status | Evidence Artifact | Safe Wording |
 |---|---|---|---|
 | Vanilla contrastive-GMM regimes are weak in this benchmark. | Supported | `models/walkforward_experiment_results.csv`, `models/regime_quality_summary.csv`, `models/statistical_claims.csv` | Vanilla contrastive regimes underperform raw-feature HMM and show weak alignment with the HMM reference. |
-| Sequential assignment matters. | Supported | `models/guided_alpha_comparison.csv`, `models/guided_encoder_comparison.csv` | Learned embeddings are more useful when the assignment layer preserves temporal state dynamics. |
+| Sequential assignment matters. | Supported | `models/guided_alpha_comparison.csv`, `models/guided_encoder_comparison.csv`, `models/paper_statistical_summary.csv` | Learned embeddings are more useful when the assignment layer preserves temporal state dynamics. |
 | HMM-guided supervision improves structural regime alignment. | Supported | `models/guided_encoder_summary.csv`, `models/guided_encoder_comparison.csv` | HMM-guided weak supervision substantially increases agreement with the raw-feature HMM reference. |
 | Guided-HMM is stress-robust on the primary BTC+ETH 8h prediction file. | Supported | `models/robustness_stress_summary.csv`, `models/robustness_stress_wins.csv` | Guided-HMM is the most frequent winner in the refreshed primary stress grid. |
 | Guided-HMM feature attribution is economically plausible. | Diagnostic | `models/feature_importance_by_regime.csv`, `models/feature_family_summary.csv` | Fold-local interpretability shows the alpha model relies mainly on volatility state, momentum/autocorrelation, and distribution shape. |
-| HMM assignment is the strongest current ablation mechanism. | Supported | `models/ablation_summary.csv`, `models/ablation_heatmap.png` | Phase 25 shows the assignment layer is the most consistently supported mechanism across structural and downstream comparisons. |
+| HMM assignment is the strongest current ablation mechanism. | Supported | `models/ablation_summary.csv`, `models/paper_statistical_summary.csv`, `models/ablation_heatmap.png` | Phase 25/26 show the assignment layer is the most consistently supported mechanism across structural and downstream comparisons. |
 
 ## Directional Claims
 
 | Claim | Status | Evidence Artifact | Safe Wording |
 |---|---|---|---|
-| Guided-HMM improves downstream alpha over raw-feature HMM. | Directional | `models/walkforward_experiment_results.csv`, `models/ablation_summary.csv`, `models/statistical_pairwise_tests.csv`, `models/statistical_claims.csv` | Guided-HMM improves point estimates over raw-feature HMM on the primary benchmark, but fold-level IC significance remains inconclusive until Phase 26 refreshes the statistical evidence. |
+| Guided-HMM improves downstream alpha over raw-feature HMM. | Directional | `models/walkforward_experiment_results.csv`, `models/ablation_summary.csv`, `models/paper_statistical_summary.csv`, `models/statistical_pairwise_tests.csv`, `models/statistical_claims.csv` | Guided-HMM improves point estimates over raw-feature HMM on the primary benchmark, but Phase 26 confirms the fold-level IC evidence remains statistically inconclusive. |
 | Guided-HMM has better risk-adjusted behavior than raw-feature HMM. | Directional | `models/statistical_sharpe_diagnostics.csv`, `models/robustness_stress_summary.csv` | Guided-HMM has the strongest PSR diagnostic and stress-grid performance, but this is not a deployable performance claim. |
 
 ## Open Claims

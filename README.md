@@ -110,6 +110,7 @@ python src/robustness_stress.py
 python src/statistical_tests.py
 python src/interpretability.py --symbols BTCUSDT ETHUSDT
 python src/ablation_suite.py
+python src/paper_claim_tests.py
 python src/validation_audit.py --symbols BTCUSDT ETHUSDT
 python src/archive_run.py --phase phase14b_baseline --run-id 20260522_phase14b_baseline --source-ref v1.3-phase14b --notes "Frozen Phase 14B baseline before Phase 15 statistical and encoder work."
 python src/backtest.py
@@ -187,6 +188,9 @@ python -m pip install -r requirements-research.txt
 | `models/statistical_multiple_testing.csv` | Phase 15B corrected p-values across tested claims |
 | `models/statistical_claims.csv` | Phase 15B corrected claim-status summary |
 | `models/statistical_sharpe_diagnostics.csv` | Probabilistic Sharpe Ratio diagnostics |
+| `models/paper_claim_tests.csv` | Phase 26 metric-level paper claim tests mapped to the ablation suite |
+| `models/paper_statistical_summary.csv` | Phase 26 paper-facing statistical claim summary |
+| `models/paper_claim_tests.png` | Visual Phase 26 paper claim status summary |
 | `models/statistical_multiple_testing.png` | Visual multiple-testing correction summary |
 | `models/statistical_sharpe_diagnostics.png` | Visual PSR diagnostic summary |
 | `runs/run_index.csv` | Versioned run registry |
@@ -239,6 +243,7 @@ adaptive-alpha-lab/
 │   ├── robustness.py
 │   ├── robustness_stress.py
 │   ├── statistical_tests.py
+│   ├── paper_claim_tests.py
 │   ├── archive_run.py
 │   ├── alpha_models.py
 │   ├── backtest.py
@@ -302,7 +307,7 @@ Latest strict fold-local run: BTCUSDT + ETHUSDT, `tb_label_8h`, 25,920 out-of-sa
 
 The current result is intentionally presented as research evidence, not a profitable trading claim. Phase 20 is the first run where the learned-regime path beats the raw-feature HMM on point-estimate alpha metrics. The improvement comes specifically from combining HMM-guided representation learning with an HMM assignment layer, not from guided embeddings plus GMM.
 
-The statistical interpretation remains careful. `regime_lgbm_hmm_guided_hmm` has the strongest mean fold IC (`0.0080`) and the best Probabilistic Sharpe Ratio (`PSR(SR>0)=0.633`), but the fold-level IC edge over raw-feature HMM is not significant at 5% (`p=0.801`). This supports the guided-encoder direction without overclaiming a settled result.
+The statistical interpretation remains careful. `regime_lgbm_hmm_guided_hmm` has the strongest mean fold IC (`0.0080`) and the best Probabilistic Sharpe Ratio (`PSR(SR>0)=0.633`), but the fold-level IC edge over raw-feature HMM is not significant at 5% (`p=0.801`). Phase 26 preserves that honest reading: guided-HMM versus raw-feature HMM remains directionally supported, while guided-HMM versus guided-GMM becomes raw-suggestive (`IC p=0.075`) but not corrected significant.
 
 ## Fold-Local Regime Benchmark
 
@@ -520,7 +525,21 @@ Phase 25 turns the paper mechanism into explicit ablation comparisons. It does n
 
 The strongest Phase 25 result is that the assignment layer matters. The best learned representations become useful when they are paired with sequential HMM filtering rather than a memoryless GMM assignment. The most useful negative result is that the current time-frequency prototype is not strong enough to justify a full downstream alpha expansion.
 
+## Phase 26 Paper Statistical Evidence Refresh
+
+Phase 26 converts the Phase 25 ablation table into paper-facing claim tests. `src/paper_claim_tests.py` reuses the fold-level statistical metrics and tests only the comparisons needed by the paper, rather than reopening the full exploratory grid.
+
+| Paper Claim | Phase 26 Status | Interpretation |
+|---|---|---|
+| HMM assignment improves the guided learned-regime alpha path | raw-suggestive | IC difference is positive and closer to significance (`p=0.075`), but not corrected significant |
+| HMM assignment improves vanilla contrastive alpha | directionally supported | All focused metrics move in the right direction, but fold-level significance is weak |
+| Guided-HMM beats raw-feature HMM | directionally supported | Point estimates still favor guided-HMM, but fold-level IC remains inconclusive |
+| Guided-HMM beats vanilla contrastive-HMM | directionally supported | All focused metrics favor guided-HMM, but not significantly |
+| Time-frequency prototype improves the guided encoder | do not expand yet | Phase 25/26 keep this as an ablation candidate, not a result claim |
+
+The paper-safe conclusion is now sharper: the project can claim that sequential assignment is the strongest supported mechanism, and that HMM-guided learned regimes are promising versus raw-feature HMM, but it must not claim statistical dominance yet.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, and a Streamlit research dashboard. The next important work is Phase 26: refresh the statistical evidence using the Phase 25 ablation table as the claim map.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, and a Streamlit research dashboard. The next important work is Phase 27 planning: decide whether to write the paper first or run a conditional multi-asset/generalization extension.
 

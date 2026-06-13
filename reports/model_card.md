@@ -184,7 +184,7 @@ random_state=42
 | Embargo | 5 days, 120 hourly bars |
 | Primary label horizon purge | 8 bars |
 | Main OOS rows | 25,920 per method |
-| Critical audit status | 30 PASS, 1 methodological WARN, 0 FAIL |
+| Critical audit status | 31 PASS, 1 methodological WARN, 0 FAIL |
 
 The current methodological warning is that the legacy `regime_assignments.csv` artifact is offline/global. Predictive regime claims should use the fold-local Phase 13 artifacts.
 
@@ -207,6 +207,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 23 | Fold-local LightGBM feature-importance and SHAP interpretability diagnostics |
 | Phase 24 | Paper protocol freeze with hypotheses, claim registry, and experiment manifest |
 | Phase 25 | Minimal ablation suite for objective, assignment-layer, augmentation, and classical-reference mechanisms |
+| Phase 26 | Paper-facing statistical claim tests mapped to the Phase 25 ablation suite |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -365,3 +366,15 @@ Phase 25 adds the first paper-facing ablation layer.
 | Main negative result | The current 3-epoch time-frequency prototype does not justify full downstream alpha expansion |
 
 The ablation suite does not claim a new retrained model variant. It consolidates completed structural and downstream artifacts into a mechanism-level decision table so the next statistical refresh can test only the claims the paper actually needs.
+
+## Paper Statistical Claim Tests
+
+Phase 26 converts the Phase 25 mechanism table into paper-facing statistical evidence.
+
+| Field | Value |
+|---|---|
+| CLI | `python src/paper_claim_tests.py` |
+| Main outputs | `paper_claim_tests.csv`, `paper_statistical_summary.csv`, `paper_claim_tests.png` |
+| Main positive read | HMM assignment improves the guided path on all focused point-estimate metrics and is raw-suggestive on IC (`p=0.075`) |
+| Main caution | Guided-HMM versus raw-feature HMM remains directionally supported, not statistically significant |
+| Paper-safe language | Sequential assignment is the strongest supported mechanism; guided learned regimes are promising versus raw-feature HMM but not statistically dominant |

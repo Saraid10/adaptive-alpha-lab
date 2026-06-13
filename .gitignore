@@ -53,11 +53,14 @@ models/*.csv
 !models/statistical_multiple_testing.csv
 !models/statistical_claims.csv
 !models/statistical_sharpe_diagnostics.csv
+!models/paper_claim_tests.csv
+!models/paper_statistical_summary.csv
 !models/target_distribution.csv
 !models/target_quality.csv
 
 # Keep visualization outputs.
 !models/*.png
+!models/paper_claim_tests.png
 
 # Versioned research run snapshots. Keep curated snapshots, not raw row-level data.
 runs/**
