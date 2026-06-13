@@ -78,6 +78,7 @@ Binance OHLCV
 - Phase 22A time-frequency guided encoder prototype with FFT magnitude bands appended to each time window.
 - Phase 23 fold-local LightGBM feature-importance and SHAP diagnostics for paper interpretability.
 - Phase 24 paper protocol freeze with hypotheses, claim boundaries, and experiment manifest.
+- Phase 25 minimal ablation suite for objective guidance, assignment layer, augmentation view, and classical-reference comparisons.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -108,6 +109,7 @@ python src/robustness.py
 python src/robustness_stress.py
 python src/statistical_tests.py
 python src/interpretability.py --symbols BTCUSDT ETHUSDT
+python src/ablation_suite.py
 python src/validation_audit.py --symbols BTCUSDT ETHUSDT
 python src/archive_run.py --phase phase14b_baseline --run-id 20260522_phase14b_baseline --source-ref v1.3-phase14b --notes "Frozen Phase 14B baseline before Phase 15 statistical and encoder work."
 python src/backtest.py
@@ -145,6 +147,9 @@ python -m pip install -r requirements-research.txt
 | `models/ablation_budget.csv` | Prioritized 12-run encoder ablation queue |
 | `models/compute_budget_summary.csv` | Compact compute-budget summary for dashboard/report use |
 | `models/compute_budget_plan.png` | Visual ablation-runtime budget |
+| `models/ablation_results.csv` | Phase 25 metric-level ablation comparisons |
+| `models/ablation_summary.csv` | Phase 25 paper-facing ablation decision table |
+| `models/ablation_heatmap.png` | Visual summary of Phase 25 ablation win rates |
 | `models/guided_encoder_summary.csv` | Phase 19B HMM-guided encoder structural diagnostics |
 | `models/guided_encoder_loss.csv` | Phase 19B guided training loss and pair-mining diagnostics |
 | `models/guided_encoder_comparison.csv` | Phase 19B comparison of guided encoder regimes versus existing structural baselines |
@@ -226,6 +231,7 @@ adaptive-alpha-lab/
 │   ├── regime_stability.py
 │   ├── regime_quality.py
 │   ├── compute_plan.py
+│   ├── ablation_suite.py
 │   ├── guided_encoder.py
 │   ├── interpretability.py
 │   ├── validation_audit.py
@@ -249,7 +255,7 @@ The primary target is `tb_label_8h`, an 8-hour triple-barrier label with classes
 
 The validation scheme uses expanding walk-forward folds with a 5-day embargo gap between train and test windows. This reduces leakage from overlapping financial labels and makes the model comparison more defensible.
 
-Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, Phase 20 fold-local guided-alpha artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, Phase 17 compute-plan artifact completeness, Phase 19B guided-encoder full-run artifact completeness, Phase 19A literature-positioning artifact completeness, and run-registry snapshot completeness.
+Phase 12 adds a validation audit. The current audit passes all critical checks: required tables, feature/target schema, finite joined rows, 24-row target horizon loss, 18 walk-forward folds, 120-bar embargo, 8-bar label-horizon purge, equal method coverage, prediction/test-fold alignment, experiment-result row counts, Phase 20 fold-local guided-alpha artifact coverage, Phase 14A robustness artifact completeness, Phase 14B stress-grid completeness, Phase 15A/15B statistical artifact completeness, Phase 16 regime-quality artifact completeness, Phase 17 compute-plan artifact completeness, Phase 19B guided-encoder full-run artifact completeness, Phase 25 ablation artifact completeness, Phase 19A literature-positioning artifact completeness, and run-registry snapshot completeness.
 
 The audit also records one methodological warning: the legacy `regime_assignments.csv` artifact is offline/global. Paper-grade predictive regime claims should use the Phase 13 `walkforward_experiment_results.csv` artifact instead.
 
@@ -501,7 +507,20 @@ The protocol artifacts are:
 
 The key Phase 24 decision is that the next modeling phase is now Phase 25, not Phase 24. Phase 25 should be a minimal ablation suite, and multi-asset expansion remains conditional rather than automatic.
 
+## Phase 25 Minimal Ablation Suite
+
+Phase 25 turns the paper mechanism into explicit ablation comparisons. It does not launch an uncontrolled retraining grid. Instead, `src/ablation_suite.py` aggregates completed structural and downstream artifacts into a compact decision table.
+
+| Ablation Family | Question | Current Read |
+|---|---|---|
+| Objective guidance | Does HMM-guided weak supervision improve the learned regime path? | Supported for guided-HMM downstream alpha; mixed structurally because duration is diagnostic rather than always better |
+| Assignment layer | Does HMM assignment improve learned embeddings over GMM assignment? | Strongly supported for guided embeddings, the time-frequency prototype, and downstream alpha |
+| Augmentation view | Does the 3-epoch time-frequency prototype beat the full time-only guided run? | Not yet; do not expand downstream time-frequency compute yet |
+| Classical reference | Does guided-HMM beat raw-feature HMM on the primary alpha benchmark? | Directionally supported; statistical refresh is still required |
+
+The strongest Phase 25 result is that the assignment layer matters. The best learned representations become useful when they are paired with sequential HMM filtering rather than a memoryless GMM assignment. The most useful negative result is that the current time-frequency prototype is not strong enough to justify a full downstream alpha expansion.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, and a Streamlit research dashboard. The next important work is Phase 25: a minimal ablation suite that tests only the mechanisms needed for a credible paper.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, and a Streamlit research dashboard. The next important work is Phase 26: refresh the statistical evidence using the Phase 25 ablation table as the claim map.
 

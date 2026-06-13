@@ -21,6 +21,8 @@ models/*.csv
 !models/regime_agreement_matrix.csv
 !models/compute_profile.csv
 !models/ablation_budget.csv
+!models/ablation_results.csv
+!models/ablation_summary.csv
 !models/compute_budget_summary.csv
 !models/guided_encoder_summary.csv
 !models/guided_encoder_loss.csv

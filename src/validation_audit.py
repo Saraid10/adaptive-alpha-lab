@@ -883,6 +883,99 @@ def audit_compute_plan_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_ablation_artifacts(rows: list[AuditRecord]) -> None:
+    results_path = Path(SAVE_DIR) / "ablation_results.csv"
+    summary_path = Path(SAVE_DIR) / "ablation_summary.csv"
+    heatmap_path = Path(SAVE_DIR) / "ablation_heatmap.png"
+
+    if not results_path.exists() or not summary_path.exists() or not heatmap_path.exists():
+        missing = [
+            str(path.relative_to(Path(SAVE_DIR)))
+            for path in [results_path, summary_path, heatmap_path]
+            if not path.exists()
+        ]
+        record(
+            rows,
+            "ablation_artifacts",
+            WARN,
+            "artifact",
+            f"Missing Phase 25 ablation artifacts: {missing}",
+        )
+        return
+
+    results = pd.read_csv(results_path)
+    summary = pd.read_csv(summary_path)
+    failures = 0
+    required_result_cols = {
+        "ablation_family",
+        "comparison",
+        "evidence_type",
+        "candidate",
+        "reference",
+        "metric",
+        "candidate_value",
+        "reference_value",
+        "delta",
+        "candidate_wins",
+        "source_artifact",
+    }
+    required_summary_cols = {
+        "ablation_family",
+        "comparison",
+        "evidence_type",
+        "candidate",
+        "reference",
+        "candidate_win_rate",
+        "phase25_decision",
+    }
+    missing_result_cols = sorted(required_result_cols - set(results.columns))
+    missing_summary_cols = sorted(required_summary_cols - set(summary.columns))
+    expected_families = {
+        "objective_guidance",
+        "assignment_layer",
+        "augmentation_view",
+        "classical_reference",
+    }
+    families = set(summary.get("ablation_family", pd.Series(dtype=str)).dropna().unique())
+    missing_families = sorted(expected_families - families)
+
+    if missing_result_cols:
+        failures += 1
+    if missing_summary_cols:
+        failures += 1
+    if missing_families:
+        failures += 1
+    if len(summary) < 10:
+        failures += 1
+    if "phase25_decision" in summary.columns and not (summary["phase25_decision"] == "supported").any():
+        failures += 1
+
+    detail_parts = [
+        f"result_rows={len(results)}",
+        f"summary_rows={len(summary)}",
+        f"families={len(families)}",
+    ]
+    if "phase25_decision" in summary.columns:
+        decision_counts = summary["phase25_decision"].value_counts().to_dict()
+        detail_parts.append(f"decisions={decision_counts}")
+    if missing_result_cols:
+        detail_parts.append(f"missing_result_columns={missing_result_cols}")
+    if missing_summary_cols:
+        detail_parts.append(f"missing_summary_columns={missing_summary_cols}")
+    if missing_families:
+        detail_parts.append(f"missing_families={missing_families}")
+
+    record(
+        rows,
+        "ablation_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(len(results) + len(summary), 1),
+        rows_failed=failures,
+    )
+
+
 def audit_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
     summary_path = Path(SAVE_DIR) / "guided_encoder_summary.csv"
     loss_path = Path(SAVE_DIR) / "guided_encoder_loss.csv"
@@ -1688,6 +1781,7 @@ def main() -> None:
     audit_robustness_stress_artifacts(rows)
     audit_regime_quality_artifacts(rows)
     audit_compute_plan_artifacts(rows)
+    audit_ablation_artifacts(rows)
     audit_guided_encoder_artifacts(rows)
     audit_time_frequency_encoder_artifacts(rows)
     audit_interpretability_artifacts(rows)
