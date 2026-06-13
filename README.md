@@ -77,6 +77,7 @@ Binance OHLCV
 - Phase 20 guided downstream alpha retest with fold-local GMM/HMM assignment layers on the guided embedding space.
 - Phase 22A time-frequency guided encoder prototype with FFT magnitude bands appended to each time window.
 - Phase 23 fold-local LightGBM feature-importance and SHAP diagnostics for paper interpretability.
+- Phase 24 paper protocol freeze with hypotheses, claim boundaries, and experiment manifest.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -189,6 +190,10 @@ python -m pip install -r requirements-research.txt
 | `reports/compute_budget.md` | Compute-aware experiment plan and multi-asset gate |
 | `reports/related_work.md` | Phase 19A paper-positioning note and contribution map |
 | `reports/literature_matrix.csv` | Compact source matrix for paper planning |
+| `reports/paper_protocol.md` | Phase 24 frozen research question, method scope, metrics, and decision gates |
+| `reports/hypotheses.md` | Phase 24 hypothesis table and current evidence status |
+| `reports/claim_registry.md` | Phase 24 allowed, directional, open, and forbidden claim language |
+| `reports/experiment_manifest.md` | Phase 24 completed experiments, future queue, and submission-readiness checklist |
 | `models/regime_stability.png` | Stability and transition-period IC dashboard panel |
 | `models/phase4_dashboard.png` | Static research backtest dashboard |
 | `reports/adaptive_alpha_lab_report.md` | Research note |
@@ -204,7 +209,11 @@ adaptive-alpha-lab/
 │   ├── related_work.md
 │   ├── literature_matrix.csv
 │   ├── model_card.md
-│   └── compute_budget.md
+│   ├── compute_budget.md
+│   ├── paper_protocol.md
+│   ├── hypotheses.md
+│   ├── claim_registry.md
+│   └── experiment_manifest.md
 ├── src/
 │   ├── ingestion.py
 │   ├── features.py
@@ -479,7 +488,20 @@ Top guided-HMM regime-conditioned alpha features:
 
 The feature-family summary is economically sensible. Guided-HMM regimes are mostly volatility-state driven, with volatility explaining about 35%-39% of SHAP share by regime, momentum about 28%-32%, and distribution shape about 11%-12%. That supports the paper narrative that the guided regimes are not arbitrary cluster IDs: the downstream alpha models mostly respond to volatility persistence, volatility-of-volatility, return autocorrelation, and return-distribution shape.
 
+## Phase 24 Paper Protocol Freeze
+
+Phase 24 turns the research direction into a controlled paper protocol. It does not add a new model; it freezes what the paper is allowed to ask, test, and claim before any more ablations are launched.
+
+The protocol artifacts are:
+
+- `reports/paper_protocol.md`: central question, dataset/feature/target/validation freeze, methods, metrics, permitted claims, forbidden claims, and decision gates.
+- `reports/hypotheses.md`: the hypothesis table from H1 to H7, including which findings are supported, directional, diagnostic, or still open.
+- `reports/claim_registry.md`: safe language for README/report/resume/paper text, plus claims that must not be made.
+- `reports/experiment_manifest.md`: completed experiment families, future experiment queue, minimal ablation definition, and submission-readiness checklist.
+
+The key Phase 24 decision is that the next modeling phase is now Phase 25, not Phase 24. Phase 25 should be a minimal ablation suite, and multi-asset expansion remains conditional rather than automatic.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, and a Streamlit research dashboard. The next important work is to turn the existing evidence into a formal paper draft, then decide whether a full-length time-frequency or hard-negative ablation is worth the compute.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, and a Streamlit research dashboard. The next important work is Phase 25: a minimal ablation suite that tests only the mechanisms needed for a credible paper.
 

@@ -83,11 +83,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 28 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, literature-positioning artifact, and run-registry checks passed |
+| PASS | 29 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, Phase 24 protocol artifact, literature-positioning artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 23 interpretability artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 23 interpretability artifacts are complete, that the Phase 24 paper-protocol artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -366,6 +366,21 @@ The feature-family summary is consistent with the regime narrative. Across guide
 
 The limitation is equally important: feature importance is diagnostic and model-specific, not causal evidence. These results support economic plausibility, but they do not prove that the regimes are true latent market states.
 
+## Phase 24 Paper Protocol Freeze
+
+Phase 24 freezes the paper protocol before additional ablations. This is a scope-control phase, not a model-performance phase. It defines what the paper asks, what evidence is already available, what claims are allowed, and what experiments remain in the queue.
+
+The new protocol artifacts are:
+
+| Artifact | Role |
+|---|---|
+| `reports/paper_protocol.md` | Freezes the research question, contribution boundary, dataset, features, targets, validation setup, methods, metrics, and decision gates |
+| `reports/hypotheses.md` | Maps H1-H7 to current evidence and next tests |
+| `reports/claim_registry.md` | Separates supported, directional, diagnostic, open, and forbidden claims |
+| `reports/experiment_manifest.md` | Lists completed experiment families, future experiment queue, minimal ablation definition, and submission-readiness checklist |
+
+The most important protocol decision is that the current strongest paper claim is directional rather than decisive: guided-HMM produces the best primary point estimates and strongest primary stress robustness, but the fold-level IC edge over raw-feature HMM is not significant at the 5% level. The next paper-critical experiment is therefore not broad feature expansion; it is a minimal ablation suite that tests whether the mechanism survives controlled model changes.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
@@ -379,6 +394,7 @@ The limitation is equally important: feature importance is diagnostic and model-
 - Phase 21 adds guided-method robustness and stress coverage. Guided-HMM is stress-robust on the primary BTC+ETH 8h prediction file, but symbol/horizon robustness remains mixed.
 - Phase 22A is a 3-epoch structural prototype. It does not replace the full 30-epoch time-only guided baseline and has not been retested downstream.
 - Phase 23 interpretability is diagnostic. Fold-local SHAP and feature-importance summaries improve economic plausibility, but they are not causal explanations.
+- Phase 24 freezes claim language but does not add new empirical evidence.
 - Calibration/NLL diagnostics do not uniformly favor the guided methods, so probability quality and trading-score quality should be discussed separately.
 - Phase 19A is a positioning phase, not an empirical result. It clarifies contribution language but does not prove a new model improvement.
 - Literature positioning depends on describing HMM states as proxy/reference states, not ground truth labels.
@@ -390,9 +406,9 @@ The limitation is equally important: feature importance is diagnostic and model-
 
 ## Next Steps
 
-1. Draft the formal paper skeleton with methodology, experiment design, results, limitations, and related work.
-2. Decide whether Phase 22A earns a full 30-epoch time-frequency run; keep hard-negative ablations capped by the compute budget.
-3. Add fold-local or expanding-window encoder retraining for the learned-regime methods.
-4. Convert the Phase 19A literature matrix into a full related-work section with explicit contribution boundaries.
+1. Run Phase 25 as a minimal ablation suite covering vanilla versus HMM-guided contrastive learning, GMM versus HMM assignment, and time-only versus time-frequency inputs.
+2. Refresh statistical evidence after Phase 25 rather than citing old p-values for new ablations.
+3. Draft the formal paper skeleton with methodology, experiment design, results, limitations, and related work.
+4. Add fold-local or expanding-window encoder retraining only if required by reviewer-style critique.
 5. Expand beyond BTC/ETH only if the written statistical gate is met.
 6. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.
