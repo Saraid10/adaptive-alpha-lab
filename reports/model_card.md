@@ -184,7 +184,7 @@ random_state=42
 | Embargo | 5 days, 120 hourly bars |
 | Primary label horizon purge | 8 bars |
 | Main OOS rows | 25,920 per method |
-| Critical audit status | 28 PASS, 1 methodological WARN, 0 FAIL |
+| Critical audit status | 29 PASS, 1 methodological WARN, 0 FAIL |
 
 The current methodological warning is that the legacy `regime_assignments.csv` artifact is offline/global. Predictive regime claims should use the fold-local Phase 13 artifacts.
 
@@ -205,6 +205,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 21 | Guided-method refresh of symbol/horizon robustness and cost/threshold/period stress robustness |
 | Phase 22A | 3-epoch time-frequency HMM-guided encoder prototype |
 | Phase 23 | Fold-local LightGBM feature-importance and SHAP interpretability diagnostics |
+| Phase 24 | Paper protocol freeze with hypotheses, claim registry, and experiment manifest |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -336,3 +337,16 @@ weak.
 ```
 
 Future encoder phases must be evaluated against this frozen run, not against overwritten latest CSVs.
+
+## Paper Protocol Freeze
+
+Phase 24 adds four paper-control documents:
+
+```text
+reports/paper_protocol.md
+reports/hypotheses.md
+reports/claim_registry.md
+reports/experiment_manifest.md
+```
+
+These files define the current research question, hypothesis table, claim boundaries, completed experiment families, future experiment queue, and submission-readiness checklist. They should be treated as the control layer for Phase 25+ work: new experiments should map to a frozen hypothesis and should not expand the paper claim set without updating the protocol.

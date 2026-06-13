@@ -1335,6 +1335,75 @@ def audit_literature_positioning_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_paper_protocol_artifacts(rows: list[AuditRecord]) -> None:
+    reports_dir = Path(BASE_DIR) / "reports"
+    required_files = {
+        "paper_protocol.md": [
+            "Central Research Question",
+            "Contribution Boundary",
+            "Dataset Freeze",
+            "Validation Freeze",
+            "Permitted Claims",
+            "Forbidden Claims",
+            "Decision Gates",
+        ],
+        "hypotheses.md": [
+            "Hypothesis Table",
+            "Primary Paper Hypothesis",
+            "Claim Language",
+        ],
+        "claim_registry.md": [
+            "Supported Claims",
+            "Directional Claims",
+            "Open Claims",
+            "Forbidden Claims",
+            "Resume-Safe Language",
+        ],
+        "experiment_manifest.md": [
+            "Frozen Baseline",
+            "Completed Experiment Families",
+            "Future Experiment Queue",
+            "Minimal Ablation Definition",
+            "Submission Readiness Checklist",
+        ],
+    }
+
+    missing_files = []
+    missing_sections = []
+    total_checks = 0
+
+    for filename, sections in required_files.items():
+        path = reports_dir / filename
+        if not path.exists():
+            missing_files.append(filename)
+            continue
+        text = path.read_text(encoding="utf-8")
+        for section in sections:
+            total_checks += 1
+            if section not in text:
+                missing_sections.append(f"{filename}:{section}")
+
+    failures = len(missing_files) + len(missing_sections)
+    detail_parts = [
+        f"protocol_files={len(required_files) - len(missing_files)}/{len(required_files)}",
+        f"section_checks={total_checks}",
+    ]
+    if missing_files:
+        detail_parts.append(f"missing_files={missing_files}")
+    if missing_sections:
+        detail_parts.append(f"missing_sections={missing_sections}")
+
+    record(
+        rows,
+        "paper_protocol_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(total_checks + len(required_files), 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -1623,6 +1692,7 @@ def main() -> None:
     audit_time_frequency_encoder_artifacts(rows)
     audit_interpretability_artifacts(rows)
     audit_literature_positioning_artifacts(rows)
+    audit_paper_protocol_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)
