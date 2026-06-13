@@ -1,5 +1,6 @@
 check,status,severity,rows_checked,rows_failed,detail
 regime_discovery_protocol,WARN,methodological,173770,0,Legacy regime_assignments.csv is an offline/global artifact. Use walkforward_experiment_results.csv for fold-local predictive regime claims.
+ablation_artifacts,PASS,critical,60,0,"result_rows=48; summary_rows=12; families=4; decisions={'supported': 5, 'mixed': 3, 'do_not_expand_yet': 2, 'not_supported': 1, 'directional_support_statistical_refresh_needed': 1}"
 compute_plan_artifacts,PASS,critical,13,0,profile_rows=1; budget_rows=12; complete=2; active_next=0; prototype_pending=1; budget_status=green; summary_rows=8
 experiment_results_match_predictions,PASS,critical,6,0,experiment_results.csv n_test_rows matches alpha_oos_predictions.csv.
 feature_columns_present,PASS,critical,22,0,All 22 configured feature columns exist.

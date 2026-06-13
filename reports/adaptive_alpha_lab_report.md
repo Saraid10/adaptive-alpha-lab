@@ -83,11 +83,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 29 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, Phase 24 protocol artifact, literature-positioning artifact, and run-registry checks passed |
+| PASS | 30 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, Phase 24 protocol artifact, Phase 25 ablation artifact, literature-positioning artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 23 interpretability artifacts are complete, that the Phase 24 paper-protocol artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 23 interpretability artifacts are complete, that the Phase 24 paper-protocol artifacts are complete, that the Phase 25 ablation artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -381,6 +381,19 @@ The new protocol artifacts are:
 
 The most important protocol decision is that the current strongest paper claim is directional rather than decisive: guided-HMM produces the best primary point estimates and strongest primary stress robustness, but the fold-level IC edge over raw-feature HMM is not significant at the 5% level. The next paper-critical experiment is therefore not broad feature expansion; it is a minimal ablation suite that tests whether the mechanism survives controlled model changes.
 
+## Phase 25 Minimal Ablation Suite
+
+Phase 25 runs the minimal paper-critical ablation suite from already completed artifacts. It is intentionally narrow: it tests the mechanism needed for the paper without launching an uncontrolled retraining grid.
+
+| Ablation Family | Paper Question | Current Evidence |
+|---|---|---|
+| Objective guidance | Does HMM-guided contrastive supervision improve the learned regime path? | Supported for guided-HMM downstream alpha; mixed structurally because the diagnostic duration metric does not always move in one direction |
+| Assignment layer | Does HMM assignment improve learned embeddings over GMM assignment? | Strongly supported for guided embeddings, the time-frequency prototype, and downstream alpha |
+| Augmentation view | Does the 3-epoch time-frequency prototype improve over the full time-only guided encoder? | Not yet; it should not receive full downstream alpha compute without better structural evidence |
+| Classical reference | Does guided-HMM outperform raw-feature HMM on the primary alpha benchmark? | Directionally supported on point estimates, but still requires a refreshed Phase 26 statistical test |
+
+The main finding is that sequential assignment is the most reliable mechanism in the current project. Learned embeddings become most useful when their assignment layer respects temporal state persistence. The ablation suite also prevents overclaiming: the current time-frequency prototype is a useful negative result, not a new winner.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
@@ -395,6 +408,7 @@ The most important protocol decision is that the current strongest paper claim i
 - Phase 22A is a 3-epoch structural prototype. It does not replace the full 30-epoch time-only guided baseline and has not been retested downstream.
 - Phase 23 interpretability is diagnostic. Fold-local SHAP and feature-importance summaries improve economic plausibility, but they are not causal explanations.
 - Phase 24 freezes claim language but does not add new empirical evidence.
+- Phase 25 aggregates completed artifacts into a minimal ablation table; it does not create new retrained encoder variants beyond already completed runs.
 - Calibration/NLL diagnostics do not uniformly favor the guided methods, so probability quality and trading-score quality should be discussed separately.
 - Phase 19A is a positioning phase, not an empirical result. It clarifies contribution language but does not prove a new model improvement.
 - Literature positioning depends on describing HMM states as proxy/reference states, not ground truth labels.
@@ -406,9 +420,8 @@ The most important protocol decision is that the current strongest paper claim i
 
 ## Next Steps
 
-1. Run Phase 25 as a minimal ablation suite covering vanilla versus HMM-guided contrastive learning, GMM versus HMM assignment, and time-only versus time-frequency inputs.
-2. Refresh statistical evidence after Phase 25 rather than citing old p-values for new ablations.
-3. Draft the formal paper skeleton with methodology, experiment design, results, limitations, and related work.
-4. Add fold-local or expanding-window encoder retraining only if required by reviewer-style critique.
-5. Expand beyond BTC/ETH only if the written statistical gate is met.
-6. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.
+1. Run Phase 26 to refresh statistical evidence using the Phase 25 ablation table as the claim map.
+2. Draft the formal paper skeleton with methodology, experiment design, results, limitations, and related work.
+3. Add fold-local or expanding-window encoder retraining only if required by reviewer-style critique.
+4. Expand beyond BTC/ETH only if the written statistical gate is met.
+5. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.

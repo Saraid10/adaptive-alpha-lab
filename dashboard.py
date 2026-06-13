@@ -64,6 +64,8 @@ def main() -> None:
     regime_agreement = read_csv("regime_agreement_matrix.csv")
     compute_profile = read_csv("compute_profile.csv")
     ablation_budget = read_csv("ablation_budget.csv")
+    ablation_results = read_csv("ablation_results.csv")
+    ablation_summary = read_csv("ablation_summary.csv")
     compute_budget_summary = read_csv("compute_budget_summary.csv")
     guided_encoder_summary = read_csv("guided_encoder_summary.csv")
     guided_encoder_loss = read_csv("guided_encoder_loss.csv")
@@ -286,6 +288,29 @@ def main() -> None:
         compute_img = MODELS_DIR / "compute_budget_plan.png"
         if compute_img.exists():
             st.image(str(compute_img), width="stretch")
+
+    st.header("Minimal Ablation Suite")
+    if ablation_summary.empty:
+        st.info("Run python src/ablation_suite.py to generate Phase 25 ablation artifacts.")
+    else:
+        st.caption(
+            "Phase 25 compares only the mechanisms needed for the paper: objective guidance, "
+            "HMM versus GMM assignment, time-frequency augmentation, and the classical HMM reference."
+        )
+        st.dataframe(ablation_summary, width="stretch")
+        c1, c2, c3, c4 = st.columns(4)
+        supported = ablation_summary[ablation_summary["phase25_decision"] == "supported"]
+        strongest = ablation_summary.sort_values("metric_win_rate", ascending=False).iloc[0]
+        c1.metric("Comparisons", len(ablation_summary))
+        c2.metric("Supported", len(supported))
+        c3.metric("Best Win Rate", f"{strongest['metric_win_rate']:.2f}", strongest["comparison"])
+        c4.metric("Families", ablation_summary["ablation_family"].nunique())
+        ablation_img = MODELS_DIR / "ablation_heatmap.png"
+        if ablation_img.exists():
+            st.image(str(ablation_img), width="stretch")
+        if not ablation_results.empty:
+            st.subheader("Metric-Level Ablation Rows")
+            st.dataframe(ablation_results, width="stretch")
 
     st.header("HMM-Guided Encoder")
     if guided_encoder_summary.empty:

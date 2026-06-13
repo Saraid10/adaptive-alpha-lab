@@ -31,20 +31,20 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Related work | 19A | Literature positioning | `related_work.md`, `literature_matrix.csv` | Paper framing |
 | Time-frequency prototype | 22A | Cheap augmentation check | `time_frequency_encoder_summary.csv`, `time_frequency_encoder_comparison.csv` | Ablation candidate |
 | Interpretability | 23 | Fold-local feature attribution | `feature_importance_by_regime.csv`, `feature_family_summary.csv` | Mechanism and discussion |
+| Minimal ablation suite | 25 | Objective, assignment-layer, augmentation, and classical-reference ablations | `ablation_results.csv`, `ablation_summary.csv`, `ablation_heatmap.png` | Mechanism test |
 
 ## Future Experiment Queue
 
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
-| 1 | 25 | Minimal ablation suite | Required before paper submission | `ablation_results.csv`, `ablation_summary.csv`, `ablation_heatmap.png` |
-| 2 | 26 | Statistical evidence refresh | Required after ablations | `paper_statistical_summary.csv`, `paper_claim_tests.csv` |
-| 3 | 27 | Multi-asset generalization | Conditional on Phase 25/26 evidence | `multi_asset_results.csv`, `generalization.md` |
-| 4 | 28 | Formal paper draft | Required for submission | `paper/main.md` or `paper/main.tex` |
-| 5 | 29 | Reproducibility package | Required for public review | `reproduce.ps1`, `artifact_manifest.md`, `environment.md` |
+| 1 | 26 | Statistical evidence refresh | Required after ablations | `paper_statistical_summary.csv`, `paper_claim_tests.csv` |
+| 2 | 27 | Multi-asset generalization | Conditional on Phase 26 evidence | `multi_asset_results.csv`, `generalization.md` |
+| 3 | 28 | Formal paper draft | Required for submission | `paper/main.md` or `paper/main.tex` |
+| 4 | 29 | Reproducibility package | Required for public review | `reproduce.ps1`, `artifact_manifest.md`, `environment.md` |
 
 ## Minimal Ablation Definition
 
-Phase 25 should include only the ablations needed to support or falsify the current paper mechanism:
+Phase 25 includes only the ablations needed to support or falsify the current paper mechanism:
 
 | Ablation | Question |
 |---|---|
@@ -53,7 +53,7 @@ Phase 25 should include only the ablations needed to support or falsify the curr
 | Time-only vs time-frequency guided encoder | Does the FFT view improve or dilute the guided representation? |
 | Encoder depth if compute allows | Is the result sensitive to a minimal architecture change? |
 
-Hard-negative mining is optional unless the minimal ablation suite leaves the mechanism unclear.
+The completed Phase 25 table supports the assignment-layer mechanism most strongly and does not justify expanding time-frequency downstream compute yet. Hard-negative mining remains optional unless Phase 26 statistical evidence leaves the mechanism unclear.
 
 ## Submission Readiness Checklist
 

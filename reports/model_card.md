@@ -184,7 +184,7 @@ random_state=42
 | Embargo | 5 days, 120 hourly bars |
 | Primary label horizon purge | 8 bars |
 | Main OOS rows | 25,920 per method |
-| Critical audit status | 29 PASS, 1 methodological WARN, 0 FAIL |
+| Critical audit status | 30 PASS, 1 methodological WARN, 0 FAIL |
 
 The current methodological warning is that the legacy `regime_assignments.csv` artifact is offline/global. Predictive regime claims should use the fold-local Phase 13 artifacts.
 
@@ -206,6 +206,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 22A | 3-epoch time-frequency HMM-guided encoder prototype |
 | Phase 23 | Fold-local LightGBM feature-importance and SHAP interpretability diagnostics |
 | Phase 24 | Paper protocol freeze with hypotheses, claim registry, and experiment manifest |
+| Phase 25 | Minimal ablation suite for objective, assignment-layer, augmentation, and classical-reference mechanisms |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -350,3 +351,17 @@ reports/experiment_manifest.md
 ```
 
 These files define the current research question, hypothesis table, claim boundaries, completed experiment families, future experiment queue, and submission-readiness checklist. They should be treated as the control layer for Phase 25+ work: new experiments should map to a frozen hypothesis and should not expand the paper claim set without updating the protocol.
+
+## Minimal Ablation Suite
+
+Phase 25 adds the first paper-facing ablation layer.
+
+| Field | Value |
+|---|---|
+| CLI | `python src/ablation_suite.py` |
+| Main outputs | `ablation_results.csv`, `ablation_summary.csv`, `ablation_heatmap.png` |
+| Families tested | objective guidance, assignment layer, augmentation view, classical reference |
+| Main positive result | HMM assignment is consistently stronger than GMM assignment for the guided learned-regime path |
+| Main negative result | The current 3-epoch time-frequency prototype does not justify full downstream alpha expansion |
+
+The ablation suite does not claim a new retrained model variant. It consolidates completed structural and downstream artifacts into a mechanism-level decision table so the next statistical refresh can test only the claims the paper actually needs.
