@@ -12,6 +12,7 @@ guided_encoder_artifacts,PASS,critical,32,0,summary_rows=2; loss_rows=30; compar
 interpretability_artifacts,PASS,critical,252,0,"global_rows=22; regime_rows=176; family_rows=54; guided_regimes=['0', '1', '2', '3']; guided_top_features=vol_20h,vol_20h,vol_20h,vol_20h"
 joined_model_rows_are_finite,PASS,critical,34872,0,Joined feature/target rows contain no NaN/inf values.
 literature_positioning_artifacts,PASS,critical,13,0,matrix_rows=13; clusters=5
+multiasset_universe_artifacts,PASS,critical,152,0,files_present=7/7; candidates=75; crypto20=20; crypto50=50; crypto20_eligible_now=2; crypto50_eligible_now=2
 ohlcv_symbol_rows,PASS,critical,2,0,"ohlcv counts: BTCUSDT=17520, ETHUSDT=17520"
 oos_prediction_equal_method_coverage,PASS,critical,6,0,"Prediction rows by method: global_lgbm=25920, regime_lgbm_contrastive=25920, regime_lgbm_contrastive_hmm=25920, regime_lgbm_hmm=25920, regime_lgbm_kmeans=25920, regime_lgbm_vol_bucket=25920"
 oos_prediction_no_duplicate_method_rows,PASS,critical,155520,0,No duplicated method/symbol/feat_idx predictions.

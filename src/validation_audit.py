@@ -1750,6 +1750,100 @@ def audit_reproducibility_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_multiasset_universe_artifacts(rows: list[AuditRecord]) -> None:
+    required_files = [
+        Path(BASE_DIR) / "configs" / "crypto_universe_candidates.csv",
+        Path(SAVE_DIR) / "asset_universe_candidates_scored.csv",
+        Path(SAVE_DIR) / "asset_universe_crypto20.csv",
+        Path(SAVE_DIR) / "asset_universe_crypto50.csv",
+        Path(SAVE_DIR) / "asset_universe_exclusions.csv",
+        Path(SAVE_DIR) / "asset_universe_summary.csv",
+        Path(BASE_DIR) / "reports" / "multiasset_universe_plan.md",
+    ]
+    missing_files = [str(path.relative_to(BASE_DIR)) for path in required_files if not path.exists()]
+    required_candidate_cols = {"design_rank", "symbol", "base_asset", "universe_group", "notes"}
+    required_selection_cols = {
+        "universe",
+        "symbol",
+        "design_rank",
+        "selection_status",
+        "target_size",
+        "selection_mode",
+        "selected_by_design",
+    }
+
+    failures = len(missing_files)
+    details = [f"files_present={len(required_files) - len(missing_files)}/{len(required_files)}"]
+    rows_checked = len(required_files)
+
+    if not missing_files:
+        candidates = pd.read_csv(required_files[0])
+        scored = pd.read_csv(Path(SAVE_DIR) / "asset_universe_candidates_scored.csv")
+        crypto20 = pd.read_csv(Path(SAVE_DIR) / "asset_universe_crypto20.csv")
+        crypto50 = pd.read_csv(Path(SAVE_DIR) / "asset_universe_crypto50.csv")
+        summary = pd.read_csv(Path(SAVE_DIR) / "asset_universe_summary.csv")
+        report_text = (Path(BASE_DIR) / "reports" / "multiasset_universe_plan.md").read_text(encoding="utf-8")
+
+        missing_candidate_cols = sorted(required_candidate_cols - set(candidates.columns))
+        missing_scored_cols = sorted(required_candidate_cols - set(scored.columns))
+        missing_20_cols = sorted(required_selection_cols - set(crypto20.columns))
+        missing_50_cols = sorted(required_selection_cols - set(crypto50.columns))
+        missing_summary_cols = sorted({"metric", "value", "notes"} - set(summary.columns))
+        missing_report_phrases = [
+            phrase
+            for phrase in ["Crypto-20 pilot", "Crypto-50 final", "pre-registered crypto universe protocol"]
+            if phrase not in report_text
+        ]
+        bad_sizes = int(len(crypto20) != 20) + int(len(crypto50) != 50)
+        failures += (
+            len(missing_candidate_cols)
+            + len(missing_scored_cols)
+            + len(missing_20_cols)
+            + len(missing_50_cols)
+            + len(missing_summary_cols)
+            + len(missing_report_phrases)
+            + bad_sizes
+        )
+        rows_checked += len(candidates) + len(crypto20) + len(crypto50)
+        details.extend(
+            [
+                f"candidates={len(candidates)}",
+                f"crypto20={len(crypto20)}",
+                f"crypto50={len(crypto50)}",
+                "crypto20_eligible_now="
+                + str(int((crypto20["selection_status"] == "eligible").sum()) if "selection_status" in crypto20 else 0),
+                "crypto50_eligible_now="
+                + str(int((crypto50["selection_status"] == "eligible").sum()) if "selection_status" in crypto50 else 0),
+            ]
+        )
+        if missing_candidate_cols:
+            details.append(f"missing_candidate_cols={missing_candidate_cols}")
+        if missing_scored_cols:
+            details.append(f"missing_scored_cols={missing_scored_cols}")
+        if missing_20_cols:
+            details.append(f"missing_crypto20_cols={missing_20_cols}")
+        if missing_50_cols:
+            details.append(f"missing_crypto50_cols={missing_50_cols}")
+        if missing_summary_cols:
+            details.append(f"missing_summary_cols={missing_summary_cols}")
+        if missing_report_phrases:
+            details.append(f"missing_report_phrases={missing_report_phrases}")
+        if bad_sizes:
+            details.append("unexpected_universe_size")
+    elif missing_files:
+        details.append(f"missing_files={missing_files}")
+
+    record(
+        rows,
+        "multiasset_universe_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(details),
+        rows_checked=max(rows_checked, 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -2043,6 +2137,7 @@ def main() -> None:
     audit_paper_protocol_artifacts(rows)
     audit_paper_draft_artifacts(rows)
     audit_reproducibility_artifacts(rows)
+    audit_multiasset_universe_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)

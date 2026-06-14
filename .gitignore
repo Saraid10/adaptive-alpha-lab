@@ -57,6 +57,11 @@ models/*.csv
 !models/paper_statistical_summary.csv
 !models/target_distribution.csv
 !models/target_quality.csv
+!models/asset_universe_candidates_scored.csv
+!models/asset_universe_crypto20.csv
+!models/asset_universe_crypto50.csv
+!models/asset_universe_exclusions.csv
+!models/asset_universe_summary.csv
 
 # Keep visualization outputs.
 !models/*.png

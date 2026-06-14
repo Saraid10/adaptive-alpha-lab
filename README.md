@@ -98,6 +98,7 @@ python -m pip install -r requirements-research.txt
 
 ```powershell
 python src/check.py
+python src/multiasset_universe.py
 python src/targets.py --symbols BTCUSDT ETHUSDT
 python src/train_encoder.py --symbols BTCUSDT ETHUSDT
 python src/visualize_regimes.py --symbols BTCUSDT ETHUSDT
@@ -143,6 +144,10 @@ python -m pip install -r requirements-research.txt
 |---|---|
 | `models/target_distribution.csv` | Label balance across horizons and label types |
 | `models/target_quality.csv` | Missing-row, horizon-loss, and neutral-class checks |
+| `models/asset_universe_crypto20.csv` | Phase 31 pre-specified Crypto-20 expansion universe |
+| `models/asset_universe_crypto50.csv` | Phase 31 pre-specified Crypto-50 expansion universe |
+| `models/asset_universe_exclusions.csv` | Phase 31 transparent exclusion and pending-ingestion log |
+| `reports/multiasset_universe_plan.md` | Phase 31 reviewer-facing multi-asset protocol |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
 | `models/regime_stability_summary.csv` | Persistence, switch-rate, confidence, and stable-vs-transition IC diagnostics |
@@ -597,5 +602,5 @@ The paper now handles three likely reviewer questions explicitly:
 
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, and a Streamlit research dashboard. The next important work is Phase 30: venue formatting and citation cleanup before adding new experimental scope.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, and a Streamlit research dashboard. The next important work is to run a Crypto-20 ingestion/feature pilot before scaling to the Crypto-50 generalization experiment.
 
