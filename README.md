@@ -587,6 +587,14 @@ Phase 29 turns `paper/main.md` from a generated scaffold into a stronger manuscr
 
 The result language remains deliberately conservative: guided-HMM is described as the strongest point-estimate and stress-robust method, while statistical dominance over raw-feature HMM remains inconclusive.
 
+## Reviewer Defense Framing
+
+The paper now handles three likely reviewer questions explicitly:
+
+- The BTC/ETH scope is framed as a controlled crypto setting, not as a broad market-generalization claim.
+- The 18 walk-forward folds are acknowledged as low-power for fold-level tests, but more defensible than treating overlapping hourly labels as independent.
+- The `p=0.801` raw-feature-HMM comparison is not hidden; the headline is the mechanism that sequential assignment drives learned-regime usefulness, not a claim that guided-HMM statistically beats HMM.
+
 ## Current Status
 
 The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, and a Streamlit research dashboard. The next important work is Phase 30: venue formatting and citation cleanup before adding new experimental scope.

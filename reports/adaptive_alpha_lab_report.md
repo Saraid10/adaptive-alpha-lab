@@ -440,6 +440,16 @@ Phase 29 turns the generated paper scaffold into stronger manuscript-style prose
 
 The phase keeps the same scientific conclusion: sequential HMM assignment is the strongest supported mechanism; HMM-guided learned regimes are promising and stress-robust on the BTC/ETH 8h benchmark; and the fold-level IC advantage over raw-feature HMM remains statistically inconclusive.
 
+## Reviewer Defense Notes
+
+Three likely reviewer objections are now handled directly in the paper draft:
+
+| Reviewer concern | Paper response |
+|---|---|
+| Only BTC/ETH are tested | The paper frames BTC/ETH as a controlled crypto setting with relatively uniform trading microstructure; multi-asset generalization is future work |
+| Fold-level tests have only 18 folds | The paper acknowledges low statistical power and argues that 18 embargoed walk-forward folds are more defensible than row-level independence assumptions on overlapping labels |
+| Main guided-HMM vs raw HMM comparison has `p=0.801` | The paper leads with the mechanism: sequential assignment is the key driver, and HMM-guided representation learning makes that assignment more effective; alpha dominance remains directional |
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.

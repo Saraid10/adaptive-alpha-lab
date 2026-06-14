@@ -6,7 +6,7 @@ Phase 29 manuscript prose pass. This Markdown draft is generated from current ar
 
 ## Abstract
 
-Financial alpha models often behave differently across market regimes, yet regime labels are rarely observed and may be unstable during transitions. Classical Hidden Markov Models impose useful temporal state discipline, while contrastive time-series encoders can learn richer representations from raw features. This paper studies whether those two ideas can be combined for regime-conditioned financial alpha modeling. Adaptive Alpha Lab benchmarks global LightGBM, raw-feature HMM regimes, clustering and volatility baselines, vanilla contrastive regimes, and an HMM-guided contrastive encoder on BTCUSDT and ETHUSDT hourly data. The evaluation uses triple-barrier labels, expanding purged walk-forward validation, transaction costs, robustness grids, fold-level statistical tests, ablation summaries, and fold-local interpretability. The strongest current point-estimate method is regime_lgbm_hmm_guided_hmm (IC=0.0094, Sharpe=0.0989). The evidence supports a clear mechanism: learned embeddings are more useful when paired with sequential HMM assignment, and HMM-guided weak supervision improves the learned-regime path. However, the fold-level IC edge over the raw-feature HMM baseline remains statistically inconclusive. The contribution is therefore a reproducible empirical benchmark and cautious model-side intervention, not a claim of profitable trading or statistically dominant alpha.
+Financial alpha models often behave differently across market regimes, yet regime labels are rarely observed and may be unstable during transitions. Classical Hidden Markov Models impose useful temporal state discipline, while contrastive time-series encoders can learn richer representations from raw features. This paper studies whether those two ideas can be combined for regime-conditioned financial alpha modeling. Adaptive Alpha Lab benchmarks global LightGBM, raw-feature HMM regimes, clustering and volatility baselines, vanilla contrastive regimes, and an HMM-guided contrastive encoder on BTCUSDT and ETHUSDT hourly data. The two-asset scope is intentional: BTC and ETH provide a controlled crypto setting with relatively similar trading venue structure, letting the benchmark isolate regime-method behavior before claiming cross-asset generalization. The evaluation uses triple-barrier labels, expanding purged walk-forward validation, transaction costs, robustness grids, fold-level statistical tests, ablation summaries, and fold-local interpretability. The strongest current point-estimate method is regime_lgbm_hmm_guided_hmm (IC=0.0094, Sharpe=0.0989). The evidence supports a clear mechanism: learned embeddings are more useful when paired with sequential HMM assignment, and HMM-guided weak supervision improves the learned-regime path. However, the fold-level IC edge over the raw-feature HMM baseline remains statistically inconclusive. The contribution is therefore a reproducible empirical benchmark and cautious model-side intervention, not a claim of profitable trading or statistically dominant alpha.
 
 ## 1. Introduction
 
@@ -37,7 +37,9 @@ The central distinction is that this paper does not treat HMM states as true lab
 
 ## 3. Data and Labels
 
-The current paper dataset contains BTCUSDT and ETHUSDT hourly bars from 2024-04-26 to 2026-04-26. The feature store contains 22 engineered hourly features covering returns, realized volatility, volatility-of-volatility, liquidity proxies, order-flow proxy behavior, RSI/MACD/Bollinger-style technical state, distribution shape, and volume behavior. The primary target is `tb_label_8h`, an 8-hour triple-barrier label with down, neutral, and up classes. Secondary directional, triple-barrier, forward-return, and volatility-adjusted-return labels are retained for diagnostics and robustness, but the paper reports the primary target first.
+The current paper dataset contains BTCUSDT and ETHUSDT hourly bars from 2024-04-26 to 2026-04-26. This narrow universe is an experimental-control decision rather than an unnoticed generalization claim: both assets trade continuously, share similar crypto-market microstructure, and allow the benchmark to compare regime methods without mixing asset classes, exchange schedules, or equity/FX-specific effects. Multi-asset generalization is therefore treated as future work.
+
+The feature store contains 22 engineered hourly features covering returns, realized volatility, volatility-of-volatility, liquidity proxies, order-flow proxy behavior, RSI/MACD/Bollinger-style technical state, distribution shape, and volume behavior. The primary target is `tb_label_8h`, an 8-hour triple-barrier label with down, neutral, and up classes. Secondary directional, triple-barrier, forward-return, and volatility-adjusted-return labels are retained for diagnostics and robustness, but the paper reports the primary target first.
 
 The label diagnostics are intentionally part of the artifact set. They document class balance, neutral share, missing target rows, and the expected tail loss from horizon shifting. This prevents the benchmark from hiding label imbalance or silently comparing models on different prediction universes.
 
@@ -62,7 +64,9 @@ All alpha models use the same primary target, `tb_label_8h`, and the same walk-f
 
 ## 5. Validation and Statistical Protocol
 
-The predictive benchmark uses expanding walk-forward validation, a six-month initial training window, one-month test steps, a five-day embargo, and an eight-bar label-horizon purge. Predictive paper claims use fold-local regime assignment artifacts, not the older offline/global regime files used for descriptive plots. The validation audit checks row separation, embargo spacing, target-horizon purge, coverage parity, duplicate predictions, and consistency between predictions and result summaries.
+The predictive benchmark uses expanding walk-forward validation, a six-month initial training window, one-month test steps, a five-day embargo, and an eight-bar label-horizon purge. This produces 18 walk-forward test folds. That is a limited sample for fold-level significance testing, and the paper treats it as such. The tradeoff is deliberate: 18 embargoed walk-forward folds are statistically low-power, but they are more defensible than treating thousands of overlapping hourly labels as independent observations.
+
+Predictive paper claims use fold-local regime assignment artifacts, not the older offline/global regime files used for descriptive plots. The validation audit checks row separation, embargo spacing, target-horizon purge, coverage parity, duplicate predictions, and consistency between predictions and result summaries.
 
 Statistical interpretation is fold-level first. Row-level diagnostics are useful for forecast-loss and calibration discussion, but adjacent financial labels overlap and should not be treated as independent evidence for IC or Sharpe claims. The paper therefore separates point estimates, fold-level tests, multiple-testing diagnostics, and Probabilistic Sharpe diagnostics.
 
@@ -92,7 +96,7 @@ Statistical interpretation is fold-level first. Row-level diagnostics are useful
 
 ### 6.3 Current Interpretation
 
-The current results support the mechanism that sequential assignment matters. HMM assignment improves the guided learned-regime path relative to guided-GMM on all focused point-estimate metrics and is raw-suggestive on fold-level IC, but it is not corrected significant. Guided-HMM also improves all focused point-estimate metrics versus raw-feature HMM, yet the IC p-value remains too weak for a statistical dominance claim. This is a useful research result precisely because it separates a promising mechanism from an overclaimed victory.
+The headline result is mechanistic rather than promotional: sequential structure in the assignment layer is the key driver, and HMM-guided representation learning makes that assignment layer more effective. HMM assignment improves the guided learned-regime path relative to guided-GMM on all focused point-estimate metrics and is raw-suggestive on fold-level IC, but it is not corrected significant. Guided-HMM also improves all focused point-estimate metrics versus raw-feature HMM. However, the main guided-HMM versus raw-feature HMM IC comparison has `p=0.801`, so it cannot be framed as a statistical win. This is still useful because it separates a promising mechanism from an overclaimed victory.
 
 ## 7. Robustness
 
@@ -114,8 +118,9 @@ The ablation suite tests objective guidance, assignment layer, augmentation view
 ## 10. Limitations
 
 - HMM states are proxy states, not ground truth.
-- The benchmark currently covers BTCUSDT and ETHUSDT only.
-- The guided-HMM edge over raw-feature HMM is directionally supported but not statistically significant at 5%.
+- The benchmark intentionally covers BTCUSDT and ETHUSDT as a controlled crypto setting; it does not claim cross-asset generalization.
+- The fold-level statistical tests use 18 walk-forward folds, which is defensible but low-power.
+- The guided-HMM edge over raw-feature HMM is directionally supported but not statistically significant at 5%; the main IC comparison has `p=0.801`.
 - Backtest results are research diagnostics, not live trading claims.
 - Interpretability results are model-specific and not causal.
 - The encoder is trained offline; fold-local encoder retraining remains a possible appendix experiment if compute allows.
