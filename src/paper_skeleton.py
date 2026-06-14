@@ -23,7 +23,7 @@ METHOD_LABELS = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate the Phase 27 manuscript skeleton and paper artifact map."
+        description="Generate the current manuscript draft and paper artifact map."
     )
     parser.add_argument("--output-dir", default=str(PAPER_DIR), help="Directory for paper/main.md.")
     return parser.parse_args()
@@ -209,7 +209,7 @@ def write_artifact_map(path: Path, rows: list[dict[str, str]]) -> None:
 def build_checklist() -> str:
     return """# Paper Submission Checklist
 
-## Phase 27 Status
+## Phase 29 Status
 
 This checklist tracks what remains before the project should be treated as a submission-ready paper package.
 
@@ -220,14 +220,14 @@ This checklist tracks what remains before the project should be treated as a sub
 - Literature positioning exists in `reports/related_work.md` and `reports/literature_matrix.csv`.
 - Main fold-local benchmark artifacts exist.
 - Phase 25 ablations and Phase 26 paper claim tests exist.
+- Phase 29 manuscript prose pass is complete.
 - Validation audit has no critical failures.
 
 ## Needs Human Writing
 
-- Convert `paper/main.md` from scaffold to prose.
-- Replace placeholder citations with the final venue citation style.
+- Replace paper-planning source names with the final venue citation style.
 - Add final figure numbers after choosing the paper template.
-- Tighten the abstract after the final submission venue is selected.
+- Tune the abstract to the final submission venue length.
 - Decide whether the appendix includes the Streamlit dashboard screenshots.
 
 ## Optional Before Submission
@@ -258,40 +258,44 @@ def build_paper(results: pd.DataFrame, claims: pd.DataFrame, artifact_rows: list
 
 ## Paper Status
 
-Phase 27 manuscript skeleton. This is a structured draft generated from the current artifacts, not the final submission text.
+Phase 29 manuscript prose pass. This Markdown draft is generated from current artifacts and is intended to be converted into a venue template in the next phase.
 
-## Abstract Draft
+## Abstract
 
-Financial market regimes are often modeled with classical sequential methods such as Hidden Markov Models, while recent deep time-series encoders promise richer learned representations. This project asks whether HMM-guided contrastive representations improve regime-conditioned financial alpha modeling compared with vanilla contrastive regimes, raw-feature HMM regimes, and global no-regime LightGBM baselines. The benchmark uses BTCUSDT and ETHUSDT hourly data, triple-barrier labels, expanding purged walk-forward validation, transaction costs, robustness grids, fold-level statistical tests, and fold-local interpretability. The strongest current point-estimate method is {best_method}. However, fold-level statistical dominance over the raw-feature HMM baseline remains inconclusive. The main contribution is therefore a controlled empirical finding: sequential assignment and HMM-guided weak supervision improve the learned-regime path, but the evidence supports cautious mechanism claims rather than a deployable trading claim.
+Financial alpha models often behave differently across market regimes, yet regime labels are rarely observed and may be unstable during transitions. Classical Hidden Markov Models impose useful temporal state discipline, while contrastive time-series encoders can learn richer representations from raw features. This paper studies whether those two ideas can be combined for regime-conditioned financial alpha modeling. Adaptive Alpha Lab benchmarks global LightGBM, raw-feature HMM regimes, clustering and volatility baselines, vanilla contrastive regimes, and an HMM-guided contrastive encoder on BTCUSDT and ETHUSDT hourly data. The evaluation uses triple-barrier labels, expanding purged walk-forward validation, transaction costs, robustness grids, fold-level statistical tests, ablation summaries, and fold-local interpretability. The strongest current point-estimate method is {best_method}. The evidence supports a clear mechanism: learned embeddings are more useful when paired with sequential HMM assignment, and HMM-guided weak supervision improves the learned-regime path. However, the fold-level IC edge over the raw-feature HMM baseline remains statistically inconclusive. The contribution is therefore a reproducible empirical benchmark and cautious model-side intervention, not a claim of profitable trading or statistically dominant alpha.
 
 ## 1. Introduction
 
-Market regimes change across time, and alpha models that work in one state can fail in another. A common solution is to detect regimes with an HMM and train or weight models by state. A separate line of work uses contrastive learning to discover time-series representations without hand labels. Adaptive Alpha Lab connects these two lines: it tests whether learned regime embeddings become more useful when guided by classical sequential structure.
+Market behavior is non-stationary. Momentum signals, volatility filters, and liquidity-sensitive features can all change their predictive value when the market moves from persistent trends into choppy or stressed periods. Regime-conditioned alpha modeling tries to address this by training or weighting predictors differently across market states. The difficulty is that financial regimes are latent: they are not directly labeled, and hard regime assignments can be unreliable near transitions.
+
+The classical answer is to estimate regimes with a sequential model such as a Gaussian HMM. This gives persistent state assignments and transition probabilities, but it depends heavily on the chosen feature set and distributional assumptions. A newer answer is to learn time-series embeddings through contrastive objectives and then cluster the embedding space. This can discover nonlinear representations, but the original Adaptive Alpha Lab benchmark found that vanilla contrastive-GMM regimes were smooth yet weak for downstream alpha.
+
+This paper studies a hybrid question: can a contrastive encoder become more useful if its training objective is guided by a classical sequential reference? The proposed path uses raw-feature HMM states as weak supervision for contrastive representation learning, then evaluates both GMM and HMM assignment layers on the learned embeddings. HMM states are treated as proxy states, not ground truth. The goal is to test whether sequential structure improves learned regimes under fair financial validation.
 
 ### Contributions
 
-1. A reproducible regime-conditioned alpha benchmark using common financial labels, common folds, common transaction costs, and common test rows.
-2. A comparison between global LightGBM, classical regime baselines, vanilla contrastive regimes, and HMM-guided learned regimes.
-3. A model-side intervention: HMM states are used as weak supervision for contrastive representation learning, while still being treated as proxy states rather than ground truth.
-4. A paper-safe evidence stack with validation audit, robustness, statistical tests, ablations, and fold-local interpretability.
-5. A cautious finding: guided-HMM produces the strongest current point estimates and stress robustness, but the fold-level IC edge over raw-feature HMM is not statistically significant at 5%.
+1. A reproducible regime-conditioned alpha benchmark using common labels, folds, transaction costs, and test rows across global, classical, vanilla learned, and HMM-guided learned methods.
+2. An HMM-guided contrastive representation path that uses classical state sequences as weak supervision while explicitly rejecting the idea that HMM states are ground truth.
+3. A fold-local downstream alpha test showing that the guided embedding path only becomes useful when paired with sequential HMM assignment rather than memoryless GMM assignment.
+4. A validation and evidence layer that includes leakage audit, robustness checks, fold-level statistics, multiple-testing-aware claim language, ablations, and fold-local interpretability.
+5. A cautious empirical finding: guided-HMM produces the strongest current point estimates and stress robustness, while statistical dominance over raw-feature HMM remains unproven.
 
 ## 2. Related Work
 
-This paper should position itself across four literature clusters:
+This work sits between four research areas.
 
 - Classical financial regime detection: HMMs, Gaussian mixtures, volatility regimes, and regime-switching models.
 - Contrastive time-series representation learning: vanilla temporal contrastive objectives, TS2Vec/TNC/CoST-style representation learning, and recent time-frequency or hard-negative variants.
 - Financial ML validation: triple-barrier labels, purging, embargoing, walk-forward evaluation, multiple-testing caution, and Probabilistic Sharpe diagnostics.
 - Regime-conditioned alpha modeling: using state information to train, select, or weight predictive models.
 
-The important limitation is philosophical: raw-feature HMM states are not true market-regime labels. They are a classical sequential reference used to test whether learned embeddings benefit from temporal state discipline.
+The central distinction is that this paper does not treat HMM states as true labels. They are a classical sequential reference that can discipline learned embeddings and provide a competitive baseline. This framing allows the benchmark to ask whether learned regimes benefit from sequential structure without claiming that any fitted state sequence is the real market ontology.
 
 ## 3. Data and Labels
 
-The current paper dataset contains BTCUSDT and ETHUSDT hourly bars from 2024-04-26 to 2026-04-26. The benchmark uses 22 engineered features and the primary target `tb_label_8h`. Secondary labels and horizons are kept as diagnostics and robustness artifacts.
+The current paper dataset contains BTCUSDT and ETHUSDT hourly bars from 2024-04-26 to 2026-04-26. The feature store contains 22 engineered hourly features covering returns, realized volatility, volatility-of-volatility, liquidity proxies, order-flow proxy behavior, RSI/MACD/Bollinger-style technical state, distribution shape, and volume behavior. The primary target is `tb_label_8h`, an 8-hour triple-barrier label with down, neutral, and up classes. Secondary directional, triple-barrier, forward-return, and volatility-adjusted-return labels are retained for diagnostics and robustness, but the paper reports the primary target first.
 
-Target and feature diagnostics should cite `models/target_distribution.csv`, `models/target_quality.csv`, and `src/features.py`.
+The label diagnostics are intentionally part of the artifact set. They document class balance, neutral share, missing target rows, and the expected tail loss from horizon shifting. This prevents the benchmark from hiding label imbalance or silently comparing models on different prediction universes.
 
 ## 4. Methods
 
@@ -306,17 +310,17 @@ Target and feature diagnostics should cite `models/target_distribution.csv`, `mo
 
 ### 4.2 Proposed Method
 
-The proposed method is `regime_lgbm_hmm_guided_hmm`: an HMM-guided contrastive encoder followed by sequential HMM assignment and regime-conditioned LightGBM alpha models. The HMM state sequence is used as weak supervision, not as ground truth.
+The proposed method is `regime_lgbm_hmm_guided_hmm`: an HMM-guided contrastive encoder followed by sequential HMM assignment and regime-conditioned LightGBM alpha models. The encoder uses the HMM state sequence to define weak same-state positives and boundary-aware negatives, but the downstream regime assignment is still evaluated as a model component rather than assumed correct.
 
 ### 4.3 Alpha Modeling
 
-All alpha models use the same primary target, `tb_label_8h`, and the same walk-forward folds. The alpha score is derived from multiclass probabilities as `P(up) - P(down)`, with transaction costs applied in the evaluation layer.
+All alpha models use the same primary target, `tb_label_8h`, and the same walk-forward folds. LightGBM outputs multiclass probabilities over down, neutral, and up labels. The alpha score is `P(up) - P(down)`. A position is taken only when the score exceeds the threshold and the neutral class is not dominant. Transaction costs are applied in the evaluation layer rather than treated as an afterthought.
 
 ## 5. Validation and Statistical Protocol
 
-The predictive benchmark uses expanding walk-forward validation, a six-month initial training window, one-month test steps, a five-day embargo, and an eight-bar label-horizon purge. Paper claims should use fold-local regime assignments and `models/walkforward_experiment_results.csv`.
+The predictive benchmark uses expanding walk-forward validation, a six-month initial training window, one-month test steps, a five-day embargo, and an eight-bar label-horizon purge. Predictive paper claims use fold-local regime assignment artifacts, not the older offline/global regime files used for descriptive plots. The validation audit checks row separation, embargo spacing, target-horizon purge, coverage parity, duplicate predictions, and consistency between predictions and result summaries.
 
-Statistical interpretation is fold-level first. Row-level diagnostics are useful for calibration or forecast-loss discussion but should not replace fold-level evidence because financial labels overlap across time.
+Statistical interpretation is fold-level first. Row-level diagnostics are useful for forecast-loss and calibration discussion, but adjacent financial labels overlap and should not be treated as independent evidence for IC or Sharpe claims. The paper therefore separates point estimates, fold-level tests, multiple-testing diagnostics, and Probabilistic Sharpe diagnostics.
 
 ## 6. Results
 
@@ -330,24 +334,24 @@ Statistical interpretation is fold-level first. Row-level diagnostics are useful
 
 ### 6.3 Current Interpretation
 
-The current results support the mechanism that sequential assignment matters. HMM assignment improves the guided learned-regime path relative to guided-GMM on all focused point-estimate metrics and is raw-suggestive on fold-level IC, but not corrected significant. Guided-HMM also improves all focused point-estimate metrics versus raw-feature HMM, but the IC p-value remains too weak for a statistical dominance claim.
+The current results support the mechanism that sequential assignment matters. HMM assignment improves the guided learned-regime path relative to guided-GMM on all focused point-estimate metrics and is raw-suggestive on fold-level IC, but it is not corrected significant. Guided-HMM also improves all focused point-estimate metrics versus raw-feature HMM, yet the IC p-value remains too weak for a statistical dominance claim. This is a useful research result precisely because it separates a promising mechanism from an overclaimed victory.
 
 ## 7. Robustness
 
-The paper should discuss two robustness layers:
+The robustness evidence has two layers:
 
 - Symbol/horizon robustness: useful for showing where the conclusion is stable or mixed.
 - Cost/threshold/market-period stress robustness: stronger for the primary BTC+ETH 8h setup.
 
-The safe wording is that guided-HMM is stress-robust on the primary BTC+ETH 8h benchmark, not universally dominant across all assets and horizons.
+The safe wording is that guided-HMM is stress-robust on the primary BTC+ETH 8h benchmark, not universally dominant across all assets and horizons. This distinction matters because a method can be strong under transaction-cost and threshold stress while still showing mixed behavior across target horizons or single-symbol subsets.
 
 ## 8. Interpretability
 
-Fold-local feature attribution shows which feature families matter inside each method/regime. This should be framed as diagnostic interpretability, not causal explanation. The strongest paper use is to show whether the learned regimes rely on economically plausible features such as volatility state, momentum/autocorrelation, and distribution shape.
+Fold-local feature attribution shows which feature families matter inside each method and regime. This is diagnostic interpretability, not causal explanation. Its strongest use is plausibility: the guided-HMM regime-conditioned models rely heavily on volatility state, volatility-of-volatility, momentum/autocorrelation, and distribution-shape features, which is more convincing than a regime layer driven by arbitrary identifiers.
 
 ## 9. Ablations
 
-The ablation suite tests objective guidance, assignment layer, augmentation view, and classical-reference comparisons. The current evidence says the assignment layer is the strongest mechanism. The time-frequency prototype is not strong enough to justify expansion yet.
+The ablation suite tests objective guidance, assignment layer, augmentation view, and classical-reference comparisons. The strongest evidence is for the assignment layer: guided embeddings become useful when assignment respects temporal state persistence. The current time-frequency prototype is informative but negative; it should not receive a full downstream expansion until its structural evidence improves.
 
 ## 10. Limitations
 
@@ -364,9 +368,9 @@ The public repository separates dashboard reproduction from full research reprod
 
 The reproduction helper supports three modes: smoke, full, and dashboard. Raw data, DuckDB databases, model weights, embeddings, and row-level prediction files remain excluded from GitHub.
 
-## 12. Conclusion Draft
+## 12. Conclusion
 
-Adaptive Alpha Lab shows that learned market-regime representations need sequential discipline to become useful in this benchmark. Vanilla contrastive-GMM regimes are weak downstream, while HMM-guided embeddings paired with HMM assignment produce the strongest current point estimates and stress robustness. The central publishable finding is not a claim of profitable trading or statistical dominance, but a controlled empirical result: classical sequential structure can improve deep learned regime representations, and the assignment layer is a major driver of downstream usefulness.
+Adaptive Alpha Lab shows that learned market-regime representations need sequential discipline to become useful in this benchmark. Vanilla contrastive-GMM regimes are weak downstream, while HMM-guided embeddings paired with HMM assignment produce the strongest current point estimates and stress robustness. The central publishable finding is not a claim of profitable trading or statistical dominance. It is a controlled empirical result: classical sequential structure can improve deep learned regime representations, and the assignment layer is a major driver of downstream usefulness. The next paper step is not broader experimentation by default, but venue formatting, citation cleanup, and careful prose review against the claim registry.
 
 ## Figure and Table Plan
 
@@ -392,7 +396,7 @@ def main() -> None:
     write_artifact_map(artifact_map_path, artifact_rows)
     checklist_path.write_text(build_checklist(), encoding="utf-8")
 
-    print(f"Saved paper skeleton: {paper_path}")
+    print(f"Saved paper draft: {paper_path}")
     print(f"Saved artifact map: {artifact_map_path}")
     print(f"Saved submission checklist: {checklist_path}")
 

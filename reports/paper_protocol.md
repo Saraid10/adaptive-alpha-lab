@@ -179,5 +179,5 @@ The current Phase 26 read does not show statistically decisive guided-HMM domina
 
 Phase 27 is represented by `paper/main.md`, `reports/paper_artifact_map.csv`, and `reports/paper_submission_checklist.md`. Phase 28 is represented by `reproduce.ps1`, `reports/environment.md`, `reports/artifact_manifest.md`, and `reports/reproduction_checklist.md`.
 
-The next default step is paper-prose polishing and venue formatting, not broad experiment expansion.
+Phase 29 turns the scaffold into manuscript-style prose while preserving the claim registry. The next default step is venue formatting and citation cleanup, not broad experiment expansion.
 

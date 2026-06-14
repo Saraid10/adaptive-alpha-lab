@@ -1607,7 +1607,7 @@ def audit_paper_draft_artifacts(rows: list[AuditRecord]) -> None:
     artifact_map = pd.read_csv(artifact_map_path)
 
     required_sections = [
-        "Abstract Draft",
+        "Abstract",
         "Related Work",
         "Data and Labels",
         "Methods",
@@ -1618,8 +1618,14 @@ def audit_paper_draft_artifacts(rows: list[AuditRecord]) -> None:
         "Ablations",
         "Limitations",
         "Reproducibility",
-        "Conclusion Draft",
+        "Conclusion",
         "Figure and Table Plan",
+    ]
+    required_paper_phrases = [
+        "not a claim of profitable trading",
+        "HMM states are proxy states",
+        "not statistically significant at 5%",
+        "fold-level",
     ]
     required_columns = {"paper_section", "artifact_type", "artifact", "paper_role"}
     required_checklist_phrases = [
@@ -1629,6 +1635,7 @@ def audit_paper_draft_artifacts(rows: list[AuditRecord]) -> None:
     ]
 
     missing_sections = [section for section in required_sections if section not in paper_text]
+    missing_paper_phrases = [phrase for phrase in required_paper_phrases if phrase not in paper_text]
     missing_columns = sorted(required_columns - set(artifact_map.columns))
     artifact_rows = 0 if missing_columns else len(artifact_map)
     missing_checklist_phrases = [
@@ -1638,6 +1645,7 @@ def audit_paper_draft_artifacts(rows: list[AuditRecord]) -> None:
 
     failures = (
         len(missing_sections)
+        + len(missing_paper_phrases)
         + len(missing_columns)
         + len(missing_checklist_phrases)
         + int(too_few_artifacts)
@@ -1649,6 +1657,8 @@ def audit_paper_draft_artifacts(rows: list[AuditRecord]) -> None:
     ]
     if missing_sections:
         detail_parts.append(f"missing_sections={missing_sections}")
+    if missing_paper_phrases:
+        detail_parts.append(f"missing_paper_phrases={missing_paper_phrases}")
     if missing_columns:
         detail_parts.append(f"missing_columns={missing_columns}")
     if missing_checklist_phrases:

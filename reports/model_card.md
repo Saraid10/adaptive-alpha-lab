@@ -210,6 +210,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 26 | Paper-facing statistical claim tests mapped to the Phase 25 ablation suite |
 | Phase 27 | Generated manuscript skeleton, paper artifact map, and submission checklist |
 | Phase 28 | Reproducibility package with smoke/full/dashboard modes and artifact policy docs |
+| Phase 29 | Paper prose pass for submission-style Markdown while preserving conservative claims |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -380,13 +381,13 @@ Phase 26 converts the Phase 25 mechanism table into paper-facing statistical evi
 
 ## Paper Skeleton
 
-Phase 27 converts the audited evidence stack into a manuscript scaffold.
+Phase 27 converts the audited evidence stack into a manuscript scaffold, and Phase 29 turns that scaffold into stronger submission-style prose.
 
 | Field | Value |
 |---|---|
 | CLI | `python src/paper_skeleton.py` |
 | Main outputs | `paper/main.md`, `reports/paper_artifact_map.csv`, `reports/paper_submission_checklist.md` |
-| Purpose | Draft the paper structure and map every section to supporting artifacts before venue formatting |
+| Purpose | Draft and polish the paper structure while mapping every section to supporting artifacts before venue formatting |
 | Claim discipline | Keeps HMM states as proxy states, treats guided-HMM alpha improvement as directional, and blocks profitability/generalization claims |
 
 ## Reproducibility Package
