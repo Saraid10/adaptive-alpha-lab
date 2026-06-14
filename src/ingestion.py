@@ -1,3 +1,4 @@
+import argparse
 import time
 import logging
 from datetime import datetime, timezone, timedelta
@@ -11,6 +12,7 @@ from config import (
     BINANCE_API_KEY, BINANCE_API_SECRET,
     SYMBOLS, INTERVAL, DB_PATH, LOOKBACK_DAYS
 )
+from universe import add_symbol_args, resolve_symbols
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -193,6 +195,16 @@ def verify(db_path=DB_PATH):
     return summary
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Ingest Binance OHLCV bars into DuckDB.")
+    add_symbol_args(parser)
+    parser.add_argument("--interval", default=INTERVAL)
+    parser.add_argument("--db-path", default=DB_PATH)
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    ingest()
-    verify()
+    args = parse_args()
+    selected_symbols = resolve_symbols(args)
+    ingest(symbols=selected_symbols, interval=args.interval, db_path=args.db_path)
+    verify(args.db_path)

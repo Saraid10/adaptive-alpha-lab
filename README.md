@@ -124,6 +124,17 @@ python src/backtest.py
 python -m compileall src dashboard.py streamlit_app.py
 ```
 
+Crypto-20 data-pipeline pilot, run only when you are ready to download the expanded asset history:
+
+```powershell
+python src/multiasset_universe.py
+python src/ingestion.py --universe crypto20
+python src/features.py --universe crypto20
+python src/targets.py --universe crypto20 --artifact-prefix crypto20_
+python src/check.py --universe crypto20
+python src/crypto20_quality_gate.py --universe crypto20
+```
+
 Optional dashboard:
 
 ```powershell
@@ -148,6 +159,11 @@ python -m pip install -r requirements-research.txt
 | `models/asset_universe_crypto50.csv` | Phase 31 pre-specified Crypto-50 expansion universe |
 | `models/asset_universe_exclusions.csv` | Phase 31 transparent exclusion and pending-ingestion log |
 | `reports/multiasset_universe_plan.md` | Phase 31 reviewer-facing multi-asset protocol |
+| `reports/crypto20_pipeline_plan.md` | Phase 32 reproducible Crypto-20 ingestion and quality-gate plan |
+| `models/crypto20_data_quality.csv` | Phase 32 per-symbol Crypto-20 OHLCV/feature/target quality gate |
+| `models/crypto20_pipeline_summary.csv` | Phase 32 compact Crypto-20 pass-rate and gate-status summary |
+| `models/crypto20_target_distribution.csv` | Phase 32 Crypto-20 label distribution diagnostics |
+| `models/crypto20_target_quality.csv` | Phase 32 Crypto-20 target horizon-loss and class-balance checks |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
 | `models/regime_stability_summary.csv` | Persistence, switch-rate, confidence, and stable-vs-transition IC diagnostics |
@@ -602,5 +618,5 @@ The paper now handles three likely reviewer questions explicitly:
 
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, and a Streamlit research dashboard. The next important work is to run a Crypto-20 ingestion/feature pilot before scaling to the Crypto-50 generalization experiment.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, and a Streamlit research dashboard. The next important work is to run multi-asset regime benchmarking only after the Crypto-20 data gate passes.
 
