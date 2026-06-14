@@ -79,6 +79,8 @@ Binance OHLCV
 - Phase 23 fold-local LightGBM feature-importance and SHAP diagnostics for paper interpretability.
 - Phase 24 paper protocol freeze with hypotheses, claim boundaries, and experiment manifest.
 - Phase 25 minimal ablation suite for objective guidance, assignment layer, augmentation view, and classical-reference comparisons.
+- Phase 26 paper-facing statistical claim tests.
+- Phase 27 generated manuscript skeleton, artifact map, and submission checklist.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -111,6 +113,7 @@ python src/statistical_tests.py
 python src/interpretability.py --symbols BTCUSDT ETHUSDT
 python src/ablation_suite.py
 python src/paper_claim_tests.py
+python src/paper_skeleton.py
 python src/validation_audit.py --symbols BTCUSDT ETHUSDT
 python src/archive_run.py --phase phase14b_baseline --run-id 20260522_phase14b_baseline --source-ref v1.3-phase14b --notes "Frozen Phase 14B baseline before Phase 15 statistical and encoder work."
 python src/backtest.py
@@ -191,6 +194,9 @@ python -m pip install -r requirements-research.txt
 | `models/paper_claim_tests.csv` | Phase 26 metric-level paper claim tests mapped to the ablation suite |
 | `models/paper_statistical_summary.csv` | Phase 26 paper-facing statistical claim summary |
 | `models/paper_claim_tests.png` | Visual Phase 26 paper claim status summary |
+| `paper/main.md` | Phase 27 generated manuscript skeleton |
+| `reports/paper_artifact_map.csv` | Phase 27 paper section to artifact map |
+| `reports/paper_submission_checklist.md` | Phase 27 submission-readiness checklist |
 | `models/statistical_multiple_testing.png` | Visual multiple-testing correction summary |
 | `models/statistical_sharpe_diagnostics.png` | Visual PSR diagnostic summary |
 | `runs/run_index.csv` | Versioned run registry |
@@ -203,6 +209,8 @@ python -m pip install -r requirements-research.txt
 | `reports/hypotheses.md` | Phase 24 hypothesis table and current evidence status |
 | `reports/claim_registry.md` | Phase 24 allowed, directional, open, and forbidden claim language |
 | `reports/experiment_manifest.md` | Phase 24 completed experiments, future queue, and submission-readiness checklist |
+| `reports/paper_artifact_map.csv` | Phase 27 mapping from manuscript sections to evidence artifacts |
+| `reports/paper_submission_checklist.md` | Phase 27 checklist for paper readiness and forbidden claims |
 | `models/regime_stability.png` | Stability and transition-period IC dashboard panel |
 | `models/phase4_dashboard.png` | Static research backtest dashboard |
 | `reports/adaptive_alpha_lab_report.md` | Research note |
@@ -222,7 +230,11 @@ adaptive-alpha-lab/
 │   ├── paper_protocol.md
 │   ├── hypotheses.md
 │   ├── claim_registry.md
-│   └── experiment_manifest.md
+│   ├── experiment_manifest.md
+│   ├── paper_artifact_map.csv
+│   └── paper_submission_checklist.md
+├── paper/
+│   └── main.md
 ├── src/
 │   ├── ingestion.py
 │   ├── features.py
@@ -244,6 +256,7 @@ adaptive-alpha-lab/
 │   ├── robustness_stress.py
 │   ├── statistical_tests.py
 │   ├── paper_claim_tests.py
+│   ├── paper_skeleton.py
 │   ├── archive_run.py
 │   ├── alpha_models.py
 │   ├── backtest.py
@@ -539,7 +552,13 @@ Phase 26 converts the Phase 25 ablation table into paper-facing claim tests. `sr
 
 The paper-safe conclusion is now sharper: the project can claim that sequential assignment is the strongest supported mechanism, and that HMM-guided learned regimes are promising versus raw-feature HMM, but it must not claim statistical dominance yet.
 
+## Phase 27 Paper Skeleton
+
+Phase 27 converts the evidence stack into a manuscript scaffold. `src/paper_skeleton.py` generates `paper/main.md`, `reports/paper_artifact_map.csv`, and `reports/paper_submission_checklist.md` from the current benchmark and claim-test artifacts.
+
+This phase does not add a new model or a new performance claim. It makes the paper argument auditable: each major manuscript section points back to the artifact that supports it, and the checklist keeps forbidden claims visible before the draft is moved into a venue template.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, and a Streamlit research dashboard. The next important work is Phase 27 planning: decide whether to write the paper first or run a conditional multi-asset/generalization extension.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, and a Streamlit research dashboard. The next important work is Phase 28 planning: decide whether to polish the paper prose first or add a carefully gated reproducibility package before any multi-asset expansion.
 

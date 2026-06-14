@@ -1,0 +1,12 @@
+paper_section,artifact_type,artifact,paper_role
+Abstract and contributions,claim control,reports/claim_registry.md,"Prevents unsupported novelty, profitability, and generalization claims."
+Related work,literature,reports/related_work.md; reports/literature_matrix.csv,"Positions the project against regime models, time-series contrastive learning, validation, and alpha modeling."
+Data and labels,data diagnostic,models/target_distribution.csv; models/target_quality.csv,"Documents class balance, neutral share, and horizon-tail loss for financial labels."
+Validation,audit,models/validation_audit.csv; models/fold_audit.csv,"Documents embargo, label-horizon purge, common coverage, and artifact availability."
+Methods,model card,reports/model_card.md; reports/paper_protocol.md,"Records architecture, frozen protocol, methods, metrics, and forbidden claims."
+Main results,result table,models/walkforward_experiment_results.csv; models/guided_alpha_comparison.csv,"Primary fold-local alpha comparison for global, classical, vanilla learned, and guided learned regimes."
+Statistical evidence,statistical test,models/statistical_test_summary.csv; models/paper_statistical_summary.csv,Separates point-estimate wins from fold-level significance and multiple-testing-safe claims.
+Mechanism,regime quality,models/regime_quality_summary.csv; models/guided_encoder_comparison.csv,"Measures structural alignment, persistence, entropy, NMI, ARI, and purity."
+Ablations,ablation,models/ablation_summary.csv; models/paper_claim_tests.csv,"Tests objective guidance, assignment layer, augmentation view, and classical-reference comparisons."
+Robustness,stress test,models/robustness_summary.csv; models/robustness_stress_summary.csv,Checks symbol/horizon robustness and cost/threshold/period sensitivity.
+Interpretability,feature attribution,models/feature_importance_by_regime.csv; models/feature_family_summary.csv,Shows fold-local feature drivers by method/regime without making causal claims.

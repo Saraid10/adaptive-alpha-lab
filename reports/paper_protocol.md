@@ -170,10 +170,12 @@ The paper must not claim:
 
 Phase 25 ablations and Phase 26 paper claim tests are mandatory before paper submission. Both are now complete in the current protocol.
 
-Phase 27 should first draft the paper skeleton unless the team explicitly chooses a multi-asset extension. Multi-asset expansion is conditional. Proceed only if Phase 25/26 shows either:
+Phase 27 drafts the paper skeleton before additional scope expansion. Multi-asset expansion is conditional. Proceed only if Phase 25/26 shows either:
 
 1. a statistically meaningful guided-HMM improvement over raw-feature HMM, or
 2. a robust enough stress/interpretable result that a generalization appendix is worth the compute.
 
-The current Phase 26 read does not show statistically decisive guided-HMM dominance over raw-feature HMM. Therefore, the default next step is to write the paper as a crypto-market benchmark with multi-asset generalization as future work, unless a separate scope decision changes that plan.
+The current Phase 26 read does not show statistically decisive guided-HMM dominance over raw-feature HMM. Therefore, the default paper is a crypto-market benchmark with multi-asset generalization as future work, unless a separate scope decision changes that plan.
+
+Phase 27 is now represented by `paper/main.md`, `reports/paper_artifact_map.csv`, and `reports/paper_submission_checklist.md`. The next default step is reproducibility packaging and paper-prose polishing, not broad experiment expansion.
 

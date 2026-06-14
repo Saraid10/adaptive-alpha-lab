@@ -42,6 +42,7 @@ These are practical local observations, not formal benchmarks:
 | Phase 24 paper protocol freeze | no model compute |
 | Phase 25 minimal ablation suite | under 1 minute; no model retraining |
 | Phase 26 paper statistical claim tests | under 1 minute; no model retraining |
+| Phase 27 paper skeleton generation | under 1 minute; no model retraining |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
@@ -79,7 +80,8 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 24 paper protocol freeze | 0 encoder runs | Complete; freezes hypotheses, claims, experiment queue, and submission gate |
 | Phase 25 minimal ablations | 0 encoder runs | Complete; aggregates completed structural and downstream artifacts into a mechanism table |
 | Phase 26 statistical evidence refresh | 0 encoder runs | Complete; maps the ablation table to paper-facing claim tests |
-| Phase 27 paper draft skeleton | 0 encoder runs | Next; turns the evidence stack into a submission-style manuscript |
+| Phase 27 paper draft skeleton | 0 encoder runs | Complete; generates manuscript scaffold, artifact map, and submission checklist |
+| Phase 28 reproducibility package | 0 encoder runs | Next; document exact public reproduction commands before adding new experimental scope |
 
 ## Initial Ablation Cap
 
@@ -158,7 +160,7 @@ This prototype does not yet justify a downstream alpha retest. The full 30-epoch
 
 ## Multi-Asset Gate
 
-Phase 27 multi-asset generalization is conditional.
+Multi-asset generalization is conditional and should not replace the Phase 28 reproducibility package.
 
 Proceed to multi-asset only if:
 
