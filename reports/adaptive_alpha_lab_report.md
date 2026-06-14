@@ -450,6 +450,12 @@ Three likely reviewer objections are now handled directly in the paper draft:
 | Fold-level tests have only 18 folds | The paper acknowledges low statistical power and argues that 18 embargoed walk-forward folds are more defensible than row-level independence assumptions on overlapping labels |
 | Main guided-HMM vs raw HMM comparison has `p=0.801` | The paper leads with the mechanism: sequential assignment is the key driver, and HMM-guided representation learning makes that assignment more effective; alpha dominance remains directional |
 
+## Phase 31 Multi-Asset Expansion Protocol
+
+The next publication upgrade is a pre-specified multi-asset crypto universe, not an ad hoc expansion after seeing results. Phase 31 adds `configs/crypto_universe_candidates.csv`, `src/multiasset_universe.py`, and generated Crypto-20/Crypto-50 universe artifacts. The current local run marks BTCUSDT and ETHUSDT as quality-eligible because those are the only symbols already ingested; the remaining selected assets are intentionally marked as pending ingestion until the Crypto-20 and Crypto-50 data checks are run.
+
+This protects the research narrative: BTC/ETH remains the controlled pilot, while Crypto-20 and Crypto-50 become the generalization tests.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
