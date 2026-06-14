@@ -1625,6 +1625,10 @@ def audit_paper_draft_artifacts(rows: list[AuditRecord]) -> None:
         "not a claim of profitable trading",
         "HMM states are proxy states",
         "not statistically significant at 5%",
+        "controlled crypto setting",
+        "18 walk-forward test folds",
+        "p=0.801",
+        "The headline result is mechanistic",
         "fold-level",
     ]
     required_columns = {"paper_section", "artifact_type", "artifact", "paper_role"}

@@ -181,3 +181,9 @@ Phase 27 is represented by `paper/main.md`, `reports/paper_artifact_map.csv`, an
 
 Phase 29 turns the scaffold into manuscript-style prose while preserving the claim registry. The next default step is venue formatting and citation cleanup, not broad experiment expansion.
 
+Reviewer-facing caveats must stay explicit in the paper draft:
+
+1. BTC/ETH is a controlled crypto setting, not a broad asset-class generalization claim.
+2. Eighteen walk-forward folds limit statistical power, but are more defensible than row-level independence over overlapping labels.
+3. The `p=0.801` guided-HMM versus raw-feature HMM IC result prevents a statistical dominance claim; the main contribution is the sequential-assignment mechanism.
+
