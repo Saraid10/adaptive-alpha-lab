@@ -83,11 +83,11 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 32 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, Phase 24 protocol artifact, Phase 25 ablation artifact, Phase 26 paper-statistical artifact, Phase 27 paper-draft artifact, literature-positioning artifact, and run-registry checks passed |
+| PASS | 33 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, Phase 24 protocol artifact, Phase 25 ablation artifact, Phase 26 paper-statistical artifact, Phase 27 paper-draft artifact, Phase 28 reproducibility artifact, literature-positioning artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
-The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 23 interpretability artifacts are complete, that the Phase 24 paper-protocol artifacts are complete, that the Phase 25 ablation artifacts are complete, that the Phase 26 paper-statistical artifacts are complete, that the Phase 27 paper-draft artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
+The most important positive result is that all 18 folds satisfy row separation, the 120-bar embargo, and the 8-bar primary label-horizon purge. The legacy offline alpha artifact still has equal coverage across six methods, while the Phase 20 fold-local artifact has equal coverage across eight methods, including the two guided-regime methods, with 25,920 rows each. The audit also confirms that the Phase 21 refreshed robustness matrix contains all 72 expected method/cell rows across 9 grid cells, that the Phase 21 refreshed stress matrix contains all 384 expected method/cell rows across 48 stress cells, that the Phase 15A/15B statistical artifacts are complete, that the Phase 16 regime-quality artifacts are complete, that the Phase 17 compute-plan artifacts are complete, that the Phase 19B guided-encoder full-run artifacts are complete, that the Phase 22A time-frequency encoder artifacts are complete, that the Phase 23 interpretability artifacts are complete, that the Phase 24 paper-protocol artifacts are complete, that the Phase 25 ablation artifacts are complete, that the Phase 26 paper-statistical artifacts are complete, that the Phase 27 paper-draft artifacts are complete, that the Phase 28 reproducibility artifacts are complete, that the Phase 19A literature-positioning artifacts are complete, and that the frozen run registry points to a complete archived baseline.
 
 The warning is methodological rather than a code failure: the legacy `regime_assignments.csv` file is generated as an offline/global artifact before alpha-model validation. This is acceptable for descriptive regime analysis and exploratory benchmarking. Phase 13 addresses the predictive version of this concern by adding a separate fold-local regime refit benchmark.
 
@@ -421,6 +421,19 @@ Phase 27 converts the evidence stack into a manuscript scaffold. It adds `src/pa
 
 This phase is important because it changes the project from "many good artifacts" into a paper-shaped research package. It does not add a new model or a new performance claim. Instead, it makes the existing claim discipline visible in the paper itself: guided-HMM is presented as the strongest current point-estimate and stress-robust method, while statistical dominance over raw-feature HMM remains inconclusive.
 
+## Phase 28 Reproducibility Package
+
+Phase 28 adds the reviewer-facing reproduction layer. It includes:
+
+| Artifact | Role |
+|---|---|
+| `reproduce.ps1` | PowerShell helper with smoke, full, and dashboard modes |
+| `reports/environment.md` | Python, dependency, data, hardware, and deployment notes |
+| `reports/artifact_manifest.md` | Separates committed curated artifacts from regenerated local and ignored heavy artifacts |
+| `reports/reproduction_checklist.md` | Reviewer checklist for smoke/full/dashboard reproduction and git safety checks |
+
+The most important distinction is between dashboard reproduction and full research reproduction. The dashboard runs from curated committed artifacts and minimal dependencies. Full research reproduction requires the local research environment, raw/local data access, and substantially more compute.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
@@ -438,6 +451,7 @@ This phase is important because it changes the project from "many good artifacts
 - Phase 25 aggregates completed artifacts into a minimal ablation table; it does not create new retrained encoder variants beyond already completed runs.
 - Phase 26 refreshes paper-facing claim tests, but the main guided-HMM versus raw-feature HMM IC edge remains directionally supported rather than statistically significant.
 - Phase 27 is a manuscript scaffold, not a finished paper; it still needs human prose, final citations, venue formatting, and figure numbering.
+- Phase 28 documents reproducibility paths but does not make raw data or model weights public.
 - Calibration/NLL diagnostics do not uniformly favor the guided methods, so probability quality and trading-score quality should be discussed separately.
 - Phase 19A is a positioning phase, not an empirical result. It clarifies contribution language but does not prove a new model improvement.
 - Literature positioning depends on describing HMM states as proxy/reference states, not ground truth labels.
@@ -450,7 +464,7 @@ This phase is important because it changes the project from "many good artifacts
 ## Next Steps
 
 1. Turn `paper/main.md` from scaffold into polished prose.
-2. Add a reproducibility package with exact public commands, artifact manifest, and environment notes.
+2. Convert the polished Markdown draft into the selected venue format.
 3. Add fold-local or expanding-window encoder retraining only if required by reviewer-style critique.
 4. Expand beyond BTC/ETH only if the written statistical gate is met.
 5. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.

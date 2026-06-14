@@ -177,5 +177,7 @@ Phase 27 drafts the paper skeleton before additional scope expansion. Multi-asse
 
 The current Phase 26 read does not show statistically decisive guided-HMM dominance over raw-feature HMM. Therefore, the default paper is a crypto-market benchmark with multi-asset generalization as future work, unless a separate scope decision changes that plan.
 
-Phase 27 is now represented by `paper/main.md`, `reports/paper_artifact_map.csv`, and `reports/paper_submission_checklist.md`. The next default step is reproducibility packaging and paper-prose polishing, not broad experiment expansion.
+Phase 27 is represented by `paper/main.md`, `reports/paper_artifact_map.csv`, and `reports/paper_submission_checklist.md`. Phase 28 is represented by `reproduce.ps1`, `reports/environment.md`, `reports/artifact_manifest.md`, and `reports/reproduction_checklist.md`.
+
+The next default step is paper-prose polishing and venue formatting, not broad experiment expansion.
 

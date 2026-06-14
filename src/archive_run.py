@@ -15,11 +15,15 @@ RUNS_DIR = BASE_DIR / "runs"
 
 CURATED_ARTIFACTS = [
     "README.md",
+    "reproduce.ps1",
     "requirements.txt",
     "requirements-research.txt",
     "reports/adaptive_alpha_lab_report.md",
     "reports/model_card.md",
     "reports/compute_budget.md",
+    "reports/environment.md",
+    "reports/artifact_manifest.md",
+    "reports/reproduction_checklist.md",
     "reports/related_work.md",
     "reports/paper_protocol.md",
     "reports/hypotheses.md",

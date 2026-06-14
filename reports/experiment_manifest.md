@@ -34,14 +34,15 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Minimal ablation suite | 25 | Objective, assignment-layer, augmentation, and classical-reference ablations | `ablation_results.csv`, `ablation_summary.csv`, `ablation_heatmap.png` | Mechanism test |
 | Paper statistical claim tests | 26 | Map ablation mechanisms to fold-level paper evidence | `paper_claim_tests.csv`, `paper_statistical_summary.csv` | Claim discipline |
 | Paper draft skeleton | 27 | Convert the evidence stack into a manuscript scaffold | `paper/main.md`, `paper_artifact_map.csv`, `paper_submission_checklist.md` | Writing and submission planning |
+| Reproducibility package | 28 | Document public reproduction commands, environment split, and artifact policy | `reproduce.ps1`, `environment.md`, `artifact_manifest.md`, `reproduction_checklist.md` | Public review readiness |
 
 ## Future Experiment Queue
 
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
-| 1 | 28 | Reproducibility package | Required before public review or paper submission | `reproduce.ps1`, `artifact_manifest.md`, `environment.md` |
-| 2 | 29 | Paper prose pass | Required before venue formatting | polished `paper/main.md` |
-| 3 | 30 | Multi-asset generalization | Conditional on paper gap analysis and compute budget | `multi_asset_results.csv`, `generalization.md` |
+| 1 | 29 | Paper prose pass | Required before venue formatting | polished `paper/main.md` |
+| 2 | 30 | Venue formatting and citation pass | Required before external submission | `paper/main.tex` or venue-formatted equivalent |
+| 3 | 31 | Multi-asset generalization | Conditional on paper gap analysis and compute budget | `multi_asset_results.csv`, `generalization.md` |
 
 ## Minimal Ablation Definition
 
@@ -64,7 +65,8 @@ The project is submission-ready only when:
 2. Phase 25 ablation artifacts exist and are discussed.
 3. Phase 26 refreshed statistical evidence exists.
 4. Phase 27 paper skeleton and artifact map exist.
-5. The paper draft uses only claims allowed by `reports/claim_registry.md`.
-6. The validation audit passes with no critical failures.
-7. Reproduction commands are documented.
+5. Phase 28 reproduction commands and artifact policy docs exist.
+6. The paper draft uses only claims allowed by `reports/claim_registry.md`.
+7. The validation audit passes with no critical failures.
+8. Reproduction commands are documented.
 

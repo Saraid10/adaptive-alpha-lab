@@ -81,6 +81,7 @@ Binance OHLCV
 - Phase 25 minimal ablation suite for objective guidance, assignment layer, augmentation view, and classical-reference comparisons.
 - Phase 26 paper-facing statistical claim tests.
 - Phase 27 generated manuscript skeleton, artifact map, and submission checklist.
+- Phase 28 reproducibility package with smoke/full/dashboard reproduction modes and artifact policy docs.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -115,6 +116,7 @@ python src/ablation_suite.py
 python src/paper_claim_tests.py
 python src/paper_skeleton.py
 python src/validation_audit.py --symbols BTCUSDT ETHUSDT
+.\reproduce.ps1 -Mode smoke
 python src/archive_run.py --phase phase14b_baseline --run-id 20260522_phase14b_baseline --source-ref v1.3-phase14b --notes "Frozen Phase 14B baseline before Phase 15 statistical and encoder work."
 python src/backtest.py
 python -m compileall src dashboard.py streamlit_app.py
@@ -201,6 +203,10 @@ python -m pip install -r requirements-research.txt
 | `models/statistical_sharpe_diagnostics.png` | Visual PSR diagnostic summary |
 | `runs/run_index.csv` | Versioned run registry |
 | `runs/20260522_phase14b_baseline/manifest.json` | Frozen Phase 14B baseline manifest |
+| `reproduce.ps1` | Phase 28 PowerShell reproduction helper |
+| `reports/environment.md` | Phase 28 local and deployment environment notes |
+| `reports/artifact_manifest.md` | Phase 28 committed/regenerated/ignored artifact policy |
+| `reports/reproduction_checklist.md` | Phase 28 reviewer reproduction checklist |
 | `reports/model_card.md` | Reproducible model-card snapshot |
 | `reports/compute_budget.md` | Compute-aware experiment plan and multi-asset gate |
 | `reports/related_work.md` | Phase 19A paper-positioning note and contribution map |
@@ -221,6 +227,7 @@ python -m pip install -r requirements-research.txt
 adaptive-alpha-lab/
 ├── dashboard.py
 ├── streamlit_app.py
+├── reproduce.ps1
 ├── reports/
 │   ├── adaptive_alpha_lab_report.md
 │   ├── related_work.md
@@ -232,7 +239,10 @@ adaptive-alpha-lab/
 │   ├── claim_registry.md
 │   ├── experiment_manifest.md
 │   ├── paper_artifact_map.csv
-│   └── paper_submission_checklist.md
+│   ├── paper_submission_checklist.md
+│   ├── environment.md
+│   ├── artifact_manifest.md
+│   └── reproduction_checklist.md
 ├── paper/
 │   └── main.md
 ├── src/
@@ -558,7 +568,19 @@ Phase 27 converts the evidence stack into a manuscript scaffold. `src/paper_skel
 
 This phase does not add a new model or a new performance claim. It makes the paper argument auditable: each major manuscript section points back to the artifact that supports it, and the checklist keeps forbidden claims visible before the draft is moved into a venue template.
 
+## Phase 28 Reproducibility Package
+
+Phase 28 makes the project easier to reproduce and review. It adds `reproduce.ps1` with three modes:
+
+| Mode | Command | Purpose |
+|---|---|---|
+| Smoke | `.\reproduce.ps1 -Mode smoke` | Compile code, regenerate the paper skeleton, and run the validation audit |
+| Full | `.\reproduce.ps1 -Mode full` | Regenerate the full local research pipeline |
+| Dashboard | `.\reproduce.ps1 -Mode dashboard` | Launch the Streamlit dashboard locally |
+
+It also adds `reports/environment.md`, `reports/artifact_manifest.md`, and `reports/reproduction_checklist.md`. These files separate dashboard reproduction from full research reproduction, document which artifacts are committed or ignored, and keep reviewer-facing safety checks in one place.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, and a Streamlit research dashboard. The next important work is Phase 28 planning: decide whether to polish the paper prose first or add a carefully gated reproducibility package before any multi-asset expansion.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, and a Streamlit research dashboard. The next important work is Phase 29: polish `paper/main.md` into submission-style prose before adding new experimental scope.
 
