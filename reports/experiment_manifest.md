@@ -33,14 +33,15 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Interpretability | 23 | Fold-local feature attribution | `feature_importance_by_regime.csv`, `feature_family_summary.csv` | Mechanism and discussion |
 | Minimal ablation suite | 25 | Objective, assignment-layer, augmentation, and classical-reference ablations | `ablation_results.csv`, `ablation_summary.csv`, `ablation_heatmap.png` | Mechanism test |
 | Paper statistical claim tests | 26 | Map ablation mechanisms to fold-level paper evidence | `paper_claim_tests.csv`, `paper_statistical_summary.csv` | Claim discipline |
+| Paper draft skeleton | 27 | Convert the evidence stack into a manuscript scaffold | `paper/main.md`, `paper_artifact_map.csv`, `paper_submission_checklist.md` | Writing and submission planning |
 
 ## Future Experiment Queue
 
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
-| 1 | 27 | Paper draft skeleton | Required before additional scope expansion | `paper/main.md` or `paper/main.tex` |
-| 2 | 28 | Multi-asset generalization | Conditional on paper gap analysis and compute budget | `multi_asset_results.csv`, `generalization.md` |
-| 3 | 29 | Reproducibility package | Required for public review | `reproduce.ps1`, `artifact_manifest.md`, `environment.md` |
+| 1 | 28 | Reproducibility package | Required before public review or paper submission | `reproduce.ps1`, `artifact_manifest.md`, `environment.md` |
+| 2 | 29 | Paper prose pass | Required before venue formatting | polished `paper/main.md` |
+| 3 | 30 | Multi-asset generalization | Conditional on paper gap analysis and compute budget | `multi_asset_results.csv`, `generalization.md` |
 
 ## Minimal Ablation Definition
 
@@ -62,7 +63,8 @@ The project is submission-ready only when:
 1. Phase 24 protocol files are committed.
 2. Phase 25 ablation artifacts exist and are discussed.
 3. Phase 26 refreshed statistical evidence exists.
-4. The paper draft uses only claims allowed by `reports/claim_registry.md`.
-5. The validation audit passes with no critical failures.
-6. Reproduction commands are documented.
+4. Phase 27 paper skeleton and artifact map exist.
+5. The paper draft uses only claims allowed by `reports/claim_registry.md`.
+6. The validation audit passes with no critical failures.
+7. Reproduction commands are documented.
 

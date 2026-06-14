@@ -208,6 +208,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 24 | Paper protocol freeze with hypotheses, claim registry, and experiment manifest |
 | Phase 25 | Minimal ablation suite for objective, assignment-layer, augmentation, and classical-reference mechanisms |
 | Phase 26 | Paper-facing statistical claim tests mapped to the Phase 25 ablation suite |
+| Phase 27 | Generated manuscript skeleton, paper artifact map, and submission checklist |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -375,6 +376,17 @@ Phase 26 converts the Phase 25 mechanism table into paper-facing statistical evi
 |---|---|
 | CLI | `python src/paper_claim_tests.py` |
 | Main outputs | `paper_claim_tests.csv`, `paper_statistical_summary.csv`, `paper_claim_tests.png` |
+
+## Paper Skeleton
+
+Phase 27 converts the audited evidence stack into a manuscript scaffold.
+
+| Field | Value |
+|---|---|
+| CLI | `python src/paper_skeleton.py` |
+| Main outputs | `paper/main.md`, `reports/paper_artifact_map.csv`, `reports/paper_submission_checklist.md` |
+| Purpose | Draft the paper structure and map every section to supporting artifacts before venue formatting |
+| Claim discipline | Keeps HMM states as proxy states, treats guided-HMM alpha improvement as directional, and blocks profitability/generalization claims |
 | Main positive read | HMM assignment improves the guided path on all focused point-estimate metrics and is raw-suggestive on IC (`p=0.075`) |
 | Main caution | Guided-HMM versus raw-feature HMM remains directionally supported, not statistically significant |
 | Paper-safe language | Sequential assignment is the strongest supported mechanism; guided learned regimes are promising versus raw-feature HMM but not statistically dominant |

@@ -1583,6 +1583,89 @@ def audit_paper_protocol_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_paper_draft_artifacts(rows: list[AuditRecord]) -> None:
+    paper_path = Path(BASE_DIR) / "paper" / "main.md"
+    artifact_map_path = Path(BASE_DIR) / "reports" / "paper_artifact_map.csv"
+    checklist_path = Path(BASE_DIR) / "reports" / "paper_submission_checklist.md"
+    required_paths = [paper_path, artifact_map_path, checklist_path]
+
+    missing = [str(path.relative_to(BASE_DIR)) for path in required_paths if not path.exists()]
+    if missing:
+        record(
+            rows,
+            "paper_draft_artifacts",
+            FAIL,
+            "critical",
+            f"Missing Phase 27 paper draft artifacts: {missing}",
+            rows_checked=len(required_paths),
+            rows_failed=len(missing),
+        )
+        return
+
+    paper_text = paper_path.read_text(encoding="utf-8")
+    checklist_text = checklist_path.read_text(encoding="utf-8")
+    artifact_map = pd.read_csv(artifact_map_path)
+
+    required_sections = [
+        "Abstract Draft",
+        "Related Work",
+        "Data and Labels",
+        "Methods",
+        "Validation and Statistical Protocol",
+        "Results",
+        "Robustness",
+        "Interpretability",
+        "Ablations",
+        "Limitations",
+        "Conclusion Draft",
+        "Figure and Table Plan",
+    ]
+    required_columns = {"paper_section", "artifact_type", "artifact", "paper_role"}
+    required_checklist_phrases = [
+        "Must Not Claim",
+        "Do not claim HMM states are ground truth",
+        "Do not claim guided-HMM statistically dominates raw-feature HMM at 5%",
+    ]
+
+    missing_sections = [section for section in required_sections if section not in paper_text]
+    missing_columns = sorted(required_columns - set(artifact_map.columns))
+    artifact_rows = 0 if missing_columns else len(artifact_map)
+    missing_checklist_phrases = [
+        phrase for phrase in required_checklist_phrases if phrase not in checklist_text
+    ]
+    too_few_artifacts = artifact_rows < 8
+
+    failures = (
+        len(missing_sections)
+        + len(missing_columns)
+        + len(missing_checklist_phrases)
+        + int(too_few_artifacts)
+    )
+    detail_parts = [
+        "paper_files=3/3",
+        f"section_checks={len(required_sections)}",
+        f"artifact_map_rows={artifact_rows}",
+    ]
+    if missing_sections:
+        detail_parts.append(f"missing_sections={missing_sections}")
+    if missing_columns:
+        detail_parts.append(f"missing_columns={missing_columns}")
+    if missing_checklist_phrases:
+        detail_parts.append(f"missing_checklist_phrases={missing_checklist_phrases}")
+    if too_few_artifacts:
+        detail_parts.append("artifact_map_rows_below_8")
+
+    record(
+        rows,
+        "paper_draft_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(len(required_paths) + len(required_sections) + artifact_rows, 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -1874,6 +1957,7 @@ def main() -> None:
     audit_interpretability_artifacts(rows)
     audit_literature_positioning_artifacts(rows)
     audit_paper_protocol_artifacts(rows)
+    audit_paper_draft_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)
