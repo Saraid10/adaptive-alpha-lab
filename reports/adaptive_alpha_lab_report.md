@@ -452,9 +452,13 @@ Three likely reviewer objections are now handled directly in the paper draft:
 
 ## Phase 31 Multi-Asset Expansion Protocol
 
-The next publication upgrade is a pre-specified multi-asset crypto universe, not an ad hoc expansion after seeing results. Phase 31 adds `configs/crypto_universe_candidates.csv`, `src/multiasset_universe.py`, and generated Crypto-20/Crypto-50 universe artifacts. The current local run marks BTCUSDT and ETHUSDT as quality-eligible because those are the only symbols already ingested; the remaining selected assets are intentionally marked as pending ingestion until the Crypto-20 and Crypto-50 data checks are run.
+The next publication upgrade is a pre-specified multi-asset crypto universe, not an ad hoc expansion after seeing results. Phase 31 adds `configs/crypto_universe_candidates.csv`, `src/multiasset_universe.py`, and generated Crypto-20/Crypto-50 universe artifacts. After the combined Phase 32 data run, all 20 selected Crypto-20 assets are quality-eligible locally; the remaining Crypto-50 candidates stay pending until the larger expansion is explicitly run.
 
 This protects the research narrative: BTC/ETH remains the controlled pilot, while Crypto-20 and Crypto-50 become the generalization tests.
+
+## Phase 32 Crypto-20 Data Pipeline And Quality Gate
+
+Phase 32 combines the earlier data-readiness and ingestion-quality steps into one phase. `src/ingestion.py`, `src/features.py`, `src/targets.py`, and `src/check.py` can resolve symbols from `models/asset_universe_crypto20.csv` using `--universe crypto20`. `src/crypto20_quality_gate.py` then writes per-symbol OHLCV, feature, target, and gap checks to `models/crypto20_data_quality.csv` and summarizes whether the Crypto-20 universe is ready for multi-asset regime benchmarking. The current gate passes with 20/20 selected assets.
 
 ## Limitations
 

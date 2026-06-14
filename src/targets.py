@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from config import DB_PATH, SAVE_DIR, SYMBOLS
+from config import DB_PATH, SAVE_DIR
+from universe import add_symbol_args, resolve_symbols
 
 
 HORIZONS = [4, 8, 24]
@@ -185,14 +186,20 @@ def save_targets(con: duckdb.DuckDBPyConnection, targets: pd.DataFrame) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build multi-horizon financial labels.")
-    parser.add_argument("--symbols", nargs="*", default=SYMBOLS)
+    add_symbol_args(parser)
+    parser.add_argument(
+        "--artifact-prefix",
+        default="",
+        help="Optional prefix for target diagnostic artifacts, e.g. crypto20_.",
+    )
     args = parser.parse_args()
+    symbols = resolve_symbols(args)
 
     con = duckdb.connect(DB_PATH)
     frames = []
     quality = []
 
-    for symbol in args.symbols:
+    for symbol in symbols:
         print(f"Building targets for {symbol}...")
         raw = load_symbol_frame(con, symbol)
         if raw.empty:
@@ -212,9 +219,26 @@ def main() -> None:
     con.close()
 
     dist = target_distribution(targets, HORIZONS)
-    dist.to_csv(os.path.join(SAVE_DIR, "target_distribution.csv"), index=False)
-    pd.DataFrame(quality).to_csv(os.path.join(SAVE_DIR, "target_quality.csv"), index=False)
-    save_distribution_plot(dist)
+    prefix = args.artifact_prefix
+    dist.to_csv(os.path.join(SAVE_DIR, f"{prefix}target_distribution.csv"), index=False)
+    pd.DataFrame(quality).to_csv(os.path.join(SAVE_DIR, f"{prefix}target_quality.csv"), index=False)
+    if prefix:
+        plot_path = os.path.join(SAVE_DIR, f"{prefix}target_distribution.png")
+        plt.figure(figsize=(14, 7))
+        plot_df = dist.copy()
+        plot_df["name"] = (
+            plot_df["symbol"] + " " + plot_df["label_type"] + " " + plot_df["horizon"].astype(str)
+        )
+        pivot = plot_df.pivot_table(index="name", columns="label", values="pct", fill_value=0)
+        pivot.plot(kind="bar", stacked=True, colormap="viridis", figsize=(14, 7))
+        plt.title("Target Label Distribution")
+        plt.ylabel("Share of rows")
+        plt.xlabel("")
+        plt.tight_layout()
+        plt.savefig(plot_path, dpi=160)
+        plt.close()
+    else:
+        save_distribution_plot(dist)
 
     primary_col = f"tb_label_{PRIMARY_HORIZON}h"
     print("\nPrimary target distribution:")

@@ -62,6 +62,11 @@ models/*.csv
 !models/asset_universe_crypto50.csv
 !models/asset_universe_exclusions.csv
 !models/asset_universe_summary.csv
+!models/crypto20_data_quality.csv
+!models/crypto20_pipeline_summary.csv
+!models/crypto20_target_distribution.csv
+!models/crypto20_target_quality.csv
+!models/crypto20_target_distribution.png
 
 # Keep visualization outputs.
 !models/*.png

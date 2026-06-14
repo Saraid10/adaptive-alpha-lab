@@ -1,7 +1,10 @@
+import argparse
+
 import duckdb
 import pandas as pd
 import numpy as np
 from config import DB_PATH, FEATURE_COLS
+from universe import add_symbol_args, resolve_symbols
 
 
 def load_ohlcv(symbol: str, con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
@@ -15,6 +18,19 @@ def load_ohlcv(symbol: str, con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     df["open_time"] = pd.to_datetime(df["open_time"])
     df = df.set_index("open_time")
     return df
+
+
+def table_exists(con: duckdb.DuckDBPyConnection, table_name: str) -> bool:
+    return bool(
+        con.execute(
+            """
+            SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_name = ?
+            """,
+            [table_name],
+        ).fetchone()[0]
+    )
 
 
 def compute_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -119,23 +135,51 @@ def _atr(df: pd.DataFrame, period: int) -> pd.Series:
     return tr.rolling(period).mean()
 
 
-if __name__ == "__main__":
-    con = duckdb.connect(DB_PATH)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Compute engineered features from OHLCV bars.")
+    add_symbol_args(parser)
+    parser.add_argument("--db-path", default=DB_PATH)
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Replace features only for selected symbols instead of rebuilding the whole features table.",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    symbols = resolve_symbols(args)
+    con = duckdb.connect(args.db_path)
     all_features = []
 
-    for symbol in ["BTCUSDT", "ETHUSDT"]:
+    for symbol in symbols:
         print(f"\nComputing features for {symbol}...")
         raw      = load_ohlcv(symbol, con)
+        if raw.empty:
+            print(f"  Skipping {symbol}: no OHLCV rows found")
+            continue
         features = compute_features(raw)
         features["symbol"] = symbol
         features = features.reset_index().dropna()
         all_features.append(features)
         print(f"  Computed {len(features):,} rows for {symbol}")
 
+    if not all_features:
+        con.close()
+        raise RuntimeError("No feature rows were built. Run ingestion.py first.")
+
     combined = pd.concat(all_features, ignore_index=True)
     con.register("feat_data", combined)
-    con.execute("DROP TABLE IF EXISTS features")
-    con.execute("CREATE TABLE features AS SELECT * FROM feat_data")
+    if args.append and table_exists(con, "features"):
+        con.execute(
+            f"DELETE FROM features WHERE symbol IN ({','.join(['?'] * len(symbols))})",
+            symbols,
+        )
+        con.execute("INSERT INTO features SELECT * FROM feat_data")
+    else:
+        con.execute("DROP TABLE IF EXISTS features")
+        con.execute("CREATE TABLE features AS SELECT * FROM feat_data")
     con.unregister("feat_data")
     print(f"\n  Total saved: {len(combined):,} rows")
 
@@ -151,3 +195,7 @@ if __name__ == "__main__":
 
     con.close()
     print(f"\nOK: {len(FEATURE_COLS)} features saved to DuckDB. Ready for Phase 2.")
+
+
+if __name__ == "__main__":
+    main()

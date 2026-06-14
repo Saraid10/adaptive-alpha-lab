@@ -1758,7 +1758,10 @@ def audit_multiasset_universe_artifacts(rows: list[AuditRecord]) -> None:
         Path(SAVE_DIR) / "asset_universe_crypto50.csv",
         Path(SAVE_DIR) / "asset_universe_exclusions.csv",
         Path(SAVE_DIR) / "asset_universe_summary.csv",
+        Path(SAVE_DIR) / "crypto20_data_quality.csv",
+        Path(SAVE_DIR) / "crypto20_pipeline_summary.csv",
         Path(BASE_DIR) / "reports" / "multiasset_universe_plan.md",
+        Path(BASE_DIR) / "reports" / "crypto20_pipeline_plan.md",
     ]
     missing_files = [str(path.relative_to(BASE_DIR)) for path in required_files if not path.exists()]
     required_candidate_cols = {"design_rank", "symbol", "base_asset", "universe_group", "notes"}
@@ -1782,6 +1785,8 @@ def audit_multiasset_universe_artifacts(rows: list[AuditRecord]) -> None:
         crypto20 = pd.read_csv(Path(SAVE_DIR) / "asset_universe_crypto20.csv")
         crypto50 = pd.read_csv(Path(SAVE_DIR) / "asset_universe_crypto50.csv")
         summary = pd.read_csv(Path(SAVE_DIR) / "asset_universe_summary.csv")
+        crypto20_quality = pd.read_csv(Path(SAVE_DIR) / "crypto20_data_quality.csv")
+        crypto20_pipeline = pd.read_csv(Path(SAVE_DIR) / "crypto20_pipeline_summary.csv")
         report_text = (Path(BASE_DIR) / "reports" / "multiasset_universe_plan.md").read_text(encoding="utf-8")
 
         missing_candidate_cols = sorted(required_candidate_cols - set(candidates.columns))
@@ -1789,11 +1794,22 @@ def audit_multiasset_universe_artifacts(rows: list[AuditRecord]) -> None:
         missing_20_cols = sorted(required_selection_cols - set(crypto20.columns))
         missing_50_cols = sorted(required_selection_cols - set(crypto50.columns))
         missing_summary_cols = sorted({"metric", "value", "notes"} - set(summary.columns))
+        missing_quality_cols = sorted(
+            {"symbol", "ohlcv_rows", "feature_rows", "target_rows", "quality_status", "failure_reason"}
+            - set(crypto20_quality.columns)
+        )
+        missing_pipeline_cols = sorted({"metric", "value", "notes"} - set(crypto20_pipeline.columns))
         missing_report_phrases = [
             phrase
             for phrase in ["Crypto-20 pilot", "Crypto-50 final", "pre-registered crypto universe protocol"]
             if phrase not in report_text
         ]
+        pipeline_text = (Path(BASE_DIR) / "reports" / "crypto20_pipeline_plan.md").read_text(encoding="utf-8")
+        missing_report_phrases.extend(
+            phrase
+            for phrase in ["python src/ingestion.py --universe crypto20", "Completion Gate"]
+            if phrase not in pipeline_text
+        )
         bad_sizes = int(len(crypto20) != 20) + int(len(crypto50) != 50)
         failures += (
             len(missing_candidate_cols)
@@ -1801,10 +1817,12 @@ def audit_multiasset_universe_artifacts(rows: list[AuditRecord]) -> None:
             + len(missing_20_cols)
             + len(missing_50_cols)
             + len(missing_summary_cols)
+            + len(missing_quality_cols)
+            + len(missing_pipeline_cols)
             + len(missing_report_phrases)
             + bad_sizes
         )
-        rows_checked += len(candidates) + len(crypto20) + len(crypto50)
+        rows_checked += len(candidates) + len(crypto20) + len(crypto50) + len(crypto20_quality)
         details.extend(
             [
                 f"candidates={len(candidates)}",
@@ -1814,6 +1832,8 @@ def audit_multiasset_universe_artifacts(rows: list[AuditRecord]) -> None:
                 + str(int((crypto20["selection_status"] == "eligible").sum()) if "selection_status" in crypto20 else 0),
                 "crypto50_eligible_now="
                 + str(int((crypto50["selection_status"] == "eligible").sum()) if "selection_status" in crypto50 else 0),
+                "crypto20_quality_pass="
+                + str(int((crypto20_quality["quality_status"] == "pass").sum()) if "quality_status" in crypto20_quality else 0),
             ]
         )
         if missing_candidate_cols:
@@ -1826,6 +1846,10 @@ def audit_multiasset_universe_artifacts(rows: list[AuditRecord]) -> None:
             details.append(f"missing_crypto50_cols={missing_50_cols}")
         if missing_summary_cols:
             details.append(f"missing_summary_cols={missing_summary_cols}")
+        if missing_quality_cols:
+            details.append(f"missing_quality_cols={missing_quality_cols}")
+        if missing_pipeline_cols:
+            details.append(f"missing_pipeline_cols={missing_pipeline_cols}")
         if missing_report_phrases:
             details.append(f"missing_report_phrases={missing_report_phrases}")
         if bad_sizes:
