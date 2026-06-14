@@ -72,10 +72,14 @@ runs/**
 !runs/*/manifest.json
 !runs/*/artifact_manifest.csv
 !runs/*/README.md
+!runs/*/reproduce.ps1
 !runs/*/requirements.txt
 !runs/*/requirements-research.txt
 !runs/*/reports/
 !runs/*/reports/*.md
+!runs/*/reports/*.csv
+!runs/*/paper/
+!runs/*/paper/*.md
 !runs/*/models/
 !runs/*/models/*.csv
 !runs/*/models/*.png

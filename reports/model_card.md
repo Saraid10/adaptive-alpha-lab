@@ -209,6 +209,7 @@ The current methodological warning is that the legacy `regime_assignments.csv` a
 | Phase 25 | Minimal ablation suite for objective, assignment-layer, augmentation, and classical-reference mechanisms |
 | Phase 26 | Paper-facing statistical claim tests mapped to the Phase 25 ablation suite |
 | Phase 27 | Generated manuscript skeleton, paper artifact map, and submission checklist |
+| Phase 28 | Reproducibility package with smoke/full/dashboard modes and artifact policy docs |
 
 Phase 14B re-scores existing fold-local predictions. It does not retrain models for every cost or threshold setting.
 
@@ -387,6 +388,18 @@ Phase 27 converts the audited evidence stack into a manuscript scaffold.
 | Main outputs | `paper/main.md`, `reports/paper_artifact_map.csv`, `reports/paper_submission_checklist.md` |
 | Purpose | Draft the paper structure and map every section to supporting artifacts before venue formatting |
 | Claim discipline | Keeps HMM states as proxy states, treats guided-HMM alpha improvement as directional, and blocks profitability/generalization claims |
+
+## Reproducibility Package
+
+Phase 28 documents the exact public reproduction paths.
+
+| Field | Value |
+|---|---|
+| CLI | `.\reproduce.ps1 -Mode smoke`, `.\reproduce.ps1 -Mode full`, `.\reproduce.ps1 -Mode dashboard` |
+| Main outputs | `reports/environment.md`, `reports/artifact_manifest.md`, `reports/reproduction_checklist.md` |
+| Dashboard dependencies | `requirements.txt` |
+| Research dependencies | `requirements-research.txt` |
+| Data policy | Curated summary artifacts are committed; raw data, DuckDB databases, model weights, embeddings, and row-level prediction files stay ignored |
 | Main positive read | HMM assignment improves the guided path on all focused point-estimate metrics and is raw-suggestive on IC (`p=0.075`) |
 | Main caution | Guided-HMM versus raw-feature HMM remains directionally supported, not statistically significant |
 | Paper-safe language | Sequential assignment is the strongest supported mechanism; guided learned regimes are promising versus raw-feature HMM but not statistically dominant |

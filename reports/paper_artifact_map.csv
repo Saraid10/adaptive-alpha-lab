@@ -10,3 +10,4 @@ Mechanism,regime quality,models/regime_quality_summary.csv; models/guided_encode
 Ablations,ablation,models/ablation_summary.csv; models/paper_claim_tests.csv,"Tests objective guidance, assignment layer, augmentation view, and classical-reference comparisons."
 Robustness,stress test,models/robustness_summary.csv; models/robustness_stress_summary.csv,Checks symbol/horizon robustness and cost/threshold/period sensitivity.
 Interpretability,feature attribution,models/feature_importance_by_regime.csv; models/feature_family_summary.csv,Shows fold-local feature drivers by method/regime without making causal claims.
+Reproducibility,reproduction package,reproduce.ps1; reports/environment.md; reports/artifact_manifest.md; reports/reproduction_checklist.md,"Documents smoke/full/dashboard reproduction paths, environment split, and artifact policy."

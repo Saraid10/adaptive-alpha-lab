@@ -187,6 +187,12 @@ def build_artifact_map() -> list[dict[str, str]]:
             "artifact": "models/feature_importance_by_regime.csv; models/feature_family_summary.csv",
             "paper_role": "Shows fold-local feature drivers by method/regime without making causal claims.",
         },
+        {
+            "paper_section": "Reproducibility",
+            "artifact_type": "reproduction package",
+            "artifact": "reproduce.ps1; reports/environment.md; reports/artifact_manifest.md; reports/reproduction_checklist.md",
+            "paper_role": "Documents smoke/full/dashboard reproduction paths, environment split, and artifact policy.",
+        },
     ]
 
 
@@ -352,7 +358,13 @@ The ablation suite tests objective guidance, assignment layer, augmentation view
 - Interpretability results are model-specific and not causal.
 - The encoder is trained offline; fold-local encoder retraining remains a possible appendix experiment if compute allows.
 
-## 11. Conclusion Draft
+## 11. Reproducibility
+
+The public repository separates dashboard reproduction from full research reproduction. The dashboard runs from curated committed summary artifacts and minimal Streamlit dependencies. Full research reproduction uses `requirements-research.txt`, local data access, encoder training, fold-local validation, robustness checks, statistical tests, and validation audit.
+
+The reproduction helper supports three modes: smoke, full, and dashboard. Raw data, DuckDB databases, model weights, embeddings, and row-level prediction files remain excluded from GitHub.
+
+## 12. Conclusion Draft
 
 Adaptive Alpha Lab shows that learned market-regime representations need sequential discipline to become useful in this benchmark. Vanilla contrastive-GMM regimes are weak downstream, while HMM-guided embeddings paired with HMM assignment produce the strongest current point estimates and stress robustness. The central publishable finding is not a claim of profitable trading or statistical dominance, but a controlled empirical result: classical sequential structure can improve deep learned regime representations, and the assignment layer is a major driver of downstream usefulness.
 

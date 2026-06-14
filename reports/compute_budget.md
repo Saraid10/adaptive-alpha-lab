@@ -43,6 +43,7 @@ These are practical local observations, not formal benchmarks:
 | Phase 25 minimal ablation suite | under 1 minute; no model retraining |
 | Phase 26 paper statistical claim tests | under 1 minute; no model retraining |
 | Phase 27 paper skeleton generation | under 1 minute; no model retraining |
+| Phase 28 reproducibility smoke check | about 30 seconds; no model retraining |
 | Validation audit | about 10 seconds |
 | Data health check | a few seconds |
 
@@ -81,7 +82,8 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 25 minimal ablations | 0 encoder runs | Complete; aggregates completed structural and downstream artifacts into a mechanism table |
 | Phase 26 statistical evidence refresh | 0 encoder runs | Complete; maps the ablation table to paper-facing claim tests |
 | Phase 27 paper draft skeleton | 0 encoder runs | Complete; generates manuscript scaffold, artifact map, and submission checklist |
-| Phase 28 reproducibility package | 0 encoder runs | Next; document exact public reproduction commands before adding new experimental scope |
+| Phase 28 reproducibility package | 0 encoder runs | Complete; adds smoke/full/dashboard reproduction modes and reviewer-facing artifact policy docs |
+| Phase 29 paper prose pass | 0 encoder runs | Next; turns the scaffold into polished submission-style prose |
 
 ## Initial Ablation Cap
 

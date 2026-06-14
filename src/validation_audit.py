@@ -1617,6 +1617,7 @@ def audit_paper_draft_artifacts(rows: list[AuditRecord]) -> None:
         "Interpretability",
         "Ablations",
         "Limitations",
+        "Reproducibility",
         "Conclusion Draft",
         "Figure and Table Plan",
     ]
@@ -1662,6 +1663,75 @@ def audit_paper_draft_artifacts(rows: list[AuditRecord]) -> None:
         "critical",
         "; ".join(detail_parts),
         rows_checked=max(len(required_paths) + len(required_sections) + artifact_rows, 1),
+        rows_failed=failures,
+    )
+
+
+def audit_reproducibility_artifacts(rows: list[AuditRecord]) -> None:
+    required_files = {
+        "reproduce.ps1": [
+            "Mode",
+            "smoke",
+            "full",
+            "dashboard",
+            "validation_audit.py",
+            "paper_skeleton.py",
+            "archive_run.py",
+        ],
+        "reports/environment.md": [
+            "Python 3.11",
+            "requirements.txt",
+            "requirements-research.txt",
+            "data/market.duckdb",
+            "HMM states are proxy/reference states",
+        ],
+        "reports/artifact_manifest.md": [
+            "Committed Curated Artifacts",
+            "Regenerated Local Artifacts",
+            "Ignored Private or Heavy Artifacts",
+            "models/*.pt",
+            "data/",
+        ],
+        "reports/reproduction_checklist.md": [
+            "Smoke Reproduction",
+            "Full Reproduction",
+            "Dashboard Reproduction",
+            "Git Safety Checks",
+            "should print nothing",
+        ],
+    }
+
+    missing_files = []
+    missing_phrases = []
+    total_checks = 0
+    for relative_path, phrases in required_files.items():
+        path = Path(BASE_DIR) / relative_path
+        if not path.exists():
+            missing_files.append(relative_path)
+            continue
+        text = path.read_text(encoding="utf-8")
+        for phrase in phrases:
+            total_checks += 1
+            if phrase not in text:
+                missing_phrases.append(f"{relative_path}:{phrase}")
+
+    failures = len(missing_files) + len(missing_phrases)
+    detail_parts = [
+        f"repro_files={len(required_files) - len(missing_files)}/{len(required_files)}",
+        f"phrase_checks={total_checks}",
+    ]
+    if missing_files:
+        detail_parts.append(f"missing_files={missing_files}")
+    if missing_phrases:
+        detail_parts.append(f"missing_phrases={missing_phrases}")
+
+    record(
+        rows,
+        "reproducibility_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(detail_parts),
+        rows_checked=max(total_checks + len(required_files), 1),
         rows_failed=failures,
     )
 
@@ -1958,6 +2028,7 @@ def main() -> None:
     audit_literature_positioning_artifacts(rows)
     audit_paper_protocol_artifacts(rows)
     audit_paper_draft_artifacts(rows)
+    audit_reproducibility_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)
