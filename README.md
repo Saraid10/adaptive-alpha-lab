@@ -82,6 +82,7 @@ Binance OHLCV
 - Phase 26 paper-facing statistical claim tests.
 - Phase 27 generated manuscript skeleton, artifact map, and submission checklist.
 - Phase 28 reproducibility package with smoke/full/dashboard reproduction modes and artifact policy docs.
+- Phase 29 paper prose pass that turns the manuscript scaffold into submission-style Markdown.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -580,7 +581,13 @@ Phase 28 makes the project easier to reproduce and review. It adds `reproduce.ps
 
 It also adds `reports/environment.md`, `reports/artifact_manifest.md`, and `reports/reproduction_checklist.md`. These files separate dashboard reproduction from full research reproduction, document which artifacts are committed or ignored, and keep reviewer-facing safety checks in one place.
 
+## Phase 29 Paper Prose Pass
+
+Phase 29 turns `paper/main.md` from a generated scaffold into a stronger manuscript-style draft. The abstract, introduction, method narrative, validation discussion, results interpretation, robustness, interpretability, ablations, limitations, reproducibility, and conclusion now read as a coherent paper rather than a checklist.
+
+The result language remains deliberately conservative: guided-HMM is described as the strongest point-estimate and stress-robust method, while statistical dominance over raw-feature HMM remains inconclusive.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, and a Streamlit research dashboard. The next important work is Phase 29: polish `paper/main.md` into submission-style prose before adding new experimental scope.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, and a Streamlit research dashboard. The next important work is Phase 30: venue formatting and citation cleanup before adding new experimental scope.
 

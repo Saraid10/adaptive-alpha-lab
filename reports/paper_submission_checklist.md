@@ -1,6 +1,6 @@
 # Paper Submission Checklist
 
-## Phase 27 Status
+## Phase 29 Status
 
 This checklist tracks what remains before the project should be treated as a submission-ready paper package.
 
@@ -11,14 +11,14 @@ This checklist tracks what remains before the project should be treated as a sub
 - Literature positioning exists in `reports/related_work.md` and `reports/literature_matrix.csv`.
 - Main fold-local benchmark artifacts exist.
 - Phase 25 ablations and Phase 26 paper claim tests exist.
+- Phase 29 manuscript prose pass is complete.
 - Validation audit has no critical failures.
 
 ## Needs Human Writing
 
-- Convert `paper/main.md` from scaffold to prose.
-- Replace placeholder citations with the final venue citation style.
+- Replace paper-planning source names with the final venue citation style.
 - Add final figure numbers after choosing the paper template.
-- Tighten the abstract after the final submission venue is selected.
+- Tune the abstract to the final submission venue length.
 - Decide whether the appendix includes the Streamlit dashboard screenshots.
 
 ## Optional Before Submission

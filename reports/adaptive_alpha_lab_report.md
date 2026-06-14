@@ -83,7 +83,7 @@ The audit result is:
 
 | Status | Count | Interpretation |
 |---|---:|---|
-| PASS | 33 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, Phase 24 protocol artifact, Phase 25 ablation artifact, Phase 26 paper-statistical artifact, Phase 27 paper-draft artifact, Phase 28 reproducibility artifact, literature-positioning artifact, and run-registry checks passed |
+| PASS | 33 | All critical data, fold, target, coverage, prediction-alignment, Phase 20 fold-local artifact, robustness artifact, stress-grid, statistical-test artifact, regime-quality artifact, compute-plan artifact, guided-encoder full-run artifact, Phase 22A time-frequency artifact, Phase 23 interpretability artifact, Phase 24 protocol artifact, Phase 25 ablation artifact, Phase 26 paper-statistical artifact, Phase 27/29 paper-draft artifact, Phase 28 reproducibility artifact, literature-positioning artifact, and run-registry checks passed |
 | WARN | 1 | Legacy `regime_assignments.csv` is an offline/global artifact |
 | FAIL | 0 | No critical validation failure was detected |
 
@@ -434,6 +434,12 @@ Phase 28 adds the reviewer-facing reproduction layer. It includes:
 
 The most important distinction is between dashboard reproduction and full research reproduction. The dashboard runs from curated committed artifacts and minimal dependencies. Full research reproduction requires the local research environment, raw/local data access, and substantially more compute.
 
+## Phase 29 Paper Prose Pass
+
+Phase 29 turns the generated paper scaffold into stronger manuscript-style prose. The abstract, introduction, related-work positioning, data description, methods, validation protocol, results interpretation, robustness, interpretability, ablations, limitations, reproducibility, and conclusion are now written as a coherent paper draft rather than a checklist.
+
+The phase keeps the same scientific conclusion: sequential HMM assignment is the strongest supported mechanism; HMM-guided learned regimes are promising and stress-robust on the BTC/ETH 8h benchmark; and the fold-level IC advantage over raw-feature HMM remains statistically inconclusive.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
@@ -450,7 +456,7 @@ The most important distinction is between dashboard reproduction and full resear
 - Phase 24 freezes claim language but does not add new empirical evidence.
 - Phase 25 aggregates completed artifacts into a minimal ablation table; it does not create new retrained encoder variants beyond already completed runs.
 - Phase 26 refreshes paper-facing claim tests, but the main guided-HMM versus raw-feature HMM IC edge remains directionally supported rather than statistically significant.
-- Phase 27 is a manuscript scaffold, not a finished paper; it still needs human prose, final citations, venue formatting, and figure numbering.
+- Phase 29 improves the manuscript prose, but it still needs final citations, venue formatting, and figure numbering.
 - Phase 28 documents reproducibility paths but does not make raw data or model weights public.
 - Calibration/NLL diagnostics do not uniformly favor the guided methods, so probability quality and trading-score quality should be discussed separately.
 - Phase 19A is a positioning phase, not an empirical result. It clarifies contribution language but does not prove a new model improvement.
@@ -463,8 +469,8 @@ The most important distinction is between dashboard reproduction and full resear
 
 ## Next Steps
 
-1. Turn `paper/main.md` from scaffold into polished prose.
-2. Convert the polished Markdown draft into the selected venue format.
+1. Convert the polished Markdown draft into the selected venue format.
+2. Add final citations and figure/table numbering.
 3. Add fold-local or expanding-window encoder retraining only if required by reviewer-style critique.
 4. Expand beyond BTC/ETH only if the written statistical gate is met.
 5. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.

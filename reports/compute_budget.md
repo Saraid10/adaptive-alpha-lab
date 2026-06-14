@@ -83,7 +83,8 @@ The next phases should stay small until the baseline is statistically understood
 | Phase 26 statistical evidence refresh | 0 encoder runs | Complete; maps the ablation table to paper-facing claim tests |
 | Phase 27 paper draft skeleton | 0 encoder runs | Complete; generates manuscript scaffold, artifact map, and submission checklist |
 | Phase 28 reproducibility package | 0 encoder runs | Complete; adds smoke/full/dashboard reproduction modes and reviewer-facing artifact policy docs |
-| Phase 29 paper prose pass | 0 encoder runs | Next; turns the scaffold into polished submission-style prose |
+| Phase 29 paper prose pass | 0 encoder runs | Complete; turns the scaffold into polished submission-style prose |
+| Phase 30 venue formatting and citation pass | 0 encoder runs | Next; convert the Markdown draft into the target venue format |
 
 ## Initial Ablation Cap
 
