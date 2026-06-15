@@ -134,6 +134,7 @@ python src/targets.py --universe crypto20 --artifact-prefix crypto20_
 python src/check.py --universe crypto20
 python src/crypto20_quality_gate.py --universe crypto20
 python src/crypto20_regime_benchmark.py --universe crypto20
+python src/crypto20_guided_readiness.py --universe crypto20
 ```
 
 Optional dashboard:
@@ -169,6 +170,10 @@ python -m pip install -r requirements-research.txt
 | `models/crypto20_per_regime_stats.csv` | Phase 33 per-regime forward-return, volatility, liquidity, and IC diagnostics |
 | `models/crypto20_regime_symbol_summary.csv` | Phase 33 per-symbol regime persistence and balance diagnostics |
 | `reports/crypto20_regime_benchmark_plan.md` | Phase 33 reviewer-facing multi-asset regime benchmark protocol |
+| `models/crypto20_guided_pair_summary.csv` | Phase 34 HMM-guided pair-mining readiness diagnostics for Crypto-20 |
+| `models/crypto20_guided_compute_plan.csv` | Phase 34 compute gate for the full Crypto-20 guided encoder run |
+| `models/crypto20_guided_gate.csv` | Phase 34 go/no-go recommendation for learned-regime expansion |
+| `reports/crypto20_guided_readiness.md` | Phase 34 reviewer-facing readiness note before expensive guided training |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
 | `models/regime_stability_summary.csv` | Persistence, switch-rate, confidence, and stable-vs-transition IC diagnostics |
@@ -623,5 +628,5 @@ The paper now handles three likely reviewer questions explicitly:
 
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, Phase 33 Crypto-20 classical regime benchmark artifacts, and a Streamlit research dashboard. The next important work is to train or transfer learned regimes on Crypto-20 and compare them against this frozen classical multi-asset baseline.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, Phase 33 Crypto-20 classical regime benchmark artifacts, Phase 34 Crypto-20 guided-encoder readiness artifacts, and a Streamlit research dashboard. The next important work is to run the full Crypto-20 guided learned-regime experiment and compare it against the frozen classical multi-asset baseline.
 
