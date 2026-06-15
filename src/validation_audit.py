@@ -1868,6 +1868,113 @@ def audit_multiasset_universe_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_crypto20_regime_artifacts(rows: list[AuditRecord]) -> None:
+    required_files = [
+        Path(SAVE_DIR) / "crypto20_regime_benchmark_summary.csv",
+        Path(SAVE_DIR) / "crypto20_per_regime_stats.csv",
+        Path(SAVE_DIR) / "crypto20_regime_symbol_summary.csv",
+        Path(SAVE_DIR) / "crypto20_transition_matrix_hmm.png",
+        Path(SAVE_DIR) / "crypto20_transition_matrix_kmeans.png",
+        Path(SAVE_DIR) / "crypto20_transition_matrix_vol_bucket.png",
+        Path(BASE_DIR) / "reports" / "crypto20_regime_benchmark_plan.md",
+    ]
+    missing_files = [str(path.relative_to(BASE_DIR)) for path in required_files if not path.exists()]
+    failures = len(missing_files)
+    details = [f"files_present={len(required_files) - len(missing_files)}/{len(required_files)}"]
+    rows_checked = len(required_files)
+
+    if not missing_files:
+        summary = pd.read_csv(Path(SAVE_DIR) / "crypto20_regime_benchmark_summary.csv")
+        stats = pd.read_csv(Path(SAVE_DIR) / "crypto20_per_regime_stats.csv")
+        symbol_summary = pd.read_csv(Path(SAVE_DIR) / "crypto20_regime_symbol_summary.csv")
+        report_text = (Path(BASE_DIR) / "reports" / "crypto20_regime_benchmark_plan.md").read_text(
+            encoding="utf-8"
+        )
+
+        expected_methods = {"hmm", "kmeans", "vol_bucket"}
+        missing_methods = sorted(expected_methods - set(summary.get("method", [])))
+        unexpected_methods = sorted(set(summary.get("method", [])) - expected_methods)
+        missing_summary_cols = sorted(
+            {"method", "implementation", "n_rows", "n_symbols", "n_regimes", "silhouette"}
+            - set(summary.columns)
+        )
+        missing_stats_cols = sorted(
+            {"method", "symbol", "regime", "n_rows", "avg_forward_return_8h", "feature_ic_vs_target"}
+            - set(stats.columns)
+        )
+        missing_symbol_cols = sorted(
+            {
+                "method",
+                "symbol",
+                "n_rows",
+                "transition_diagonal_probability",
+                "dominant_regime_pct",
+                "simple_feature_ic",
+            }
+            - set(symbol_summary.columns)
+        )
+        report_phrases = ["raw-feature Gaussian HMM", "Crypto-20 regime benchmark summary", "Gate To Next Phase"]
+        missing_report_phrases = [phrase for phrase in report_phrases if phrase not in report_text]
+
+        bad_rows = 0
+        if not missing_summary_cols:
+            bad_rows += int(len(summary) != 3)
+            bad_rows += int((summary["n_symbols"].astype(int) != 20).any())
+            bad_rows += int((summary["n_regimes"].astype(int) != 4).any())
+            hmm_impl = summary.set_index("method").get("implementation", pd.Series(dtype=str)).get("hmm", "")
+            bad_rows += int(hmm_impl != "hmmlearn_gaussian_hmm")
+        if not missing_symbol_cols:
+            symbol_method_counts = symbol_summary.groupby("method")["symbol"].nunique()
+            bad_rows += int((symbol_method_counts.reindex(sorted(expected_methods), fill_value=0) != 20).any())
+        if not missing_stats_cols:
+            bad_rows += int(stats.groupby(["method", "symbol"])["regime"].nunique().min() < 1)
+
+        failures += (
+            len(missing_methods)
+            + len(unexpected_methods)
+            + len(missing_summary_cols)
+            + len(missing_stats_cols)
+            + len(missing_symbol_cols)
+            + len(missing_report_phrases)
+            + bad_rows
+        )
+        rows_checked += len(summary) + len(stats) + len(symbol_summary)
+        details.extend(
+            [
+                f"summary_rows={len(summary)}",
+                f"stats_rows={len(stats)}",
+                f"symbol_summary_rows={len(symbol_summary)}",
+                f"methods={sorted(set(summary.get('method', [])))}",
+            ]
+        )
+        if missing_methods:
+            details.append(f"missing_methods={missing_methods}")
+        if unexpected_methods:
+            details.append(f"unexpected_methods={unexpected_methods}")
+        if missing_summary_cols:
+            details.append(f"missing_summary_cols={missing_summary_cols}")
+        if missing_stats_cols:
+            details.append(f"missing_stats_cols={missing_stats_cols}")
+        if missing_symbol_cols:
+            details.append(f"missing_symbol_cols={missing_symbol_cols}")
+        if missing_report_phrases:
+            details.append(f"missing_report_phrases={missing_report_phrases}")
+        if bad_rows:
+            details.append(f"bad_row_checks={bad_rows}")
+    else:
+        details.append(f"missing_files={missing_files}")
+
+    record(
+        rows,
+        "crypto20_regime_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(details),
+        rows_checked=max(rows_checked, 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -2162,6 +2269,7 @@ def main() -> None:
     audit_paper_draft_artifacts(rows)
     audit_reproducibility_artifacts(rows)
     audit_multiasset_universe_artifacts(rows)
+    audit_crypto20_regime_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)

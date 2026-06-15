@@ -67,6 +67,12 @@ models/*.csv
 !models/crypto20_target_distribution.csv
 !models/crypto20_target_quality.csv
 !models/crypto20_target_distribution.png
+!models/crypto20_regime_benchmark_summary.csv
+!models/crypto20_per_regime_stats.csv
+!models/crypto20_regime_symbol_summary.csv
+
+# Keep compact Crypto-20 regime summaries, not row-level assignments.
+models/crypto20_regime_assignments.csv
 
 # Keep visualization outputs.
 !models/*.png
