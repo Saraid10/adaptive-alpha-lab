@@ -460,6 +460,10 @@ This protects the research narrative: BTC/ETH remains the controlled pilot, whil
 
 Phase 32 combines the earlier data-readiness and ingestion-quality steps into one phase. `src/ingestion.py`, `src/features.py`, `src/targets.py`, and `src/check.py` can resolve symbols from `models/asset_universe_crypto20.csv` using `--universe crypto20`. `src/crypto20_quality_gate.py` then writes per-symbol OHLCV, feature, target, and gap checks to `models/crypto20_data_quality.csv` and summarizes whether the Crypto-20 universe is ready for multi-asset regime benchmarking. The current gate passes with 20/20 selected assets.
 
+## Phase 33 Crypto-20 Classical Regime Benchmark
+
+Phase 33 establishes the first multi-asset regime baseline before retraining learned encoders. The Crypto-20 regime benchmark summary covers 349,786 joined feature/target rows across 20 assets and compares raw-feature HMM, KMeans, and volatility buckets on the same universe. The current result preserves the mechanism story: KMeans has higher silhouette but more imbalanced and less persistent regimes, while HMM has lower silhouette but stronger sequential persistence across assets. This freezes the classical Crypto-20 baseline before the next learned-regime experiment.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.

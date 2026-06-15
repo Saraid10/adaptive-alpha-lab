@@ -17,6 +17,7 @@ Committed artifacts are small summary files or visual outputs used by the dashbo
 | Statistical evidence | `models/statistical_test_summary.csv`, `models/paper_statistical_summary.csv` | Paper-safe claim tests |
 | Interpretability | `models/feature_importance_by_regime.csv`, `models/feature_family_summary.csv` | Fold-local feature attribution |
 | Multi-asset protocol | `configs/crypto_universe_candidates.csv`, `models/asset_universe_crypto20.csv`, `models/crypto20_data_quality.csv`, `reports/crypto20_pipeline_plan.md` | Pre-specified crypto-universe expansion and data-quality gate |
+| Crypto-20 regimes | `models/crypto20_regime_benchmark_summary.csv`, `models/crypto20_regime_symbol_summary.csv` | First multi-asset regime benchmark before learned-regime retraining |
 | Paper package | `paper/main.md`, `reports/paper_artifact_map.csv`, `reports/paper_submission_checklist.md` | Manuscript scaffold and submission planning |
 | Versioning | `runs/run_index.csv`, `runs/*/manifest.json`, `runs/*/artifact_manifest.csv` | Frozen curated snapshots |
 
