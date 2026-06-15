@@ -1975,6 +1975,130 @@ def audit_crypto20_regime_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_crypto20_guided_readiness_artifacts(rows: list[AuditRecord]) -> None:
+    required_files = [
+        Path(SAVE_DIR) / "crypto20_guided_symbol_readiness.csv",
+        Path(SAVE_DIR) / "crypto20_guided_pair_summary.csv",
+        Path(SAVE_DIR) / "crypto20_guided_compute_plan.csv",
+        Path(SAVE_DIR) / "crypto20_guided_gate.csv",
+        Path(SAVE_DIR) / "crypto20_guided_compute_gate.png",
+        Path(BASE_DIR) / "reports" / "crypto20_guided_readiness.md",
+    ]
+    missing_files = [str(path.relative_to(BASE_DIR)) for path in required_files if not path.exists()]
+    failures = len(missing_files)
+    details = [f"files_present={len(required_files) - len(missing_files)}/{len(required_files)}"]
+    rows_checked = len(required_files)
+
+    if not missing_files:
+        symbol_readiness = pd.read_csv(Path(SAVE_DIR) / "crypto20_guided_symbol_readiness.csv")
+        pair_summary = pd.read_csv(Path(SAVE_DIR) / "crypto20_guided_pair_summary.csv")
+        compute_plan = pd.read_csv(Path(SAVE_DIR) / "crypto20_guided_compute_plan.csv")
+        gate = pd.read_csv(Path(SAVE_DIR) / "crypto20_guided_gate.csv")
+        report_text = (Path(BASE_DIR) / "reports" / "crypto20_guided_readiness.md").read_text(
+            encoding="utf-8"
+        )
+
+        missing_symbol_cols = sorted(
+            {
+                "symbol",
+                "eligible_windows",
+                "regimes_present",
+                "min_regime_windows",
+                "transition_rate",
+                "directed_hard_negative_pairs",
+            }
+            - set(symbol_readiness.columns)
+        )
+        missing_pair_cols = sorted({"metric", "value", "status"} - set(pair_summary.columns))
+        missing_compute_cols = sorted(
+            {
+                "scenario",
+                "eligible_windows",
+                "epochs",
+                "estimated_train_hours",
+                "decision",
+            }
+            - set(compute_plan.columns)
+        )
+        missing_gate_cols = sorted({"gate", "status", "recommendation", "hard_failures"} - set(gate.columns))
+        report_phrases = [
+            "Phase 34 Crypto-20 Guided Encoder Readiness",
+            "weak-supervision signal",
+            "Gate recommendation",
+        ]
+        missing_report_phrases = [phrase for phrase in report_phrases if phrase not in report_text]
+
+        bad_rows = 0
+        if not missing_symbol_cols:
+            bad_rows += int(len(symbol_readiness) != 20)
+            bad_rows += int((symbol_readiness["eligible_windows"].astype(int) <= 0).any())
+            bad_rows += int((symbol_readiness["regimes_present"].astype(int) < 2).any())
+        if not missing_pair_cols:
+            metrics = set(pair_summary["metric"].astype(str))
+            required_metrics = {
+                "symbols",
+                "eligible_windows",
+                "regimes_present_global",
+                "positive_anchor_coverage_pct",
+                "directed_hard_negative_pairs",
+            }
+            bad_rows += len(required_metrics - metrics)
+            metric_values = pair_summary.set_index("metric")["value"]
+            if "symbols" in metric_values:
+                bad_rows += int(int(metric_values["symbols"]) != 20)
+            if "positive_anchor_coverage_pct" in metric_values:
+                bad_rows += int(float(metric_values["positive_anchor_coverage_pct"]) < 0.99)
+        if not missing_compute_cols:
+            scenarios = set(compute_plan["scenario"].astype(str))
+            bad_rows += int("full_crypto20_guided_encoder" not in scenarios)
+        if not missing_gate_cols:
+            bad_rows += int(gate.empty)
+            if not gate.empty:
+                bad_rows += int(str(gate["status"].iloc[0]) != "pass")
+
+        failures += (
+            len(missing_symbol_cols)
+            + len(missing_pair_cols)
+            + len(missing_compute_cols)
+            + len(missing_gate_cols)
+            + len(missing_report_phrases)
+            + bad_rows
+        )
+        rows_checked += len(symbol_readiness) + len(pair_summary) + len(compute_plan) + len(gate)
+        details.extend(
+            [
+                f"symbol_rows={len(symbol_readiness)}",
+                f"pair_metrics={len(pair_summary)}",
+                f"compute_scenarios={len(compute_plan)}",
+                "gate_status=" + (str(gate["status"].iloc[0]) if not gate.empty and "status" in gate else "missing"),
+            ]
+        )
+        if missing_symbol_cols:
+            details.append(f"missing_symbol_cols={missing_symbol_cols}")
+        if missing_pair_cols:
+            details.append(f"missing_pair_cols={missing_pair_cols}")
+        if missing_compute_cols:
+            details.append(f"missing_compute_cols={missing_compute_cols}")
+        if missing_gate_cols:
+            details.append(f"missing_gate_cols={missing_gate_cols}")
+        if missing_report_phrases:
+            details.append(f"missing_report_phrases={missing_report_phrases}")
+        if bad_rows:
+            details.append(f"bad_row_checks={bad_rows}")
+    else:
+        details.append(f"missing_files={missing_files}")
+
+    record(
+        rows,
+        "crypto20_guided_readiness_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(details),
+        rows_checked=max(rows_checked, 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -2270,6 +2394,7 @@ def main() -> None:
     audit_reproducibility_artifacts(rows)
     audit_multiasset_universe_artifacts(rows)
     audit_crypto20_regime_artifacts(rows)
+    audit_crypto20_guided_readiness_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)

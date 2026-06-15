@@ -464,6 +464,12 @@ Phase 32 combines the earlier data-readiness and ingestion-quality steps into on
 
 Phase 33 establishes the first multi-asset regime baseline before retraining learned encoders. The Crypto-20 regime benchmark summary covers 349,786 joined feature/target rows across 20 assets and compares raw-feature HMM, KMeans, and volatility buckets on the same universe. The current result preserves the mechanism story: KMeans has higher silhouette but more imbalanced and less persistent regimes, while HMM has lower silhouette but stronger sequential persistence across assets. This freezes the classical Crypto-20 baseline before the next learned-regime experiment.
 
+## Phase 34 Crypto-20 Guided Encoder Readiness
+
+Phase 34 checks whether the HMM-guided learned-regime path is ready to scale from the BTC/ETH pilot to Crypto-20. The readiness audit uses the Phase 33 raw-feature HMM states as weak-supervision labels and verifies that the expanded universe has enough eligible encoder windows, same-state positives, and in-trajectory hard negatives near regime boundaries. The current gate passes with 348,606 eligible HMM-labeled windows, all four regimes represented globally, 100% positive-anchor coverage, and 6,278,476 directed hard-negative pairs.
+
+The compute estimate is heavy but feasible: using the Phase 17 measured CPU step time, a full 30-epoch Crypto-20 guided encoder run is estimated at about 16.77 hours with the current batch size, under the 24-hour planning cap. This does not claim the learned method has beaten the classical Crypto-20 HMM yet. It says the next experiment is justified, pre-gated, and not a blind compute spend.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
