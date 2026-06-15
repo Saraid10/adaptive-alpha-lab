@@ -83,6 +83,11 @@ Binance OHLCV
 - Phase 27 generated manuscript skeleton, artifact map, and submission checklist.
 - Phase 28 reproducibility package with smoke/full/dashboard reproduction modes and artifact policy docs.
 - Phase 29 paper prose pass that turns the manuscript scaffold into submission-style Markdown.
+- Phase 30 reviewer-defense framing for likely objections around scope, fold power, and statistical claims.
+- Phase 31 pre-specified Crypto-20/Crypto-50 universe protocol.
+- Phase 32 Crypto-20 ingestion, feature, target, and quality-gate pipeline.
+- Phase 33 Crypto-20 classical regime benchmark.
+- Phase 34 Crypto-20 guided-encoder readiness gate before expensive learned-regime training.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -618,13 +623,50 @@ Phase 29 turns `paper/main.md` from a generated scaffold into a stronger manuscr
 
 The result language remains deliberately conservative: guided-HMM is described as the strongest point-estimate and stress-robust method, while statistical dominance over raw-feature HMM remains inconclusive.
 
-## Reviewer Defense Framing
+## Phase 30 Reviewer Defense Framing
 
-The paper now handles three likely reviewer questions explicitly:
+Phase 30 turns the strongest reviewer objections into explicit paper language instead of leaving them as hidden weaknesses. The project now handles three likely reviewer questions directly:
 
 - The BTC/ETH scope is framed as a controlled crypto setting, not as a broad market-generalization claim.
 - The 18 walk-forward folds are acknowledged as low-power for fold-level tests, but more defensible than treating overlapping hourly labels as independent.
 - The `p=0.801` raw-feature-HMM comparison is not hidden; the headline is the mechanism that sequential assignment drives learned-regime usefulness, not a claim that guided-HMM statistically beats HMM.
+
+This phase matters because it makes the research defensible even when results are directionally strong but not statistically decisive.
+
+## Phase 31 Multi-Asset Universe Protocol
+
+Phase 31 adds a pre-specified crypto expansion protocol instead of choosing extra assets after seeing results. The project now defines candidate assets, selection criteria, exclusions, and two planned universes:
+
+- `Crypto-20`: the first controlled multi-asset generalization test.
+- `Crypto-50`: the larger future expansion, gated by compute and data quality.
+
+This protects the paper narrative from selection bias. BTC/ETH remains the controlled pilot, while Crypto-20 becomes the first broader test of whether the regime mechanism survives outside the original two assets.
+
+## Phase 32 Crypto-20 Data Pipeline And Quality Gate
+
+Phase 32 makes the Crypto-20 universe usable in the same pipeline as the original BTC/ETH benchmark. The ingestion, feature, target, and check scripts can resolve `--universe crypto20`, then `crypto20_quality_gate.py` verifies whether every selected asset has enough bars, engineered features, labels, and acceptable gap behavior.
+
+The current local gate passes with all 20 selected Crypto-20 assets eligible. This means the expanded universe is not just listed in a CSV; it has actually been pulled through the project’s feature and labeling machinery.
+
+## Phase 33 Crypto-20 Classical Regime Benchmark
+
+Phase 33 freezes the classical multi-asset baseline before retraining any learned encoder. It benchmarks raw-feature HMM, KMeans, and volatility buckets across the same Crypto-20 row universe.
+
+The key finding is useful for the paper: KMeans gives the cleanest geometric clusters by silhouette, but its regimes are more imbalanced and less persistent. HMM has lower silhouette but stronger temporal persistence. That supports the project’s central mechanism claim: financial regimes should not be judged only by static cluster separation; sequential structure matters.
+
+## Phase 34 Crypto-20 Guided Encoder Readiness
+
+Phase 34 checks whether it is responsible to run the expensive Crypto-20 HMM-guided encoder experiment. It does not train the full encoder yet. Instead, it verifies that the Phase 33 HMM states provide enough weak-supervision signal for multi-asset contrastive learning.
+
+The readiness gate passes:
+
+- `348,606` eligible HMM-labeled encoder windows.
+- All four regimes represented globally.
+- `100%` positive-anchor coverage.
+- `6,278,476` directed hard-negative pairs near regime boundaries.
+- Estimated full 30-epoch CPU training time: about `16.77` hours.
+
+The recommendation is to run the full Crypto-20 guided encoder next. This makes the next phase a pre-gated experiment rather than a blind compute spend.
 
 ## Current Status
 
