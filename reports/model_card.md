@@ -388,7 +388,7 @@ Phase 27 converts the audited evidence stack into a manuscript scaffold, and Pha
 | CLI | `python src/paper_skeleton.py` |
 | Main outputs | `paper/main.md`, `reports/paper_artifact_map.csv`, `reports/paper_submission_checklist.md` |
 | Purpose | Draft and polish the paper structure while mapping every section to supporting artifacts before venue formatting |
-| Claim discipline | Keeps HMM states as proxy states, treats guided-HMM alpha improvement as directional, and blocks profitability/generalization claims |
+| Claim discipline | Keeps HMM states as proxy states, treats guided-HMM alpha improvement as directional, allows Crypto-20 structural transfer language, and blocks profitability or downstream multi-asset alpha claims |
 
 ## Reproducibility Package
 

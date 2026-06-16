@@ -80,4 +80,4 @@ Linux/macOS equivalents are `bash reproduce.sh --mode smoke`, `bash reproduce.sh
 - The repository is a research benchmark, not a live trading system.
 - Backtest metrics are diagnostics, not deployable trading claims.
 - HMM states are proxy/reference states, not ground-truth market regimes.
-- Current public artifacts support a BTC/ETH crypto-market benchmark; cross-asset generalization is not claimed.
+- Current public artifacts support a BTC/ETH downstream-alpha benchmark plus Crypto-20 structural diagnostics; cross-asset alpha generalization is not claimed.

@@ -43,7 +43,8 @@ This manifest defines the experiments that belong in the paper track after Phase
 |---:|---|---|---|---|
 | 1 | 30 | Venue formatting and citation pass | Required before external submission | `paper/main.tex` or venue-formatted equivalent |
 | 2 | 31 | Figure/table numbering and appendix pass | Required before external submission | final figure table and appendix map |
-| 3 | 32 | Multi-asset generalization | Conditional on paper gap analysis and compute budget | `multi_asset_results.csv`, `generalization.md` |
+| 3 | 36 | Crypto-20 downstream alpha retest | Required before any multi-asset predictive claim | `crypto20_walkforward_experiment_results.csv`, `crypto20_alpha_generalization.md` |
+| 4 | 37 | Crypto-50 or broader expansion | Conditional on Crypto-20 downstream evidence and compute budget | `crypto50_results.csv`, `generalization.md` |
 
 ## Minimal Ablation Definition
 
