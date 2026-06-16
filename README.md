@@ -140,6 +140,7 @@ python src/check.py --universe crypto20
 python src/crypto20_quality_gate.py --universe crypto20
 python src/crypto20_regime_benchmark.py --universe crypto20
 python src/crypto20_guided_readiness.py --universe crypto20
+.\run_phase35_crypto20_guided.ps1
 ```
 
 Optional dashboard:
@@ -179,6 +180,9 @@ python -m pip install -r requirements-research.txt
 | `models/crypto20_guided_compute_plan.csv` | Phase 34 compute gate for the full Crypto-20 guided encoder run |
 | `models/crypto20_guided_gate.csv` | Phase 34 go/no-go recommendation for learned-regime expansion |
 | `reports/crypto20_guided_readiness.md` | Phase 34 reviewer-facing readiness note before expensive guided training |
+| `models/crypto20_guided_encoder_summary.csv` | Phase 35 full Crypto-20 guided encoder structural summary, after the long run is executed |
+| `models/crypto20_guided_encoder_loss.csv` | Phase 35 training loss and pair-mining diagnostics |
+| `models/crypto20_guided_encoder_comparison.csv` | Phase 35 guided-regime comparison against the Phase 33 Crypto-20 classical baseline |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
 | `models/regime_stability_summary.csv` | Persistence, switch-rate, confidence, and stable-vs-transition IC diagnostics |
@@ -668,7 +672,34 @@ The readiness gate passes:
 
 The recommendation is to run the full Crypto-20 guided encoder next. This makes the next phase a pre-gated experiment rather than a blind compute spend.
 
+## Phase 35 Crypto-20 Guided Encoder Training
+
+Phase 35 is the first full learned-regime expansion beyond the BTC/ETH pilot. The run uses the Phase 33 Crypto-20 raw-feature HMM states as weak supervision, trains the HMM-guided encoder on all eligible Crypto-20 windows, and writes separate `crypto20_guided_encoder_*` artifacts so the earlier BTC/ETH guided artifacts are not overwritten.
+
+The full CPU run completed on 348,606 eligible windows across all 20 Crypto-20 symbols. Training loss fell from `0.3258` at epoch 1 to `0.0864` at epoch 30 with valid-anchor coverage held at `1.000`.
+
+The strongest Phase 35 assignment is `hmm_guided_hmm`:
+
+| Method | Rows | Symbols | Silhouette | Transition diagonal | HMM NMI | HMM ARI | HMM purity |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `hmm_guided_hmm` | 348,606 | 20 | 0.399 | 0.890 | 0.694 | 0.627 | 0.814 |
+| `hmm_guided_gmm` | 348,606 | 20 | 0.230 | 0.890 | 0.506 | 0.384 | 0.721 |
+
+This is the first multi-asset evidence that HMM-guided representation learning scales structurally beyond the BTC/ETH pilot. It supports the mechanism claim: learned embeddings become far more regime-aligned when contrastive positives and hard negatives are guided by sequential HMM state structure. It is not yet a Crypto-20 downstream alpha claim; that requires the next fold-local alpha retest.
+
+Full command:
+
+```powershell
+.\run_phase35_crypto20_guided.ps1
+```
+
+For a short smoke/prototype run, use:
+
+```powershell
+.\run_phase35_crypto20_guided.ps1 -Epochs 1 -MaxWindows 5000 -TrainOnly
+```
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, Phase 33 Crypto-20 classical regime benchmark artifacts, Phase 34 Crypto-20 guided-encoder readiness artifacts, and a Streamlit research dashboard. The next important work is to run the full Crypto-20 guided learned-regime experiment and compare it against the frozen classical multi-asset baseline.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, Phase 33 Crypto-20 classical regime benchmark artifacts, Phase 34 Crypto-20 guided-encoder readiness artifacts, Phase 35 Crypto-20 guided encoder structural results, and a Streamlit research dashboard. The next important work is Phase 36: feed the Crypto-20 guided assignments into a fold-local downstream alpha benchmark and compare them against the frozen classical multi-asset baseline.
 

@@ -19,6 +19,7 @@ Committed artifacts are small summary files or visual outputs used by the dashbo
 | Multi-asset protocol | `configs/crypto_universe_candidates.csv`, `models/asset_universe_crypto20.csv`, `models/crypto20_data_quality.csv`, `reports/crypto20_pipeline_plan.md` | Pre-specified crypto-universe expansion and data-quality gate |
 | Crypto-20 regimes | `models/crypto20_regime_benchmark_summary.csv`, `models/crypto20_regime_symbol_summary.csv` | First multi-asset regime benchmark before learned-regime retraining |
 | Crypto-20 guided readiness | `models/crypto20_guided_pair_summary.csv`, `models/crypto20_guided_compute_plan.csv`, `models/crypto20_guided_gate.csv` | Pair-mining and compute gate before full Crypto-20 guided encoder training |
+| Crypto-20 guided encoder | `models/crypto20_guided_encoder_summary.csv`, `models/crypto20_guided_encoder_loss.csv`, `models/crypto20_guided_encoder_comparison.csv`, `models/crypto20_guided_encoder_loss_curve.png`, `models/crypto20_guided_encoder_transition_hmm_guided_gmm.png`, `models/crypto20_guided_encoder_transition_hmm_guided_hmm.png` | Phase 35 full Crypto-20 HMM-guided encoder structural result |
 | Paper package | `paper/main.md`, `reports/paper_artifact_map.csv`, `reports/paper_submission_checklist.md` | Manuscript scaffold and submission planning |
 | Versioning | `runs/run_index.csv`, `runs/*/manifest.json`, `runs/*/artifact_manifest.csv` | Frozen curated snapshots |
 

@@ -2099,6 +2099,178 @@ def audit_crypto20_guided_readiness_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_crypto20_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
+    summary_path = Path(SAVE_DIR) / "crypto20_guided_encoder_summary.csv"
+    loss_path = Path(SAVE_DIR) / "crypto20_guided_encoder_loss.csv"
+    comparison_path = Path(SAVE_DIR) / "crypto20_guided_encoder_comparison.csv"
+    loss_plot_path = Path(SAVE_DIR) / "crypto20_guided_encoder_loss_curve.png"
+    transition_gmm_path = Path(SAVE_DIR) / "crypto20_guided_encoder_transition_hmm_guided_gmm.png"
+    transition_hmm_path = Path(SAVE_DIR) / "crypto20_guided_encoder_transition_hmm_guided_hmm.png"
+    required_files = [
+        summary_path,
+        loss_path,
+        comparison_path,
+        loss_plot_path,
+        transition_gmm_path,
+        transition_hmm_path,
+    ]
+    missing_files = [str(path.relative_to(BASE_DIR)) for path in required_files if not path.exists()]
+    failures = len(missing_files)
+    details = [f"files_present={len(required_files) - len(missing_files)}/{len(required_files)}"]
+    rows_checked = len(required_files)
+
+    if not summary_path.exists():
+        record(
+            rows,
+            "crypto20_guided_encoder_artifacts",
+            WARN,
+            "artifact",
+            "crypto20_guided_encoder_summary.csv is missing; run run_phase35_crypto20_guided.ps1 after Phase 34 readiness passes.",
+        )
+        return
+
+    summary = pd.read_csv(summary_path)
+    loss = pd.read_csv(loss_path) if loss_path.exists() else pd.DataFrame()
+    comparison = pd.read_csv(comparison_path) if comparison_path.exists() else pd.DataFrame()
+    rows_checked += len(summary) + len(loss) + len(comparison)
+
+    required_summary_cols = {
+        "method",
+        "loss",
+        "augmentation",
+        "assignment_method",
+        "epochs",
+        "batch_size",
+        "n_rows",
+        "n_symbols",
+        "n_regimes",
+        "silhouette",
+        "avg_regime_duration",
+        "transition_diagonal_probability",
+        "mean_confidence",
+        "final_loss",
+        "final_valid_anchor_pct",
+        "hmm_reference_nmi",
+        "hmm_reference_ari",
+        "hmm_reference_purity",
+    }
+    required_loss_cols = {
+        "epoch",
+        "loss",
+        "valid_anchor_pct",
+        "positive_pairs_per_batch",
+        "hard_negative_pairs_per_batch",
+    }
+    required_comparison_cols = {
+        "method",
+        "source_phase",
+        "n_rows",
+        "n_symbols",
+        "n_regimes",
+        "avg_regime_duration",
+        "hmm_reference_nmi",
+        "hmm_reference_ari",
+        "hmm_reference_purity",
+    }
+    missing_summary_cols = sorted(required_summary_cols - set(summary.columns))
+    missing_loss_cols = sorted(required_loss_cols - set(loss.columns))
+    missing_comparison_cols = sorted(required_comparison_cols - set(comparison.columns))
+    required_methods = {"hmm_guided_gmm", "hmm_guided_hmm"}
+
+    failures += len(missing_summary_cols) + len(missing_loss_cols) + len(missing_comparison_cols)
+    if not missing_summary_cols:
+        method_set = set(summary["method"].astype(str))
+        missing_methods = sorted(required_methods - method_set)
+        failures += len(missing_methods)
+
+        numeric_summary = summary.copy()
+        for column in required_summary_cols - {"method", "loss", "augmentation", "assignment_method"}:
+            numeric_summary[column] = pd.to_numeric(numeric_summary[column], errors="coerce")
+
+        bad_rows = 0
+        bad_rows += int(numeric_summary["epochs"].min() < 30)
+        bad_rows += int(numeric_summary["n_symbols"].min() != 20)
+        bad_rows += int(numeric_summary["n_rows"].min() < 300_000)
+        bad_rows += int(numeric_summary["n_regimes"].min() != 4)
+        bad_rows += int(numeric_summary["final_valid_anchor_pct"].min() < 0.99)
+        bad_rows += int(numeric_summary["final_loss"].isna().any())
+        bounded_cols = [
+            "transition_diagonal_probability",
+            "mean_confidence",
+            "final_valid_anchor_pct",
+            "hmm_reference_nmi",
+            "hmm_reference_ari",
+            "hmm_reference_purity",
+        ]
+        for column in bounded_cols:
+            bad_rows += int(
+                (
+                    (numeric_summary[column] < 0)
+                    | (numeric_summary[column] > 1)
+                    | numeric_summary[column].isna()
+                ).sum()
+            )
+
+        if required_methods.issubset(method_set):
+            guided = numeric_summary.set_index("method")
+            gmm_nmi = float(guided.loc["hmm_guided_gmm", "hmm_reference_nmi"])
+            hmm_nmi = float(guided.loc["hmm_guided_hmm", "hmm_reference_nmi"])
+            gmm_silhouette = float(guided.loc["hmm_guided_gmm", "silhouette"])
+            hmm_silhouette = float(guided.loc["hmm_guided_hmm", "silhouette"])
+            bad_rows += int(hmm_nmi <= gmm_nmi)
+            bad_rows += int(hmm_silhouette <= gmm_silhouette)
+            details.extend(
+                [
+                    f"hmm_guided_hmm_nmi={hmm_nmi:.3f}",
+                    f"hmm_guided_hmm_silhouette={hmm_silhouette:.3f}",
+                ]
+            )
+        if missing_methods:
+            details.append(f"missing_methods={missing_methods}")
+        failures += bad_rows
+        if bad_rows:
+            details.append(f"bad_summary_checks={bad_rows}")
+
+    if not loss.empty and not missing_loss_cols:
+        loss_values = pd.to_numeric(loss["loss"], errors="coerce")
+        first_loss = float(loss_values.iloc[0])
+        final_loss = float(loss_values.iloc[-1])
+        loss_failures = int(len(loss) < 30) + int(not np.isfinite(final_loss)) + int(final_loss >= first_loss)
+        failures += loss_failures
+        details.extend([f"loss_rows={len(loss)}", f"loss_drop={first_loss:.4f}->{final_loss:.4f}"])
+        if loss_failures:
+            details.append(f"loss_checks_failed={loss_failures}")
+
+    if not comparison.empty and not missing_comparison_cols:
+        source_phases = set(comparison["source_phase"].astype(str))
+        methods = set(comparison["method"].astype(str))
+        comparison_failures = len(required_methods - methods)
+        comparison_failures += int("phase35_crypto20_guided_encoder" not in source_phases)
+        failures += comparison_failures
+        details.append(f"comparison_rows={len(comparison)}")
+        if comparison_failures:
+            details.append(f"comparison_checks_failed={comparison_failures}")
+
+    if missing_files:
+        details.append(f"missing_files={missing_files}")
+    if missing_summary_cols:
+        details.append(f"missing_summary_cols={missing_summary_cols}")
+    if missing_loss_cols:
+        details.append(f"missing_loss_cols={missing_loss_cols}")
+    if missing_comparison_cols:
+        details.append(f"missing_comparison_cols={missing_comparison_cols}")
+
+    record(
+        rows,
+        "crypto20_guided_encoder_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(details),
+        rows_checked=max(rows_checked, 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -2395,6 +2567,7 @@ def main() -> None:
     audit_multiasset_universe_artifacts(rows)
     audit_crypto20_regime_artifacts(rows)
     audit_crypto20_guided_readiness_artifacts(rows)
+    audit_crypto20_guided_encoder_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)

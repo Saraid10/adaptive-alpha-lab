@@ -470,6 +470,16 @@ Phase 34 checks whether the HMM-guided learned-regime path is ready to scale fro
 
 The compute estimate is heavy but feasible: using the Phase 17 measured CPU step time, a full 30-epoch Crypto-20 guided encoder run is estimated at about 16.77 hours with the current batch size, under the 24-hour planning cap. This does not claim the learned method has beaten the classical Crypto-20 HMM yet. It says the next experiment is justified, pre-gated, and not a blind compute spend.
 
+## Phase 35 Crypto-20 Guided Encoder Training
+
+Phase 35 executes the full learned-regime expansion beyond the BTC/ETH pilot. `src/guided_encoder.py` resolves `--universe crypto20`, reads `models/crypto20_regime_assignments.csv` as the HMM weak-supervision source, and writes separate `crypto20_guided_encoder_*` artifacts without overwriting the BTC/ETH guided encoder outputs. The helper script `run_phase35_crypto20_guided.ps1` records the long training command and logs output under `.tmp/`.
+
+The completed CPU run trains for 30 epochs on 348,606 eligible windows across 20 Crypto-20 symbols. The training loss falls from `0.3258` at epoch 1 to `0.0864` at epoch 30, while valid-anchor coverage stays at `1.000`. This indicates that the HMM-guided positive-pair and hard-negative mining setup remains usable at the multi-asset scale rather than collapsing into sparse or invalid pair selection.
+
+The strongest assignment path is `hmm_guided_hmm`, not `hmm_guided_gmm`. It reaches silhouette `0.399`, transition diagonal probability `0.890`, HMM-reference NMI `0.694`, HMM-reference ARI `0.627`, and HMM-reference purity `0.814`. The GMM assignment on the same learned embeddings is weaker on the HMM-reference structure, with silhouette `0.230`, NMI `0.506`, ARI `0.384`, and purity `0.721`.
+
+This is a structural generalization result, not a final alpha-performance claim. The Phase 35 evidence supports the mechanism that HMM-guided representation learning can scale from BTC/ETH to Crypto-20 and produce regime geometry that is more aligned with sequential state structure. The next required experiment is a fold-local Crypto-20 downstream alpha retest using these guided assignments against the frozen Phase 33 classical baseline.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
