@@ -18,6 +18,7 @@ from config import DB_PATH, LATENT_DIM, N_FEATURES, N_REGIMES, SAVE_DIR, SYMBOLS
 from dataset import load_feature_matrix
 from encoder import TemporalEncoder
 from train_encoder import BATCH_SIZE, LR
+from universe import add_symbol_args, resolve_symbols
 
 
 RANDOM_STATE = 42
@@ -145,7 +146,7 @@ class HMMGuidedContrastiveLoss(nn.Module):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train an HMM-guided contrastive encoder.")
-    parser.add_argument("--symbols", nargs="*", default=SYMBOLS)
+    add_symbol_args(parser)
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument(
@@ -169,6 +170,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--hard-negative-gap", type=int, default=24)
     parser.add_argument("--hard-negative-weight", type=float, default=2.0)
     parser.add_argument("--temperature", type=float, default=0.07)
+    parser.add_argument(
+        "--max-windows",
+        type=int,
+        default=0,
+        help="Optional training-window cap for smoke/prototype runs. Zero means use all windows.",
+    )
+    parser.add_argument(
+        "--train-only",
+        action="store_true",
+        help="Stop after training/loss artifacts. Useful for smoke runs that should skip dense assignment.",
+    )
+    parser.add_argument(
+        "--hmm-assignment-path",
+        default=os.path.join(SAVE_DIR, "regime_assignments.csv"),
+        help=(
+            "HMM reference assignments used as weak supervision. "
+            "Use models/crypto20_regime_assignments.csv for Phase 35."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -200,6 +220,8 @@ def active_methods(args: argparse.Namespace) -> list[str]:
 
 
 def source_phase(args: argparse.Namespace) -> str:
+    if artifact_prefix(args).startswith("crypto20_guided_encoder"):
+        return "phase35_crypto20_guided_encoder"
     return "phase19b_full_guided_encoder" if args.augmentation == "time_only" else "phase22_time_frequency_guided_encoder"
 
 
@@ -240,15 +262,15 @@ def transformed_feature_count(augmentation: str, fft_bins: int) -> int:
     raise ValueError(f"Unknown augmentation: {augmentation}")
 
 
-def load_hmm_labels(symbols: list[str]) -> pd.DataFrame:
-    path = Path(SAVE_DIR) / "regime_assignments.csv"
+def load_hmm_labels(symbols: list[str], args: argparse.Namespace) -> pd.DataFrame:
+    path = Path(args.hmm_assignment_path)
     if not path.exists():
-        raise RuntimeError("regime_assignments.csv missing. Run baselines.py before guided_encoder.py.")
+        raise RuntimeError(f"{path} missing. Run baselines.py or crypto20_regime_benchmark.py first.")
     assignments = pd.read_csv(path)
     required = {"method", "symbol", "feat_idx", "regime"}
     missing = required - set(assignments.columns)
     if missing:
-        raise RuntimeError(f"regime_assignments.csv missing columns: {sorted(missing)}")
+        raise RuntimeError(f"{path.name} missing columns: {sorted(missing)}")
     labels = assignments[
         (assignments["method"] == "hmm") & (assignments["symbol"].isin(symbols))
     ][["symbol", "feat_idx", "regime"]].copy()
@@ -288,7 +310,7 @@ def load_guided_samples(symbols: list[str], args: argparse.Namespace) -> GuidedS
 
     mean, std = fit_guided_scaler(raw, args)
     matrices = {symbol: (matrix - mean) / std for symbol, matrix in raw.items()}
-    hmm_labels = load_hmm_labels(list(matrices))
+    hmm_labels = load_hmm_labels(list(matrices), args)
 
     sample_rows = []
     for symbol, matrix in matrices.items():
@@ -308,6 +330,15 @@ def load_guided_samples(symbols: list[str], args: argparse.Namespace) -> GuidedS
     samples = pd.DataFrame(sample_rows)
     if samples.empty:
         raise RuntimeError("No HMM-labeled encoder windows found.")
+    if args.max_windows and len(samples) > args.max_windows:
+        samples = (
+            samples.groupby(["symbol", "hmm_regime"], group_keys=False)
+            .sample(frac=min(1.0, args.max_windows / len(samples)), random_state=RANDOM_STATE)
+            .sample(n=min(args.max_windows, len(samples)), random_state=RANDOM_STATE)
+            .sort_values(["symbol", "feat_idx"])
+            .reset_index(drop=True)
+        )
+        print(f"NOTE: capped guided training windows to {len(samples):,} for this run.")
     return GuidedSamples(matrices, samples)
 
 
@@ -550,7 +581,7 @@ def summarize_guided(
     loss_history: pd.DataFrame,
     args: argparse.Namespace,
 ) -> pd.DataFrame:
-    reference = pd.read_csv(Path(SAVE_DIR) / "regime_assignments.csv")
+    reference = pd.read_csv(Path(args.hmm_assignment_path))
     reference = reference[reference["method"] == "hmm"].copy()
     rows = []
     for method in active_methods(args):
@@ -601,12 +632,17 @@ def summarize_guided(
 
 
 def save_guided_comparison(summary: pd.DataFrame, args: argparse.Namespace) -> pd.DataFrame:
-    quality_path = Path(SAVE_DIR) / "regime_quality_summary.csv"
+    is_crypto20 = artifact_prefix(args).startswith("crypto20_guided_encoder")
+    quality_path = Path(SAVE_DIR) / (
+        "crypto20_regime_benchmark_summary.csv" if is_crypto20 else "regime_quality_summary.csv"
+    )
     baseline = pd.DataFrame()
     if quality_path.exists():
         quality = pd.read_csv(quality_path)
-        if "symbol_scope" in quality.columns:
+        if not is_crypto20 and "symbol_scope" in quality.columns:
             baseline = quality[quality["symbol_scope"] == "ALL"].copy()
+        else:
+            baseline = quality.copy()
         keep_cols = [
             "method",
             "n_rows",
@@ -620,7 +656,10 @@ def save_guided_comparison(summary: pd.DataFrame, args: argparse.Namespace) -> p
             "hmm_reference_purity",
         ]
         baseline = baseline[[col for col in keep_cols if col in baseline.columns]]
-        baseline["source_phase"] = "phase16_regime_quality"
+        baseline["source_phase"] = "phase33_crypto20_classical_regime_benchmark" if is_crypto20 else "phase16_regime_quality"
+        for col in COMPARISON_COLS:
+            if col not in baseline.columns:
+                baseline[col] = np.nan
 
     guided = summary[
         [
@@ -703,8 +742,16 @@ def main() -> None:
     torch.manual_seed(RANDOM_STATE)
     np.random.seed(RANDOM_STATE)
 
-    guided = load_guided_samples(args.symbols, args)
+    symbols = resolve_symbols(args)
+    print(f"Resolved symbols ({len(symbols)}): {', '.join(symbols)}")
+    print(f"Artifact prefix: {artifact_prefix(args)}")
+    print(f"HMM assignment path: {args.hmm_assignment_path}")
+    guided = load_guided_samples(symbols, args)
     model, loss_history = train_guided_encoder(guided, args)
+    if args.train_only:
+        save_loss_plot(loss_history, args)
+        print("\nOK: HMM-guided encoder train-only run saved loss artifacts.")
+        return
     embeddings, meta = extract_guided_embeddings(model, guided.matrices, args)
     assignments = fit_guided_assignments(embeddings, meta, args)
     summary = summarize_guided(embeddings, assignments, loss_history, args)
