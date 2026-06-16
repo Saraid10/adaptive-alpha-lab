@@ -32,13 +32,19 @@ This registry separates allowed paper claims from claims that are not supported 
 | Guided-HMM improves downstream alpha over raw-feature HMM. | Directional | `models/walkforward_experiment_results.csv`, `models/ablation_summary.csv`, `models/paper_statistical_summary.csv`, `models/statistical_pairwise_tests.csv`, `models/statistical_claims.csv` | Guided-HMM improves point estimates over raw-feature HMM on the primary benchmark, but Phase 26 confirms the fold-level IC evidence remains statistically inconclusive. |
 | Guided-HMM has better risk-adjusted behavior than raw-feature HMM. | Directional | `models/statistical_sharpe_diagnostics.csv`, `models/robustness_stress_summary.csv` | Guided-HMM has the strongest PSR diagnostic and stress-grid performance, but this is not a deployable performance claim. |
 
+## Diagnostic Claims
+
+| Claim | Status | Evidence Artifact | Safe Wording |
+|---|---|---|---|
+| Structural regime-learning behavior transfers beyond BTC/ETH. | Diagnostic | `models/crypto20_guided_encoder_summary.csv`, `models/crypto20_guided_encoder_comparison.csv`, `reports/multiasset_universe_plan.md` | Phase 35 shows the HMM-guided objective scales structurally to Crypto-20, but this is not evidence of downstream alpha generalization. |
+
 ## Open Claims
 
 | Claim | Status | Required Evidence |
 |---|---|---|
 | Time-frequency guided encoding improves the full model. | Open | Full-length time-frequency run plus downstream alpha retest; Phase 25 says not to expand this yet. |
 | Hard-negative mining improves guided regimes. | Open | Capped ablation suite. |
-| Results generalize beyond BTC/ETH. | Open | Conditional multi-asset experiment after statistical/compute gate. |
+| Downstream alpha results generalize beyond BTC/ETH. | Open | Requires the Phase 36 Crypto-20 fold-local alpha retest before any predictive claim. |
 | Fold-local encoder retraining changes the conclusion. | Open | Expanding-window or fold-local encoder retraining experiment. |
 
 ## Forbidden Claims
@@ -48,7 +54,8 @@ This registry separates allowed paper claims from claims that are not supported 
 | HMM states are true market regimes. | HMM states are proxy/reference states, not ground-truth labels. |
 | The trading strategy is profitable. | Backtest returns are research diagnostics with limited assets and overlapping labels. |
 | Guided-HMM statistically dominates raw-feature HMM. | The current fold-level IC edge is not significant at 5%. |
-| The result generalizes to equities, FX, or commodities. | Multi-asset tests have not been run. |
+| The result generalizes to equities, FX, or commodities. | The expanded tests are still crypto-only and do not cover other asset classes. |
+| The result improves downstream alpha on Crypto-20. | Phase 35 is structural only; the fold-local Crypto-20 alpha retest has not been run yet. |
 | SHAP proves causal market drivers. | Feature attribution is model-specific and diagnostic. |
 | Offline/global regime assignments prove predictive performance. | Predictive claims require fold-local regime refits. |
 

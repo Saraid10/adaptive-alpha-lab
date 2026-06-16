@@ -23,7 +23,8 @@ This checklist tracks what remains before the project should be treated as a sub
 
 ## Optional Before Submission
 
-- Multi-asset generalization only if scope and compute allow it.
+- Crypto-20 downstream alpha retest only if the paper needs a predictive generalization section.
+- Crypto-50 expansion only if Crypto-20 downstream evidence and compute budget justify it.
 - Fold-local encoder retraining only if the paper needs a stronger leakage-resistance appendix.
 - Full time-frequency encoder run only if Phase 25/26 gates are reopened.
 
@@ -32,4 +33,5 @@ This checklist tracks what remains before the project should be treated as a sub
 - Do not claim HMM states are ground truth.
 - Do not claim a profitable or deployable trading strategy.
 - Do not claim guided-HMM statistically dominates raw-feature HMM at 5%.
-- Do not claim generalization outside BTC/ETH without new experiments.
+- Do not claim downstream alpha generalization outside BTC/ETH before the Crypto-20 fold-local alpha retest.
+- Do not treat Phase 35 structural Crypto-20 results as trading or alpha evidence.

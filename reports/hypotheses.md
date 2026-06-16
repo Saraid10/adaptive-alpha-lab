@@ -14,7 +14,7 @@ This file freezes the paper hypotheses after Phase 23. Every future experiment s
 | H4 | Better guided regime structure improves downstream alpha. | Phase 20 guided-HMM has the best primary point estimates and positive Sharpe; Phase 26 keeps the edge over raw HMM directional but statistically inconclusive. | Directionally supported, statistically inconclusive | Treat as promising evidence, not a dominance claim. |
 | H5 | Guided-HMM robustness survives realistic trading assumptions. | Phase 21 stress grid shows guided-HMM as the most frequent winner across IC, Sharpe, drawdown, and total return under threshold/cost/period variation. | Supported on primary BTC+ETH 8h setup | Keep stress result as robustness evidence; do not overgeneralize. |
 | H6 | Guided-HMM regimes are economically interpretable. | Phase 23 shows fold-local feature attribution dominated by volatility state, momentum/autocorrelation, and distribution-shape features. | Supported diagnostically | Include interpretability in paper; avoid causal language. |
-| H7 | The result generalizes across asset classes. | Not tested. | Open | Conditional multi-asset gate after Phase 25/26. |
+| H7 | The structural regime-learning mechanism transfers beyond BTC/ETH. | Phase 31-35 test a pre-specified Crypto-20 universe structurally. The HMM-guided objective scales to 20 assets and `hmm_guided_hmm` remains stronger than `hmm_guided_gmm`, but downstream Crypto-20 alpha has not been retested yet. | Structurally supported, predictively open | Discuss structural transfer separately from alpha generalization; require Phase 36 before any predictive claim. |
 
 ## Phase 25 Status Update
 

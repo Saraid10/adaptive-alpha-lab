@@ -245,6 +245,9 @@ python -m pip install -r requirements-research.txt
 | `runs/run_index.csv` | Versioned run registry |
 | `runs/20260522_phase14b_baseline/manifest.json` | Frozen Phase 14B baseline manifest |
 | `reproduce.ps1` | Phase 28 PowerShell reproduction helper |
+| `reproduce.sh` | POSIX shell reproduction helper for Linux/macOS reviewers |
+| `run_phase35_crypto20_guided.ps1` | PowerShell runner for the long Crypto-20 guided encoder experiment |
+| `run_phase35_crypto20_guided.sh` | POSIX shell runner for the long Crypto-20 guided encoder experiment |
 | `reports/environment.md` | Phase 28 local and deployment environment notes |
 | `reports/artifact_manifest.md` | Phase 28 committed/regenerated/ignored artifact policy |
 | `reports/reproduction_checklist.md` | Phase 28 reviewer reproduction checklist |
@@ -269,6 +272,9 @@ adaptive-alpha-lab/
 ├── dashboard.py
 ├── streamlit_app.py
 ├── reproduce.ps1
+├── reproduce.sh
+├── run_phase35_crypto20_guided.ps1
+├── run_phase35_crypto20_guided.sh
 ├── reports/
 │   ├── adaptive_alpha_lab_report.md
 │   ├── related_work.md
@@ -611,13 +617,15 @@ This phase does not add a new model or a new performance claim. It makes the pap
 
 ## Phase 28 Reproducibility Package
 
-Phase 28 makes the project easier to reproduce and review. It adds `reproduce.ps1` with three modes:
+Phase 28 makes the project easier to reproduce and review. It adds `reproduce.ps1` and `reproduce.sh` with three modes:
 
 | Mode | Command | Purpose |
 |---|---|---|
 | Smoke | `.\reproduce.ps1 -Mode smoke` | Compile code, regenerate the paper skeleton, and run the validation audit |
 | Full | `.\reproduce.ps1 -Mode full` | Regenerate the full local research pipeline |
 | Dashboard | `.\reproduce.ps1 -Mode dashboard` | Launch the Streamlit dashboard locally |
+
+Linux/macOS reviewers can use the equivalent shell commands: `bash reproduce.sh --mode smoke`, `bash reproduce.sh --mode full`, and `bash reproduce.sh --mode dashboard`.
 
 It also adds `reports/environment.md`, `reports/artifact_manifest.md`, and `reports/reproduction_checklist.md`. These files separate dashboard reproduction from full research reproduction, document which artifacts are committed or ignored, and keep reviewer-facing safety checks in one place.
 
@@ -645,6 +653,8 @@ Phase 31 adds a pre-specified crypto expansion protocol instead of choosing extr
 - `Crypto-50`: the larger future expansion, gated by compute and data quality.
 
 This protects the paper narrative from selection bias. BTC/ETH remains the controlled pilot, while Crypto-20 becomes the first broader test of whether the regime mechanism survives outside the original two assets.
+
+The multi-asset gate is split deliberately. The Phase 20 `p=0.801` result blocks a downstream alpha generalization claim, but it does not block structural generalization diagnostics. Phase 31-35 therefore test whether the HMM-guided representation objective transfers structurally to a pre-specified wider crypto universe. A Crypto-20 fold-local alpha retest is still required before the project can claim multi-asset predictive improvement.
 
 ## Phase 32 Crypto-20 Data Pipeline And Quality Gate
 
@@ -686,6 +696,8 @@ The strongest Phase 35 assignment is `hmm_guided_hmm`:
 | `hmm_guided_gmm` | 348,606 | 20 | 0.230 | 0.890 | 0.506 | 0.384 | 0.721 |
 
 This is the first multi-asset evidence that HMM-guided representation learning scales structurally beyond the BTC/ETH pilot. It supports the mechanism claim: learned embeddings become far more regime-aligned when contrastive positives and hard negatives are guided by sequential HMM state structure. It is not yet a Crypto-20 downstream alpha claim; that requires the next fold-local alpha retest.
+
+The result is weaker-but-consistent relative to the BTC/ETH pilot. Crypto-20 `hmm_guided_hmm` has lower HMM-reference alignment than the two-asset guided-HMM run (`NMI 0.694` versus `0.869`, purity `0.814` versus `0.957`), which is expected in a more heterogeneous 20-asset universe. At the same time, the transition diagonal is higher on Crypto-20 (`0.890` versus about `0.825` in the BTC/ETH guided-HMM run), suggesting that persistence and reference-agreement can decouple at larger scale.
 
 Full command:
 

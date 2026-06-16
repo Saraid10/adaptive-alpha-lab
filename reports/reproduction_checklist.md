@@ -16,6 +16,12 @@ Run:
 .\reproduce.ps1 -Mode smoke
 ```
 
+Linux/macOS equivalent:
+
+```bash
+bash reproduce.sh --mode smoke
+```
+
 Expected checks:
 
 - Python files compile.
@@ -33,10 +39,22 @@ Run:
 .\reproduce.ps1 -Mode full
 ```
 
+Linux/macOS equivalent:
+
+```bash
+bash reproduce.sh --mode full
+```
+
 Optional archival run:
 
 ```powershell
 .\reproduce.ps1 -Mode full -Archive
+```
+
+Linux/macOS equivalent:
+
+```bash
+bash reproduce.sh --mode full --archive
 ```
 
 The full run retrains encoders and can take a long time on CPU.
@@ -49,6 +67,12 @@ Run:
 .\reproduce.ps1 -Mode dashboard
 ```
 
+Linux/macOS equivalent:
+
+```bash
+bash reproduce.sh --mode dashboard
+```
+
 Then open the Streamlit local URL printed by the command.
 
 ## Evidence Checks
@@ -58,7 +82,7 @@ After reproduction, verify:
 - `models/validation_audit.csv` has no critical failures.
 - `models/walkforward_experiment_results.csv` has equal test rows across methods.
 - `models/paper_statistical_summary.csv` still marks guided-HMM versus raw-feature HMM as directional, not statistically dominant.
-- `paper/main.md` does not claim profitability, true regimes, or cross-asset generalization.
+- `paper/main.md` does not claim profitability, true regimes, or cross-asset alpha generalization.
 
 ## Git Safety Checks
 

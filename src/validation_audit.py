@@ -1525,6 +1525,8 @@ def audit_paper_protocol_artifacts(rows: list[AuditRecord]) -> None:
             "Permitted Claims",
             "Forbidden Claims",
             "Decision Gates",
+            "downstream alpha-claim gate",
+            "structural generalization experiments",
         ],
         "hypotheses.md": [
             "Hypothesis Table",
@@ -1692,6 +1694,27 @@ def audit_reproducibility_artifacts(rows: list[AuditRecord]) -> None:
             "paper_skeleton.py",
             "archive_run.py",
         ],
+        "reproduce.sh": [
+            "MODE",
+            "smoke",
+            "full",
+            "dashboard",
+            "validation_audit.py",
+            "paper_skeleton.py",
+            "archive_run.py",
+        ],
+        "run_phase35_crypto20_guided.ps1": [
+            "Epochs",
+            "BatchSize",
+            "crypto20_regime_assignments.csv",
+            "crypto20_guided_encoder",
+        ],
+        "run_phase35_crypto20_guided.sh": [
+            "EPOCHS",
+            "BATCH_SIZE",
+            "crypto20_regime_assignments.csv",
+            "crypto20_guided_encoder",
+        ],
         "reports/environment.md": [
             "Python 3.11",
             "requirements.txt",
@@ -1712,6 +1735,12 @@ def audit_reproducibility_artifacts(rows: list[AuditRecord]) -> None:
             "Dashboard Reproduction",
             "Git Safety Checks",
             "should print nothing",
+        ],
+        "reports/compute_budget.md": [
+            "downstream alpha claims",
+            "Structural generalization tests",
+            "p = 0.801",
+            "structural generalization testing: permitted",
         ],
     }
 
@@ -1801,7 +1830,13 @@ def audit_multiasset_universe_artifacts(rows: list[AuditRecord]) -> None:
         missing_pipeline_cols = sorted({"metric", "value", "notes"} - set(crypto20_pipeline.columns))
         missing_report_phrases = [
             phrase
-            for phrase in ["Crypto-20 pilot", "Crypto-50 final", "pre-registered crypto universe protocol"]
+            for phrase in [
+                "Crypto-20 pilot",
+                "Crypto-50 final",
+                "pre-registered crypto universe protocol",
+                "downstream alpha gate",
+                "structural diagnostics gate",
+            ]
             if phrase not in report_text
         ]
         pipeline_text = (Path(BASE_DIR) / "reports" / "crypto20_pipeline_plan.md").read_text(encoding="utf-8")
