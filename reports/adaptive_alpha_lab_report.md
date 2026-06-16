@@ -454,7 +454,7 @@ Three likely reviewer objections are now handled directly in the paper draft:
 
 The next publication upgrade is a pre-specified multi-asset crypto universe, not an ad hoc expansion after seeing results. Phase 31 adds `configs/crypto_universe_candidates.csv`, `src/multiasset_universe.py`, and generated Crypto-20/Crypto-50 universe artifacts. After the combined Phase 32 data run, all 20 selected Crypto-20 assets are quality-eligible locally; the remaining Crypto-50 candidates stay pending until the larger expansion is explicitly run.
 
-This protects the research narrative: BTC/ETH remains the controlled pilot, while Crypto-20 and Crypto-50 become the generalization tests.
+This protects the research narrative: BTC/ETH remains the controlled pilot, while Crypto-20 and Crypto-50 become pre-specified generalization tests. The multi-asset gate is split deliberately. The Phase 20 fold-level result blocks a downstream alpha generalization claim, but it does not block structural generalization diagnostics. In other words, a Crypto-20 guided encoder run can test whether the representation objective transfers structurally, while a separate fold-local Crypto-20 alpha retest is still required before claiming predictive improvement on the wider universe.
 
 ## Phase 32 Crypto-20 Data Pipeline And Quality Gate
 
@@ -479,6 +479,8 @@ The completed CPU run trains for 30 epochs on 348,606 eligible windows across 20
 The strongest assignment path is `hmm_guided_hmm`, not `hmm_guided_gmm`. It reaches silhouette `0.399`, transition diagonal probability `0.890`, HMM-reference NMI `0.694`, HMM-reference ARI `0.627`, and HMM-reference purity `0.814`. The GMM assignment on the same learned embeddings is weaker on the HMM-reference structure, with silhouette `0.230`, NMI `0.506`, ARI `0.384`, and purity `0.721`.
 
 This is a structural generalization result, not a final alpha-performance claim. The Phase 35 evidence supports the mechanism that HMM-guided representation learning can scale from BTC/ETH to Crypto-20 and produce regime geometry that is more aligned with sequential state structure. The next required experiment is a fold-local Crypto-20 downstream alpha retest using these guided assignments against the frozen Phase 33 classical baseline.
+
+The result is also informative because it is weaker but consistent relative to the BTC/ETH pilot. The assignment-layer mechanism replicates: `hmm_guided_hmm` beats `hmm_guided_gmm` on NMI, ARI, purity, and silhouette. But the absolute HMM-reference alignment is lower than in the two-asset pilot (`NMI 0.694` versus `0.869`, purity `0.814` versus `0.957`), which is consistent with greater regime heterogeneity across 20 assets. The transition diagonal is higher on Crypto-20 (`0.890` versus about `0.825` in the BTC/ETH guided-HMM run), so regime persistence and HMM-reference agreement appear to decouple at larger scale. That nuance should be kept in the generalization section rather than hidden.
 
 ## Limitations
 

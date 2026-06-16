@@ -16,6 +16,12 @@ Run:
 .\reproduce.ps1 -Mode smoke
 ```
 
+Linux/macOS equivalent:
+
+```bash
+bash reproduce.sh --mode smoke
+```
+
 Expected checks:
 
 - Python files compile.
@@ -33,10 +39,22 @@ Run:
 .\reproduce.ps1 -Mode full
 ```
 
+Linux/macOS equivalent:
+
+```bash
+bash reproduce.sh --mode full
+```
+
 Optional archival run:
 
 ```powershell
 .\reproduce.ps1 -Mode full -Archive
+```
+
+Linux/macOS equivalent:
+
+```bash
+bash reproduce.sh --mode full --archive
 ```
 
 The full run retrains encoders and can take a long time on CPU.
@@ -47,6 +65,12 @@ Run:
 
 ```powershell
 .\reproduce.ps1 -Mode dashboard
+```
+
+Linux/macOS equivalent:
+
+```bash
+bash reproduce.sh --mode dashboard
 ```
 
 Then open the Streamlit local URL printed by the command.

@@ -21,6 +21,7 @@ Committed artifacts are small summary files or visual outputs used by the dashbo
 | Crypto-20 guided readiness | `models/crypto20_guided_pair_summary.csv`, `models/crypto20_guided_compute_plan.csv`, `models/crypto20_guided_gate.csv` | Pair-mining and compute gate before full Crypto-20 guided encoder training |
 | Crypto-20 guided encoder | `models/crypto20_guided_encoder_summary.csv`, `models/crypto20_guided_encoder_loss.csv`, `models/crypto20_guided_encoder_comparison.csv`, `models/crypto20_guided_encoder_loss_curve.png`, `models/crypto20_guided_encoder_transition_hmm_guided_gmm.png`, `models/crypto20_guided_encoder_transition_hmm_guided_hmm.png` | Phase 35 full Crypto-20 HMM-guided encoder structural result |
 | Paper package | `paper/main.md`, `reports/paper_artifact_map.csv`, `reports/paper_submission_checklist.md` | Manuscript scaffold and submission planning |
+| Reproduction helpers | `reproduce.ps1`, `reproduce.sh`, `run_phase35_crypto20_guided.ps1`, `run_phase35_crypto20_guided.sh` | Cross-platform smoke/full/dashboard and Phase 35 long-run helpers |
 | Versioning | `runs/run_index.csv`, `runs/*/manifest.json`, `runs/*/artifact_manifest.csv` | Frozen curated snapshots |
 
 ## Regenerated Local Artifacts

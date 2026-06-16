@@ -187,19 +187,22 @@ Sharpe, drawdown, total return, turnover
 If the gate fails:
 
 ```text
-Do not expand scope.
+Do not expand downstream alpha scope.
 Write the paper as a crypto benchmark.
-List multi-asset validation as future work.
+List multi-asset predictive validation as future work.
 ```
 
 This gate prevents scope creep and avoids spending compute on a generalization claim before the learned encoder has earned it.
+
+This gate applies to downstream alpha claims, not to structural diagnostics. Structural generalization tests may proceed independently if they are clearly labeled as regime-quality or representation-quality experiments and do not authorize any claim that the learned method improves out-of-sample alpha on the expanded universe. In practice, this means a Crypto-20 guided encoder run can be used to test whether the HMM-guided objective transfers structurally, while a separate fold-local Crypto-20 alpha benchmark is still required before making any predictive generalization claim.
 
 Current gate status after Phase 20:
 
 ```text
 point-estimate improvement: yes
 fold-level IC significance versus raw HMM: no, p = 0.801
-decision: do not expand to multi-asset yet
+decision: do not expand downstream alpha claims to multi-asset yet
+structural generalization testing: permitted with explicit no-alpha-claim language
 ```
 
 ## Paper-Safety Rules

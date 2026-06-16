@@ -16,6 +16,9 @@ RUNS_DIR = BASE_DIR / "runs"
 CURATED_ARTIFACTS = [
     "README.md",
     "reproduce.ps1",
+    "reproduce.sh",
+    "run_phase35_crypto20_guided.ps1",
+    "run_phase35_crypto20_guided.sh",
     "requirements.txt",
     "requirements-research.txt",
     "configs/crypto_universe_candidates.csv",

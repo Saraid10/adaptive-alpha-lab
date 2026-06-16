@@ -37,6 +37,12 @@ Or use the reproduction helper:
 .\reproduce.ps1 -Mode smoke -CreateEnv
 ```
 
+On Linux/macOS:
+
+```bash
+bash reproduce.sh --mode smoke --create-env
+```
+
 ## Data Requirements
 
 Raw OHLCV data and DuckDB databases are not committed to GitHub.
@@ -66,6 +72,8 @@ The current project is CPU-friendly for smoke checks and dashboard use. Full enc
 | Smoke | `.\reproduce.ps1 -Mode smoke` | Compile code, regenerate paper scaffold, run validation audit |
 | Full | `.\reproduce.ps1 -Mode full` | Regenerate the full local research artifact stack |
 | Dashboard | `.\reproduce.ps1 -Mode dashboard` | Launch Streamlit dashboard locally |
+
+Linux/macOS equivalents are `bash reproduce.sh --mode smoke`, `bash reproduce.sh --mode full`, and `bash reproduce.sh --mode dashboard`.
 
 ## Reproduction Caveats
 

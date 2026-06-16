@@ -154,6 +154,7 @@ The paper may claim:
 4. Guided embeddings plus HMM assignment produce the strongest current point estimates on the primary BTC+ETH 8h benchmark.
 5. Guided-HMM is stress-robust on the primary BTC+ETH 8h prediction file.
 6. Fold-local interpretability indicates economically plausible drivers dominated by volatility state, momentum/autocorrelation, and distribution shape.
+7. Crypto-20 structural diagnostics show that the HMM-guided objective transfers to a pre-specified broader crypto universe, while downstream alpha generalization remains untested until the fold-local Crypto-20 alpha retest.
 
 ## Forbidden Claims
 
@@ -162,7 +163,7 @@ The paper must not claim:
 1. HMM states are ground-truth market regimes.
 2. The strategy is profitable or deployable.
 3. The guided-HMM method is statistically dominant over raw-feature HMM at 5% significance.
-4. The result generalizes beyond BTC/ETH.
+4. The downstream alpha result generalizes beyond BTC/ETH before the Crypto-20 fold-local alpha retest is complete.
 5. The interpretability results are causal explanations.
 6. Offline/global regime artifacts prove predictive performance.
 
@@ -177,6 +178,8 @@ Phase 27 drafts the paper skeleton before additional scope expansion. Multi-asse
 
 The current Phase 26 read does not show statistically decisive guided-HMM dominance over raw-feature HMM. Therefore, the default paper is a crypto-market benchmark with multi-asset generalization as future work, unless a separate scope decision changes that plan.
 
+The multi-asset gate is a downstream alpha-claim gate. It does not prohibit structural generalization experiments that test whether the representation-learning objective transfers to a pre-specified wider universe. Those experiments must be labeled as structural diagnostics, must not be used as evidence of predictive alpha improvement, and must still be followed by a fold-local downstream alpha benchmark before the paper can claim multi-asset alpha generalization.
+
 Phase 27 is represented by `paper/main.md`, `reports/paper_artifact_map.csv`, and `reports/paper_submission_checklist.md`. Phase 28 is represented by `reproduce.ps1`, `reports/environment.md`, `reports/artifact_manifest.md`, and `reports/reproduction_checklist.md`.
 
 Phase 29 turns the scaffold into manuscript-style prose while preserving the claim registry. The next default step is venue formatting and citation cleanup, not broad experiment expansion.
@@ -186,4 +189,5 @@ Reviewer-facing caveats must stay explicit in the paper draft:
 1. BTC/ETH is a controlled crypto setting, not a broad asset-class generalization claim.
 2. Eighteen walk-forward folds limit statistical power, but are more defensible than row-level independence over overlapping labels.
 3. The `p=0.801` guided-HMM versus raw-feature HMM IC result prevents a statistical dominance claim; the main contribution is the sequential-assignment mechanism.
+4. Phase 35 is a structural Crypto-20 generalization result, not a Crypto-20 alpha result.
 
