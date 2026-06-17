@@ -2306,6 +2306,164 @@ def audit_crypto20_guided_encoder_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_crypto20_alpha_retest_artifacts(rows: list[AuditRecord]) -> None:
+    results_path = Path(SAVE_DIR) / "crypto20_walkforward_experiment_results.csv"
+    summary_path = Path(SAVE_DIR) / "crypto20_walkforward_regime_summary.csv"
+    guided_path = Path(SAVE_DIR) / "crypto20_walkforward_guided_alpha_comparison.csv"
+    equity_path = Path(SAVE_DIR) / "crypto20_walkforward_equity_curve.png"
+    report_path = Path(BASE_DIR) / "reports" / "crypto20_alpha_generalization.md"
+    required_files = [results_path, summary_path, guided_path, equity_path, report_path]
+    missing_files = [str(path.relative_to(BASE_DIR)) for path in required_files if not path.exists()]
+
+    if missing_files:
+        record(
+            rows,
+            "crypto20_alpha_retest_artifacts",
+            WARN,
+            "artifact",
+            f"Missing Phase 36 Crypto-20 downstream alpha artifacts: {missing_files}",
+            rows_checked=len(required_files),
+            rows_failed=len(missing_files),
+        )
+        return
+
+    results = pd.read_csv(results_path)
+    summary = pd.read_csv(summary_path)
+    guided = pd.read_csv(guided_path)
+    report_text = report_path.read_text(encoding="utf-8")
+
+    required_result_cols = {
+        "method",
+        "target",
+        "horizon",
+        "regime_method",
+        "symbol_scope",
+        "IC",
+        "accuracy",
+        "balanced_accuracy",
+        "Sharpe",
+        "drawdown",
+        "turnover",
+        "total_return",
+        "n_trades",
+        "n_test_rows",
+    }
+    expected_methods = {
+        "global_lgbm",
+        "regime_lgbm_hmm",
+        "regime_lgbm_kmeans",
+        "regime_lgbm_vol_bucket",
+        "regime_lgbm_hmm_guided_gmm",
+        "regime_lgbm_hmm_guided_hmm",
+    }
+    required_summary_cols = {
+        "method",
+        "protocol",
+        "implementation",
+        "n_test_assignment_rows",
+        "n_folds",
+        "n_symbols",
+        "n_regimes",
+        "avg_regime_duration",
+        "min_regime_pct",
+        "max_regime_pct",
+        "mean_confidence",
+    }
+    required_guided_cols = {
+        "guided_method",
+        "reference_method",
+        "delta_IC",
+        "delta_Sharpe",
+        "delta_drawdown",
+        "equal_test_coverage",
+    }
+
+    missing_result_cols = sorted(required_result_cols - set(results.columns))
+    missing_summary_cols = sorted(required_summary_cols - set(summary.columns))
+    missing_guided_cols = sorted(required_guided_cols - set(guided.columns))
+    failures = len(missing_result_cols) + len(missing_summary_cols) + len(missing_guided_cols)
+    details = [
+        f"result_rows={len(results)}",
+        f"summary_rows={len(summary)}",
+        f"guided_comparison_rows={len(guided)}",
+    ]
+
+    if not missing_result_cols:
+        method_set = set(results["method"].astype(str))
+        missing_methods = sorted(expected_methods - method_set)
+        failures += len(missing_methods)
+        if missing_methods:
+            details.append(f"missing_methods={missing_methods}")
+
+        n_test = pd.to_numeric(results["n_test_rows"], errors="coerce")
+        coverage_failures = int(n_test.isna().sum()) + int(n_test.nunique(dropna=True) != 1)
+        failures += coverage_failures
+        if coverage_failures:
+            details.append("unequal_or_invalid_n_test_rows")
+
+        scopes = results["symbol_scope"].dropna().astype(str).unique().tolist()
+        symbol_counts = [len(scope.split("+")) for scope in scopes if scope]
+        bad_scope = int(not symbol_counts or max(symbol_counts) != 20)
+        failures += bad_scope
+        details.append(f"symbol_counts={symbol_counts}")
+
+        if "regime_lgbm_hmm_guided_hmm" in method_set:
+            best_ic = results.sort_values("IC", ascending=False).iloc[0]
+            guided_row = results[results["method"] == "regime_lgbm_hmm_guided_hmm"].iloc[0]
+            details.extend(
+                [
+                    f"best_ic_method={best_ic['method']}",
+                    f"hmm_guided_hmm_ic={float(guided_row['IC']):.4f}",
+                    f"hmm_guided_hmm_sharpe={float(guided_row['Sharpe']):.4f}",
+                ]
+            )
+
+    if not missing_summary_cols:
+        summary_symbols = pd.to_numeric(summary["n_symbols"], errors="coerce")
+        bad_summary = int((summary_symbols != 20).sum()) + int((summary["protocol"] != "fold_local_regime_refit").sum())
+        failures += bad_summary
+        if bad_summary:
+            details.append(f"bad_summary_rows={bad_summary}")
+
+    if not missing_guided_cols:
+        references = set(guided["reference_method"].astype(str))
+        missing_references = sorted({"regime_lgbm_hmm", "global_lgbm"} - references)
+        equal_coverage = guided["equal_test_coverage"].astype(str).str.lower().isin({"true", "1", "yes"})
+        guided_failures = len(missing_references) + int((~equal_coverage).sum())
+        failures += guided_failures
+        if missing_references:
+            details.append(f"missing_guided_references={missing_references}")
+        if guided_failures and bool((~equal_coverage).any()):
+            details.append("guided_comparison_has_unequal_coverage")
+
+    required_phrases = [
+        "not a downstream alpha claim",
+        "fold-local",
+        "structural transfer does not automatically imply predictive transfer",
+    ]
+    missing_phrases = [phrase for phrase in required_phrases if phrase not in report_text]
+    failures += len(missing_phrases)
+    if missing_phrases:
+        details.append(f"missing_report_phrases={missing_phrases}")
+
+    if missing_result_cols:
+        details.append(f"missing_result_cols={missing_result_cols}")
+    if missing_summary_cols:
+        details.append(f"missing_summary_cols={missing_summary_cols}")
+    if missing_guided_cols:
+        details.append(f"missing_guided_cols={missing_guided_cols}")
+
+    record(
+        rows,
+        "crypto20_alpha_retest_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(details),
+        rows_checked=max(len(results) + len(summary) + len(guided), 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -2603,6 +2761,7 @@ def main() -> None:
     audit_crypto20_regime_artifacts(rows)
     audit_crypto20_guided_readiness_artifacts(rows)
     audit_crypto20_guided_encoder_artifacts(rows)
+    audit_crypto20_alpha_retest_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)
