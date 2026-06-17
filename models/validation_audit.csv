@@ -2,6 +2,7 @@ check,status,severity,rows_checked,rows_failed,detail
 regime_discovery_protocol,WARN,methodological,173770,0,Legacy regime_assignments.csv is an offline/global artifact. Use walkforward_experiment_results.csv for fold-local predictive regime claims.
 ablation_artifacts,PASS,critical,60,0,"result_rows=48; summary_rows=12; families=4; decisions={'supported': 5, 'mixed': 3, 'do_not_expand_yet': 2, 'not_supported': 1, 'directional_support_statistical_refresh_needed': 1}"
 compute_plan_artifacts,PASS,critical,13,0,profile_rows=1; budget_rows=12; complete=2; active_next=0; prototype_pending=1; budget_status=green; summary_rows=8
+crypto20_alpha_retest_artifacts,PASS,critical,19,0,result_rows=6; summary_rows=5; guided_comparison_rows=8; symbol_counts=[20]; best_ic_method=regime_lgbm_kmeans; hmm_guided_hmm_ic=0.0226; hmm_guided_hmm_sharpe=-0.0573
 crypto20_guided_encoder_artifacts,PASS,critical,43,0,files_present=6/6; hmm_guided_hmm_nmi=0.694; hmm_guided_hmm_silhouette=0.399; loss_rows=30; loss_drop=0.3258->0.0864; comparison_rows=5
 crypto20_guided_readiness_artifacts,PASS,critical,43,0,files_present=6/6; symbol_rows=20; pair_metrics=12; compute_scenarios=4; gate_status=pass
 crypto20_regime_artifacts,PASS,critical,292,0,"files_present=7/7; summary_rows=3; stats_rows=222; symbol_summary_rows=60; methods=['hmm', 'kmeans', 'vol_bucket']"

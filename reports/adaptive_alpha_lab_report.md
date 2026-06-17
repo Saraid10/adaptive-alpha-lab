@@ -480,6 +480,14 @@ The strongest assignment path is `hmm_guided_hmm`, not `hmm_guided_gmm`. It reac
 
 This is a structural generalization result, not a final alpha-performance claim. The Phase 35 evidence supports the mechanism that HMM-guided representation learning can scale from BTC/ETH to Crypto-20 and produce regime geometry that is more aligned with sequential state structure. The next required experiment is a fold-local Crypto-20 downstream alpha retest using these guided assignments against the frozen Phase 33 classical baseline.
 
+## Phase 36 Crypto-20 Downstream Alpha Retest
+
+Phase 36 is the predictive follow-up to the Phase 35 structural result. The protocol uses the same expanding walk-forward setup as the BTC/ETH paper benchmark: 6-month initial training, 1-month test step, 5-day embargo, fold-local regime refits, LightGBM alpha models, and transaction costs. The key difference is scope: the benchmark resolves the pre-specified Crypto-20 universe and writes prefixed artifacts so the original BTC/ETH results remain frozen.
+
+The experiment compares a global LightGBM model, raw-feature HMM, raw-feature KMeans, volatility buckets, HMM-guided embedding GMM, and HMM-guided embedding HMM. Vanilla contrastive methods are skipped in the default Phase 36 run because dense vanilla Crypto-20 contrastive artifacts are not part of the Phase 35 structural expansion. This keeps the claim narrow and reviewer-safe: Phase 36 tests whether HMM-guided learned regimes improve downstream Crypto-20 alpha against classical and global references.
+
+The completed run produces equal OOS coverage across all methods (`230,400` rows each). The strongest guided method, `regime_lgbm_hmm_guided_hmm`, reaches IC `0.0226`, beating the global model (`0.0175`) and raw-feature HMM (`0.0214`) on predictive correlation. However, raw-feature HMM still has stronger Sharpe (`0.1479` versus `-0.0573`) and total return (`0.1386` versus `-0.1257`). The paper interpretation is therefore deliberately mixed: HMM-guided regimes transfer structurally and directionally improve Crypto-20 IC, but do not yet dominate classical HMM at the portfolio-risk level.
+
 The result is also informative because it is weaker but consistent relative to the BTC/ETH pilot. The assignment-layer mechanism replicates: `hmm_guided_hmm` beats `hmm_guided_gmm` on NMI, ARI, purity, and silhouette. But the absolute HMM-reference alignment is lower than in the two-asset pilot (`NMI 0.694` versus `0.869`, purity `0.814` versus `0.957`), which is consistent with greater regime heterogeneity across 20 assets. The transition diagonal is higher on Crypto-20 (`0.890` versus about `0.825` in the BTC/ETH guided-HMM run), so regime persistence and HMM-reference agreement appear to decouple at larger scale. That nuance should be kept in the generalization section rather than hidden.
 
 ## Limitations

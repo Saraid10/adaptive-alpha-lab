@@ -77,9 +77,15 @@ models/*.csv
 !models/crypto20_guided_encoder_summary.csv
 !models/crypto20_guided_encoder_loss.csv
 !models/crypto20_guided_encoder_comparison.csv
+!models/crypto20_walkforward_experiment_results.csv
+!models/crypto20_walkforward_regime_summary.csv
+!models/crypto20_walkforward_comparison.csv
+!models/crypto20_walkforward_guided_alpha_comparison.csv
 
 # Keep compact Crypto-20 regime summaries, not row-level assignments.
 models/crypto20_regime_assignments.csv
+models/crypto20_walkforward_alpha_oos_predictions.csv
+models/crypto20_walkforward_regime_assignments.csv
 
 # Keep visualization outputs.
 !models/*.png

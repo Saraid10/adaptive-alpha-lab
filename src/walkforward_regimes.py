@@ -29,6 +29,7 @@ from alpha_models import (
 )
 from alpha_models import fold_ranges, load_model_frame
 from baselines import HMM_FEATURES
+from universe import add_symbol_args, resolve_symbols
 
 
 POST_COLS = [f"post_{k}" for k in range(N_REGIMES)]
@@ -49,11 +50,47 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run a strict benchmark with regime models refit inside each walk-forward fold."
     )
-    parser.add_argument("--symbols", nargs="*", default=SYMBOLS)
+    add_symbol_args(parser)
     parser.add_argument(
         "--skip-guided",
         action="store_true",
         help="Run only the pre-Phase-20 fold-local regime methods.",
+    )
+    parser.add_argument(
+        "--skip-contrastive",
+        action="store_true",
+        help="Skip vanilla contrastive embedding methods when dense contrastive artifacts are unavailable.",
+    )
+    parser.add_argument(
+        "--posterior-path",
+        default=str(Path(SAVE_DIR) / "regime_posteriors.csv"),
+        help="Dense vanilla contrastive posterior artifact used to align embeddings.",
+    )
+    parser.add_argument(
+        "--embedding-path",
+        default=str(Path(SAVE_DIR) / "embeddings.npy"),
+        help="Dense vanilla contrastive embedding artifact.",
+    )
+    parser.add_argument(
+        "--guided-assignment-path",
+        default=str(Path(SAVE_DIR) / "guided_encoder_assignments.csv"),
+        help="Guided encoder assignment artifact used to align guided embeddings.",
+    )
+    parser.add_argument(
+        "--guided-embedding-path",
+        default=str(Path(SAVE_DIR) / "guided_embeddings.npy"),
+        help="Guided encoder embedding artifact.",
+    )
+    parser.add_argument(
+        "--output-prefix",
+        default="walkforward_",
+        help="Prefix for generated artifacts, e.g. crypto20_walkforward_.",
+    )
+    parser.add_argument(
+        "--max-folds",
+        type=int,
+        default=None,
+        help="Optional smoke-test limit on the number of walk-forward folds.",
     )
     return parser.parse_args()
 
@@ -99,14 +136,39 @@ def build_assignment_frame(
     return out[ASSIGNMENT_COLS]
 
 
-def load_dense_contrastive_universe(symbols: list[str]) -> tuple[pd.DataFrame, np.ndarray]:
+def output_path(prefix: str, stem: str, suffix: str = ".csv") -> Path:
+    return Path(SAVE_DIR) / f"{prefix}{stem}{suffix}"
+
+
+def legacy_or_prefixed_guided_path(prefix: str) -> Path:
+    if prefix == "walkforward_":
+        return Path(SAVE_DIR) / "guided_alpha_comparison.csv"
+    return output_path(prefix, "guided_alpha_comparison")
+
+
+def load_benchmark_universe(
+    symbols: list[str],
+    skip_contrastive: bool,
+    posterior_path: str,
+    embedding_path: str,
+) -> tuple[pd.DataFrame, np.ndarray | None]:
     df = load_model_frame(symbols)
     original_rows = len(df)
 
-    posterior_path = Path(SAVE_DIR) / "regime_posteriors.csv"
-    embedding_path = Path(SAVE_DIR) / "embeddings.npy"
+    if skip_contrastive:
+        df = df.sort_values(["symbol", "open_time"]).reset_index(drop=True)
+        df["row_id"] = np.arange(len(df), dtype=int)
+        print(f"Fold-local benchmark universe: {len(df):,}/{original_rows:,} rows (100.0%)")
+        print("NOTE: vanilla contrastive embedding methods are skipped for this run.")
+        return df, None
+
+    posterior_path = Path(posterior_path)
+    embedding_path = Path(embedding_path)
     if not posterior_path.exists() or not embedding_path.exists():
-        raise RuntimeError("Missing regime_posteriors.csv or embeddings.npy. Run visualize_regimes.py first.")
+        raise RuntimeError(
+            f"Missing {posterior_path.name} or {embedding_path.name}. "
+            "Run visualize_regimes.py first, or pass --skip-contrastive for guided/raw-only runs."
+        )
 
     posteriors = pd.read_csv(posterior_path)
     if "embedding_idx" not in posteriors.columns:
@@ -127,13 +189,18 @@ def load_dense_contrastive_universe(symbols: list[str]) -> tuple[pd.DataFrame, n
     return df, aligned_embeddings
 
 
-def load_guided_embedding_matrix(df: pd.DataFrame) -> np.ndarray:
-    assignment_path = Path(SAVE_DIR) / "guided_encoder_assignments.csv"
-    embedding_path = Path(SAVE_DIR) / "guided_embeddings.npy"
+def load_guided_embedding_matrix(
+    df: pd.DataFrame,
+    assignment_path: str,
+    embedding_path: str,
+    companion_embeddings: np.ndarray | None = None,
+) -> tuple[pd.DataFrame, np.ndarray | None, np.ndarray]:
+    assignment_path = Path(assignment_path)
+    embedding_path = Path(embedding_path)
     if not assignment_path.exists() or not embedding_path.exists():
         raise RuntimeError(
-            "Missing guided_encoder_assignments.csv or guided_embeddings.npy. "
-            "Run guided_encoder.py --epochs 30 first, or pass --skip-guided."
+            f"Missing {assignment_path.name} or {embedding_path.name}. "
+            "Run guided_encoder.py first, pass Phase-35 artifact paths, or pass --skip-guided."
         )
 
     assignments = pd.read_csv(assignment_path)
@@ -156,18 +223,31 @@ def load_guided_embedding_matrix(df: pd.DataFrame) -> np.ndarray:
             "Rerun guided_encoder.py."
         )
 
+    original_rows = len(df)
     aligned = df[["symbol", "feat_idx"]].merge(meta, on=["symbol", "feat_idx"], how="left")
     missing_rows = int(aligned["guided_embedding_idx"].isna().sum())
     if missing_rows:
-        raise RuntimeError(
-            f"Guided embeddings are missing {missing_rows:,} rows from the fold-local universe. "
-            "Rerun guided_encoder.py with the same symbols and dense feature store."
+        coverage = 1.0 - missing_rows / max(len(aligned), 1)
+        if coverage < 0.90:
+            raise RuntimeError(
+                f"Guided embeddings kept only {coverage:.1%} of the fold-local universe. "
+                "Rerun guided_encoder.py with the same symbols and dense feature store."
+            )
+        keep = ~aligned["guided_embedding_idx"].isna()
+        print(
+            f"NOTE: restricting to guided embedding universe: "
+            f"{int(keep.sum()):,}/{original_rows:,} rows ({coverage:.1%})."
         )
+        df = df.loc[keep.to_numpy()].copy().reset_index(drop=True)
+        df["row_id"] = np.arange(len(df), dtype=int)
+        aligned = aligned.loc[keep].reset_index(drop=True)
+        if companion_embeddings is not None:
+            companion_embeddings = companion_embeddings[keep.to_numpy()]
 
     idx = aligned["guided_embedding_idx"].astype(int).to_numpy()
     guided = embeddings[idx]
     print(f"Aligned guided embeddings: {len(guided):,} rows | dim={guided.shape[1]}")
-    return guided
+    return df, companion_embeddings, guided
 
 
 def fit_scaled(train_x: np.ndarray, full_x: np.ndarray) -> tuple[np.ndarray, np.ndarray, StandardScaler]:
@@ -359,7 +439,7 @@ def fit_vol_bucket_assignments(
 
 def fit_fold_assignments(
     df_by_row: pd.DataFrame,
-    embeddings: np.ndarray,
+    embeddings: np.ndarray | None,
     raw_matrix: np.ndarray,
     hmm_matrix: np.ndarray,
     train_ids: list[int],
@@ -367,31 +447,39 @@ def fit_fold_assignments(
     fold: int,
     guided_embeddings: np.ndarray | None = None,
 ) -> list[FoldAssignments]:
-    outputs = [
-        fit_gmm_assignments(df_by_row, embeddings, train_ids, test_ids, fold, "contrastive"),
-        fit_hmm_assignments(
-            df_by_row,
-            embeddings,
-            train_ids,
-            test_ids,
-            fold,
-            "contrastive_hmm",
-            covariance_type="diag",
-            implementation="fold_local_embedding_hmm_online_filter",
-        ),
-        fit_hmm_assignments(
-            df_by_row,
-            hmm_matrix,
-            train_ids,
-            test_ids,
-            fold,
-            "hmm",
-            covariance_type="full",
-            implementation="fold_local_raw_feature_hmm_online_filter",
-        ),
-        fit_kmeans_assignments(df_by_row, raw_matrix, train_ids, test_ids, fold),
-        fit_vol_bucket_assignments(df_by_row, train_ids, test_ids, fold),
-    ]
+    outputs = []
+    if embeddings is not None:
+        outputs.extend(
+            [
+                fit_gmm_assignments(df_by_row, embeddings, train_ids, test_ids, fold, "contrastive"),
+                fit_hmm_assignments(
+                    df_by_row,
+                    embeddings,
+                    train_ids,
+                    test_ids,
+                    fold,
+                    "contrastive_hmm",
+                    covariance_type="diag",
+                    implementation="fold_local_embedding_hmm_online_filter",
+                ),
+            ]
+        )
+    outputs.extend(
+        [
+            fit_hmm_assignments(
+                df_by_row,
+                hmm_matrix,
+                train_ids,
+                test_ids,
+                fold,
+                "hmm",
+                covariance_type="full",
+                implementation="fold_local_raw_feature_hmm_online_filter",
+            ),
+            fit_kmeans_assignments(df_by_row, raw_matrix, train_ids, test_ids, fold),
+            fit_vol_bucket_assignments(df_by_row, train_ids, test_ids, fold),
+        ]
+    )
     if guided_embeddings is not None:
         outputs.extend(
             [
@@ -421,13 +509,18 @@ def fit_fold_assignments(
 
 def run_fold_local_regime_models(
     df_by_row: pd.DataFrame,
-    embeddings: np.ndarray,
+    embeddings: np.ndarray | None,
     folds: list[tuple[int, int, int]],
     guided_embeddings: np.ndarray | None = None,
 ) -> tuple[list[PredictionSet], pd.DataFrame, pd.DataFrame]:
     raw_matrix = finite_matrix(df_by_row.sort_index(), FEATURE_COLS)
     hmm_matrix = finite_matrix(df_by_row.sort_index(), HMM_FEATURES)
-    methods = PHASE20_REGIME_METHODS if guided_embeddings is not None else REGIME_METHODS
+    methods = []
+    if embeddings is not None:
+        methods.extend(["contrastive", "contrastive_hmm"])
+    methods.extend(["hmm", "kmeans", "vol_bucket"])
+    if guided_embeddings is not None:
+        methods.extend(GUIDED_REGIME_METHODS)
     predictions_by_method: dict[str, list[pd.DataFrame]] = {method: [] for method in methods}
     test_assignments = []
     implementation_rows = []
@@ -517,7 +610,7 @@ def summarize_assignments(assignments: pd.DataFrame, implementations: pd.DataFra
     return pd.DataFrame(rows)
 
 
-def save_walkforward_equity_plot(predictions: pd.DataFrame) -> None:
+def save_walkforward_equity_plot(predictions: pd.DataFrame, prefix: str) -> None:
     if predictions.empty:
         return
     fig, ax = plt.subplots(figsize=(14, 6))
@@ -530,12 +623,12 @@ def save_walkforward_equity_plot(predictions: pd.DataFrame) -> None:
     ax.legend(fontsize=8)
     ax.grid(True, alpha=0.25)
     plt.tight_layout()
-    plt.savefig(os.path.join(SAVE_DIR, "walkforward_equity_curve.png"), dpi=150)
+    plt.savefig(output_path(prefix, "equity_curve", ".png"), dpi=150)
     plt.close(fig)
 
 
-def build_comparison(walkforward_results: pd.DataFrame) -> pd.DataFrame:
-    offline_path = Path(SAVE_DIR) / "experiment_results.csv"
+def build_comparison(walkforward_results: pd.DataFrame, offline_path: str | Path | None = None) -> pd.DataFrame:
+    offline_path = Path(offline_path) if offline_path else Path(SAVE_DIR) / "experiment_results.csv"
     if not offline_path.exists():
         return pd.DataFrame()
 
@@ -615,11 +708,30 @@ def build_guided_alpha_comparison(walkforward_results: pd.DataFrame) -> pd.DataF
 
 def main() -> None:
     args = parse_args()
-    symbol_scope = "+".join(args.symbols)
-    df, embeddings = load_dense_contrastive_universe(args.symbols)
-    guided_embeddings = None if args.skip_guided else load_guided_embedding_matrix(df)
+    symbols = resolve_symbols(args)
+    symbol_scope = "+".join(symbols)
+    df, embeddings = load_benchmark_universe(
+        symbols,
+        args.skip_contrastive,
+        args.posterior_path,
+        args.embedding_path,
+    )
+    guided_embeddings = (
+        None
+        if args.skip_guided
+        else None
+    )
+    if not args.skip_guided:
+        df, embeddings, guided_embeddings = load_guided_embedding_matrix(
+            df,
+            args.guided_assignment_path,
+            args.guided_embedding_path,
+            companion_embeddings=embeddings,
+        )
     df_by_row = df.set_index("row_id", drop=False)
     folds = fold_ranges(df)
+    if args.max_folds is not None:
+        folds = folds[: args.max_folds]
     if not folds:
         raise RuntimeError("Not enough rows for walk-forward validation.")
 
@@ -639,24 +751,24 @@ def main() -> None:
 
     predictions = pd.concat([output.frame for output in outputs if not output.frame.empty], ignore_index=True)
     predictions = predictions.sort_values(["method", "open_time", "symbol"]).reset_index(drop=True)
-    predictions.to_csv(os.path.join(SAVE_DIR, "walkforward_alpha_oos_predictions.csv"), index=False)
-    assignments.to_csv(os.path.join(SAVE_DIR, "walkforward_regime_assignments.csv"), index=False)
+    predictions.to_csv(output_path(args.output_prefix, "alpha_oos_predictions"), index=False)
+    assignments.to_csv(output_path(args.output_prefix, "regime_assignments"), index=False)
 
     summaries = [summarize_predictions(output.frame, output.method, output.regime_method, symbol_scope) for output in outputs]
     results = pd.DataFrame(summaries)
     validate_test_coverage(results)
-    results.to_csv(os.path.join(SAVE_DIR, "walkforward_experiment_results.csv"), index=False)
+    results.to_csv(output_path(args.output_prefix, "experiment_results"), index=False)
 
     regime_summary = summarize_assignments(assignments, implementations)
-    regime_summary.to_csv(os.path.join(SAVE_DIR, "walkforward_regime_summary.csv"), index=False)
+    regime_summary.to_csv(output_path(args.output_prefix, "regime_summary"), index=False)
 
     comparison = build_comparison(results)
     if not comparison.empty:
-        comparison.to_csv(os.path.join(SAVE_DIR, "walkforward_comparison.csv"), index=False)
+        comparison.to_csv(output_path(args.output_prefix, "comparison"), index=False)
     guided_comparison = build_guided_alpha_comparison(results)
     if not guided_comparison.empty:
-        guided_comparison.to_csv(os.path.join(SAVE_DIR, "guided_alpha_comparison.csv"), index=False)
-    save_walkforward_equity_plot(predictions)
+        guided_comparison.to_csv(legacy_or_prefixed_guided_path(args.output_prefix), index=False)
+    save_walkforward_equity_plot(predictions, args.output_prefix)
 
     print("\nFold-local experiment results:")
     print(results.to_string(index=False))

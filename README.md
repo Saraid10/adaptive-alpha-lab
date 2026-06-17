@@ -88,6 +88,8 @@ Binance OHLCV
 - Phase 32 Crypto-20 ingestion, feature, target, and quality-gate pipeline.
 - Phase 33 Crypto-20 classical regime benchmark.
 - Phase 34 Crypto-20 guided-encoder readiness gate before expensive learned-regime training.
+- Phase 35 full Crypto-20 HMM-guided encoder structural generalization run.
+- Phase 36 Crypto-20 fold-local downstream alpha retest scaffold.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -141,6 +143,7 @@ python src/crypto20_quality_gate.py --universe crypto20
 python src/crypto20_regime_benchmark.py --universe crypto20
 python src/crypto20_guided_readiness.py --universe crypto20
 .\run_phase35_crypto20_guided.ps1
+.\run_phase36_crypto20_alpha.ps1
 ```
 
 Optional dashboard:
@@ -183,6 +186,11 @@ python -m pip install -r requirements-research.txt
 | `models/crypto20_guided_encoder_summary.csv` | Phase 35 full Crypto-20 guided encoder structural summary, after the long run is executed |
 | `models/crypto20_guided_encoder_loss.csv` | Phase 35 training loss and pair-mining diagnostics |
 | `models/crypto20_guided_encoder_comparison.csv` | Phase 35 guided-regime comparison against the Phase 33 Crypto-20 classical baseline |
+| `reports/crypto20_alpha_generalization.md` | Phase 36 protocol for the Crypto-20 downstream alpha retest |
+| `models/crypto20_walkforward_experiment_results.csv` | Phase 36 Crypto-20 fold-local alpha benchmark summary |
+| `models/crypto20_walkforward_regime_summary.csv` | Phase 36 fold-local Crypto-20 regime coverage and persistence diagnostics |
+| `models/crypto20_walkforward_guided_alpha_comparison.csv` | Phase 36 guided-vs-classical downstream alpha comparison |
+| `models/crypto20_walkforward_equity_curve.png` | Phase 36 Crypto-20 fold-local equity curve visualization |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
 | `models/regime_stability_summary.csv` | Persistence, switch-rate, confidence, and stable-vs-transition IC diagnostics |
@@ -275,6 +283,8 @@ adaptive-alpha-lab/
 ├── reproduce.sh
 ├── run_phase35_crypto20_guided.ps1
 ├── run_phase35_crypto20_guided.sh
+├── run_phase36_crypto20_alpha.ps1
+├── run_phase36_crypto20_alpha.sh
 ├── reports/
 │   ├── adaptive_alpha_lab_report.md
 │   ├── related_work.md
@@ -711,7 +721,38 @@ For a short smoke/prototype run, use:
 .\run_phase35_crypto20_guided.ps1 -Epochs 1 -MaxWindows 5000 -TrainOnly
 ```
 
+## Phase 36 Crypto-20 Downstream Alpha Retest
+
+Phase 36 turns the Phase 35 structural result into the next required predictive test. It feeds the Crypto-20 HMM-guided embeddings into the same fold-local, embargoed, transaction-cost-aware LightGBM alpha benchmark used in the BTC/ETH track.
+
+The phase deliberately skips vanilla contrastive methods unless a separate dense Crypto-20 vanilla-contrastive artifact is generated. The comparison is focused on the reviewer-critical question: do HMM-guided learned regimes outperform the raw-feature HMM, KMeans, volatility buckets, and the global no-regime model on the wider pre-specified Crypto-20 universe?
+
+The full Phase 36 run completed on 20 symbols with equal test coverage across all six methods (`230,400` OOS rows per method). The headline is mixed but useful: `hmm_guided_hmm` improves IC versus both the global model and raw-feature HMM, but it does not improve Sharpe or total return versus raw-feature HMM.
+
+| Method | IC | Sharpe | Drawdown | Total return | OOS rows |
+|---|---:|---:|---:|---:|---:|
+| `global_lgbm` | 0.0175 | 0.1087 | -0.5478 | 0.0724 | 230,400 |
+| `regime_lgbm_hmm` | 0.0214 | 0.1479 | -0.5428 | 0.1386 | 230,400 |
+| `regime_lgbm_kmeans` | 0.0229 | 0.1238 | -0.5696 | 0.0970 | 230,400 |
+| `regime_lgbm_vol_bucket` | 0.0159 | -0.1596 | -0.6539 | -0.2106 | 230,400 |
+| `regime_lgbm_hmm_guided_gmm` | 0.0169 | -0.1901 | -0.6659 | -0.2412 | 230,400 |
+| `regime_lgbm_hmm_guided_hmm` | 0.0226 | -0.0573 | -0.6033 | -0.1257 | 230,400 |
+
+The paper-safe interpretation is: structural transfer from Phase 35 partially translates into predictive IC on Crypto-20, but not into superior risk-adjusted performance. This strengthens the mechanism narrative while preventing an overclaim that guided regimes dominate classical methods at portfolio level.
+
+Full command:
+
+```powershell
+.\run_phase36_crypto20_alpha.ps1
+```
+
+For a quick smoke check:
+
+```powershell
+.\run_phase36_crypto20_alpha.ps1 -MaxFolds 1
+```
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, Phase 33 Crypto-20 classical regime benchmark artifacts, Phase 34 Crypto-20 guided-encoder readiness artifacts, Phase 35 Crypto-20 guided encoder structural results, and a Streamlit research dashboard. The next important work is Phase 36: feed the Crypto-20 guided assignments into a fold-local downstream alpha benchmark and compare them against the frozen classical multi-asset baseline.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, Phase 33 Crypto-20 classical regime benchmark artifacts, Phase 34 Crypto-20 guided-encoder readiness artifacts, Phase 35 Crypto-20 guided encoder structural results, Phase 36 Crypto-20 downstream alpha results, and a Streamlit research dashboard. The next important work is to update the manuscript claim language around the Phase 36 mixed predictive result.
 
