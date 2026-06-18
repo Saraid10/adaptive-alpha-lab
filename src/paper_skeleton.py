@@ -23,7 +23,7 @@ METHOD_LABELS = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate the current manuscript draft and paper artifact map."
+        description="Initialize missing paper artifacts without overwriting the human-reviewed Phase 38 manuscript."
     )
     parser.add_argument("--output-dir", default=str(PAPER_DIR), help="Directory for paper/main.md.")
     return parser.parse_args()
@@ -399,13 +399,23 @@ def main() -> None:
     artifact_map_path = REPORTS_DIR / "paper_artifact_map.csv"
     checklist_path = REPORTS_DIR / "paper_submission_checklist.md"
 
-    paper_path.write_text(build_paper(results, claims, artifact_rows), encoding="utf-8")
-    write_artifact_map(artifact_map_path, artifact_rows)
-    checklist_path.write_text(build_checklist(), encoding="utf-8")
+    if paper_path.exists():
+        print(f"Preserved human-reviewed paper draft: {paper_path}")
+    else:
+        paper_path.write_text(build_paper(results, claims, artifact_rows), encoding="utf-8")
+        print(f"Initialized paper draft: {paper_path}")
 
-    print(f"Saved paper draft: {paper_path}")
-    print(f"Saved artifact map: {artifact_map_path}")
-    print(f"Saved submission checklist: {checklist_path}")
+    if artifact_map_path.exists():
+        print(f"Preserved human-reviewed artifact map: {artifact_map_path}")
+    else:
+        write_artifact_map(artifact_map_path, artifact_rows)
+        print(f"Initialized artifact map: {artifact_map_path}")
+
+    if checklist_path.exists():
+        print(f"Preserved human-reviewed submission checklist: {checklist_path}")
+    else:
+        checklist_path.write_text(build_checklist(), encoding="utf-8")
+        print(f"Initialized submission checklist: {checklist_path}")
 
 
 if __name__ == "__main__":

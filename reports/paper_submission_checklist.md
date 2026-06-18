@@ -1,8 +1,8 @@
 # Paper Submission Checklist
 
-## Phase 29 Status
+## Phase 38 Status
 
-This checklist tracks what remains before the project should be treated as a submission-ready paper package.
+This checklist tracks what remains after the completed Phase 37 Crypto-20 adjudication. Passing the historical audit does not by itself make the project submission-ready.
 
 ## Ready
 
@@ -11,27 +11,43 @@ This checklist tracks what remains before the project should be treated as a sub
 - Literature positioning exists in `reports/related_work.md` and `reports/literature_matrix.csv`.
 - Main fold-local benchmark artifacts exist.
 - Phase 25 ablations and Phase 26 paper claim tests exist.
-- Phase 29 manuscript prose pass is complete.
+- Phase 29 manuscript prose pass and Phase 37 evidence synchronization are complete.
 - Validation audit has no critical failures.
+- Crypto-20 structural, predictive, calibration, and portfolio outcomes are separated honestly.
+- Phase 38 data roles, experiment ledger, and publication gates are defined.
 
-## Needs Human Writing
+## Critical Scientific Work
 
-- Replace paper-planning source names with the final venue citation style.
-- Add final figure numbers after choosing the paper template.
-- Tune the abstract to the final submission venue length.
-- Decide whether the appendix includes the Streamlit dashboard screenshots.
+- Retrain the learned encoder fully inside each outer fold.
+- Add the missing vanilla contrastive and contrastive-HMM Crypto-20 baselines.
+- Use inner chronological validation for epochs, calibration, thresholds, and model selection.
+- Freeze exactly one candidate before an untouched external evaluation.
+- Add dependence-aware time-and-asset inference for the final claim table.
+- Harden execution timing, costs, overlapping positions, and exposure accounting.
 
-## Optional Before Submission
+## Critical Paper Work
 
-- Crypto-20 downstream alpha retest only if the paper needs a predictive generalization section.
-- Crypto-50 expansion only if Crypto-20 downstream evidence and compute budget justify it.
-- Fold-local encoder retraining only if the paper needs a stronger leakage-resistance appendix.
-- Full time-frequency encoder run only if Phase 25/26 gates are reopened.
+- Refresh related work through the submission year.
+- Replace planning prose with anonymous ACM `sigconf` LaTeX.
+- Fit the complete paper, including figures and references, inside the venue limit.
+- Make the paper self-contained without relying on an appendix.
+- Map every quantitative claim to a generated artifact.
+- Complete anonymity, citation, formatting, and claim audits.
+
+## Explicitly Deferred
+
+- Crypto-50 expansion before fold-local validity is established.
+- Unrestricted architecture or feature search.
+- Full time-frequency training without a reopened written gate.
+- FastAPI, paper trading, and dashboard expansion before model freeze.
+- Any real-money execution.
 
 ## Must Not Claim
 
 - Do not claim HMM states are ground truth.
 - Do not claim a profitable or deployable trading strategy.
 - Do not claim guided-HMM statistically dominates raw-feature HMM at 5%.
-- Do not claim downstream alpha generalization outside BTC/ETH before the Crypto-20 fold-local alpha retest.
+- Do not claim statistically proven Crypto-20 alpha, calibration, or portfolio-performance dominance.
 - Do not treat Phase 35 structural Crypto-20 results as trading or alpha evidence.
+- Do not describe the inspected Phase 36/37 Crypto-20 results as an untouched final test.
+- Do not treat fold-local assignment as sufficient when the learned encoder was trained offline.

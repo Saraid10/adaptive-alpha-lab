@@ -25,7 +25,7 @@ bash reproduce.sh --mode smoke
 Expected checks:
 
 - Python files compile.
-- `paper/main.md` regenerates.
+- Existing human-reviewed paper artifacts are preserved; missing paper artifacts initialize.
 - `models/validation_audit.csv` updates.
 - Validation audit has no critical failures.
 

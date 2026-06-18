@@ -69,7 +69,7 @@ The current project is CPU-friendly for smoke checks and dashboard use. Full enc
 
 | Mode | Command | Purpose |
 |---|---|---|
-| Smoke | `.\reproduce.ps1 -Mode smoke` | Compile code, regenerate paper scaffold, run validation audit |
+| Smoke | `.\reproduce.ps1 -Mode smoke` | Compile code, verify or initialize paper artifacts, run validation audit |
 | Full | `.\reproduce.ps1 -Mode full` | Regenerate the full local research artifact stack |
 | Dashboard | `.\reproduce.ps1 -Mode dashboard` | Launch Streamlit dashboard locally |
 

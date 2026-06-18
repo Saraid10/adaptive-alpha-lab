@@ -59,7 +59,7 @@ if ($Mode -eq "dashboard") {
 
 if ($Mode -eq "smoke") {
     Invoke-PythonStep "Compile Python sources" @("-m", "compileall", "src", "dashboard.py", "streamlit_app.py")
-    Invoke-PythonStep "Regenerate paper skeleton" @("src\paper_skeleton.py")
+    Invoke-PythonStep "Verify or initialize paper artifacts" @("src\paper_skeleton.py")
     Invoke-PythonStep "Run validation audit" (@("src\validation_audit.py", "--symbols") + $Symbols)
     Write-Host ""
     Write-Host "Smoke reproduction complete."
@@ -85,7 +85,7 @@ if ($Mode -eq "full") {
     Invoke-PythonStep "Run interpretability" (@("src\interpretability.py", "--symbols") + $Symbols)
     Invoke-PythonStep "Run ablation suite" @("src\ablation_suite.py")
     Invoke-PythonStep "Run paper claim tests" @("src\paper_claim_tests.py")
-    Invoke-PythonStep "Regenerate paper skeleton" @("src\paper_skeleton.py")
+    Invoke-PythonStep "Verify or initialize paper artifacts" @("src\paper_skeleton.py")
     Invoke-PythonStep "Run validation audit" (@("src\validation_audit.py", "--symbols") + $Symbols)
     Invoke-PythonStep "Build backtest dashboard artifacts" @("src\backtest.py")
     Invoke-PythonStep "Compile Python sources" @("-m", "compileall", "src", "dashboard.py", "streamlit_app.py")

@@ -24,6 +24,8 @@ This registry separates allowed paper claims from claims that are not supported 
 | Guided-HMM is stress-robust on the primary BTC+ETH 8h prediction file. | Supported | `models/robustness_stress_summary.csv`, `models/robustness_stress_wins.csv` | Guided-HMM is the most frequent winner in the refreshed primary stress grid. |
 | Guided-HMM feature attribution is economically plausible. | Diagnostic | `models/feature_importance_by_regime.csv`, `models/feature_family_summary.csv` | Fold-local interpretability shows the alpha model relies mainly on volatility state, momentum/autocorrelation, and distribution shape. |
 | HMM assignment is the strongest current ablation mechanism. | Supported | `models/ablation_summary.csv`, `models/paper_statistical_summary.csv`, `models/ablation_heatmap.png` | Phase 25/26 show the assignment layer is the most consistently supported mechanism across structural and downstream comparisons. |
+| Structural regime-learning behavior transfers to Crypto-20. | Supported structurally | `models/crypto20_guided_encoder_summary.csv`, `models/crypto20_guided_encoder_comparison.csv` | The guided objective preserves strong sequential structure across the pre-specified Crypto-20 universe; this is a structural, not alpha, claim. |
+| Structural quality, ranking, calibration, and portfolio performance are distinct outcomes. | Supported diagnostically | `models/crypto20_statistical_method_summary.csv`, `models/crypto20_statistical_claims.csv`, `reports/crypto20_statistical_protocol.md` | Phase 37 shows that stronger regime alignment and the highest mean fold IC can coexist with inconclusive dominance, worse calibration, and weak portfolio performance. |
 
 ## Directional Claims
 
@@ -46,6 +48,9 @@ This registry separates allowed paper claims from claims that are not supported 
 | Hard-negative mining improves guided regimes. | Open | Capped ablation suite. |
 | Downstream alpha results generalize beyond BTC/ETH. | Directional only | Phase 37 gives guided-HMM the highest mean fold IC, but the edge is not significant after paired testing or correction; Sharpe/return dominance is unsupported. |
 | Fold-local encoder retraining changes the conclusion. | Open | Expanding-window or fold-local encoder retraining experiment. |
+| Validation-only calibration repairs guided-HMM NLL without reducing IC. | Open | Inner-validation calibration followed by fully fold-local outer evaluation. |
+| Soft regime gating improves transition behavior. | Open | Pre-specified hard-versus-soft gating comparison on development folds. |
+| The selected method transfers to an untouched holdout. | Open | One frozen configuration evaluated once on a registered locked asset or temporal holdout. |
 
 ## Forbidden Claims
 
@@ -59,6 +64,11 @@ This registry separates allowed paper claims from claims that are not supported 
 | The guided model is better calibrated on Crypto-20. | Unsupported. Time-block DM tests show worse multiclass NLL than global LightGBM and raw-feature HMM. |
 | SHAP proves causal market drivers. | Feature attribution is model-specific and diagnostic. |
 | Offline/global regime assignments prove predictive performance. | Predictive claims require fold-local regime refits. |
+| Existing Crypto-20 results are an untouched final test. | Phase 36/37 outcomes have already been inspected and are development-observed under the Phase 38 data-role policy. |
+
+## Phase 38 Claim Control
+
+The source of truth for data roles is `reports/data_role_registry.csv`; the source of truth for tried and planned experiment families is `reports/experiment_ledger.csv`. New README, paper, dashboard, resume, or presentation language must remain inside both registries and the gates in `reports/publication_acceptance_gates.md`.
 
 ## Resume-Safe Language
 

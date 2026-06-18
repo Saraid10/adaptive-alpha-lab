@@ -356,6 +356,21 @@ reports/experiment_manifest.md
 
 These files define the current research question, hypothesis table, claim boundaries, completed experiment families, future experiment queue, and submission-readiness checklist. They should be treated as the control layer for Phase 25+ work: new experiments should map to a frozen hypothesis and should not expand the paper claim set without updating the protocol.
 
+## Phase 38 Research-Control Reset
+
+Phase 38 reclassifies every inspected BTC/ETH and Crypto-20 outcome as development-observed and adds four enforced control artifacts:
+
+```text
+reports/phase38_master_protocol.md
+reports/data_role_registry.csv
+reports/experiment_ledger.csv
+reports/publication_acceptance_gates.md
+```
+
+The current learned-regime evidence uses an offline encoder followed by fold-local assignment and downstream fitting. That is sufficient for the completed historical diagnostic, but not for the final predictive claim. The next critical implementation must fit scaling, weak-supervision HMMs, contrastive pairs, encoder weights, assignment layers, calibration, thresholds, and alpha models inside each outer fold, using only an inner chronological validation block for decisions.
+
+Phase 38 also blocks Crypto-50 expansion, unrestricted architecture search, and product deployment until the fold-local validity and baseline-completeness gates pass. The next complete baseline ladder must include global LightGBM, classical regime baselines, vanilla contrastive-GMM/HMM, and guided contrastive-GMM/HMM with equal folds and coverage.
+
 ## Minimal Ablation Suite
 
 Phase 25 adds the first paper-facing ablation layer.
@@ -381,14 +396,14 @@ Phase 26 converts the Phase 25 mechanism table into paper-facing statistical evi
 
 ## Paper Skeleton
 
-Phase 27 converts the audited evidence stack into a manuscript scaffold, and Phase 29 turns that scaffold into stronger submission-style prose.
+Phase 27 created the audited manuscript scaffold, Phase 29 strengthened the prose, and Phases 37/38 synchronized the human-reviewed paper with the completed multi-asset evidence. The initializer now preserves existing reviewed paper artifacts.
 
 | Field | Value |
 |---|---|
 | CLI | `python src/paper_skeleton.py` |
 | Main outputs | `paper/main.md`, `reports/paper_artifact_map.csv`, `reports/paper_submission_checklist.md` |
-| Purpose | Draft and polish the paper structure while mapping every section to supporting artifacts before venue formatting |
-| Claim discipline | Keeps HMM states as proxy states, treats guided-HMM alpha improvement as directional, allows Crypto-20 structural transfer language, and blocks profitability or downstream multi-asset alpha claims |
+| Purpose | Initialize missing paper artifacts while preserving human-reviewed manuscript, artifact-map, and checklist edits |
+| Claim discipline | Keeps HMM states as proxy states, permits Crypto-20 structural transfer, records directional IC evidence, and blocks profitability or statistical dominance claims |
 
 ## Reproducibility Package
 

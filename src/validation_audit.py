@@ -1547,6 +1547,22 @@ def audit_paper_protocol_artifacts(rows: list[AuditRecord]) -> None:
             "Minimal Ablation Definition",
             "Submission Readiness Checklist",
         ],
+        "phase38_master_protocol.md": [
+            "Current Evidence Freeze",
+            "Data Roles",
+            "Non-Negotiable Validation Rules",
+            "Phase 39 Model Contract",
+            "Locked Evaluation Policy",
+            "Phase 38 Exit Condition",
+        ],
+        "publication_acceptance_gates.md": [
+            "Gate 0: Evidence Freeze",
+            "Gate 1: Fold-Local Validity",
+            "Gate 2: Baseline Completeness And Parity",
+            "Gate 4: Locked External Evaluation",
+            "Gate 6: ICAIF Paper Readiness",
+            "Gate 7: BTech Project Readiness",
+        ],
     }
 
     missing_files = []
@@ -1581,6 +1597,207 @@ def audit_paper_protocol_artifacts(rows: list[AuditRecord]) -> None:
         "critical",
         "; ".join(detail_parts),
         rows_checked=max(total_checks + len(required_files), 1),
+        rows_failed=failures,
+    )
+
+
+def audit_phase38_control_artifacts(rows: list[AuditRecord]) -> None:
+    reports_dir = Path(BASE_DIR) / "reports"
+    paths = {
+        "master": reports_dir / "phase38_master_protocol.md",
+        "roles": reports_dir / "data_role_registry.csv",
+        "ledger": reports_dir / "experiment_ledger.csv",
+        "gates": reports_dir / "publication_acceptance_gates.md",
+        "paper_initializer": Path(BASE_DIR) / "src" / "paper_skeleton.py",
+        "fold_local_design": reports_dir / "phase39_fold_local_encoder_design.md",
+    }
+    missing = [str(path.relative_to(BASE_DIR)) for path in paths.values() if not path.exists()]
+    if missing:
+        record(
+            rows,
+            "phase38_control_artifacts",
+            FAIL,
+            "critical",
+            f"Missing Phase 38 control artifacts: {missing}",
+            rows_checked=len(paths),
+            rows_failed=len(missing),
+        )
+        return
+
+    roles = pd.read_csv(paths["roles"])
+    ledger = pd.read_csv(paths["ledger"])
+    master_text = paths["master"].read_text(encoding="utf-8")
+    gates_text = paths["gates"].read_text(encoding="utf-8")
+    paper_initializer_text = paths["paper_initializer"].read_text(encoding="utf-8")
+    fold_local_design_text = paths["fold_local_design"].read_text(encoding="utf-8")
+
+    required_role_cols = {
+        "dataset_id",
+        "scope",
+        "observed_endpoint",
+        "role",
+        "result_inspected",
+        "allowed_uses",
+        "forbidden_uses",
+        "lock_rule",
+        "notes",
+    }
+    required_ledger_cols = {
+        "experiment_id",
+        "phase_family",
+        "scope",
+        "method_family",
+        "selection_role",
+        "outcome_inspected",
+        "paper_role",
+        "status",
+        "next_action",
+    }
+    allowed_roles = {
+        "development_observed",
+        "locked_unobserved",
+        "future_uncollected",
+        "descriptive_only",
+    }
+    allowed_selection_roles = {"development", "final_locked"}
+    required_master_phrases = [
+        "All BTC/ETH and Crypto-20 data available through the Phase 37 checkpoint are `development_observed`",
+        "The encoder itself must be fold-local",
+        "The locked evaluation is run once",
+        "More encoder epochs, unrestricted architecture search, Crypto-50 expansion",
+    ]
+    required_gate_phrases = [
+        "A later gate cannot pass while an earlier critical gate is open",
+        "Failure or contradiction is reported without same-holdout retuning",
+        "Exactly one configuration is frozen for external evaluation",
+        "No real-money execution is enabled",
+    ]
+
+    failures = 0
+    details = [f"role_rows={len(roles)}", f"ledger_rows={len(ledger)}"]
+    missing_role_cols = sorted(required_role_cols - set(roles.columns))
+    missing_ledger_cols = sorted(required_ledger_cols - set(ledger.columns))
+    failures += len(missing_role_cols) + len(missing_ledger_cols)
+
+    if not missing_role_cols:
+        invalid_roles = sorted(set(roles["role"].astype(str)) - allowed_roles)
+        duplicate_datasets = int(roles["dataset_id"].astype(str).duplicated().sum())
+        inspected = roles["result_inspected"].astype(str).str.lower().eq("true")
+        invalid_inspected_locks = int(
+            (inspected & roles["role"].isin({"locked_unobserved", "future_uncollected"})).sum()
+        )
+        development_rows = int((roles["role"] == "development_observed").sum())
+        locked_rows = int(roles["role"].isin({"locked_unobserved", "future_uncollected"}).sum())
+        failures += (
+            len(invalid_roles)
+            + duplicate_datasets
+            + invalid_inspected_locks
+            + int(development_rows < 2)
+            + int(locked_rows < 2)
+        )
+        details.extend(
+            [
+                f"development_rows={development_rows}",
+                f"locked_or_future_rows={locked_rows}",
+                f"invalid_inspected_locks={invalid_inspected_locks}",
+            ]
+        )
+        if invalid_roles:
+            details.append(f"invalid_roles={invalid_roles}")
+        if duplicate_datasets:
+            details.append(f"duplicate_datasets={duplicate_datasets}")
+
+    if not missing_ledger_cols:
+        invalid_selection_roles = sorted(
+            set(ledger["selection_role"].astype(str)) - allowed_selection_roles
+        )
+        duplicate_experiments = int(ledger["experiment_id"].astype(str).duplicated().sum())
+        locked = ledger["selection_role"].astype(str).eq("final_locked")
+        inspected = ledger["outcome_inspected"].astype(str).str.lower().eq("true")
+        inspected_final_rows = int((locked & inspected).sum())
+        planned_fold_local = int(
+            ledger["experiment_id"].astype(str).eq("fold_local_encoder_baseline").sum()
+        )
+        planned_confirmation = int(
+            ledger["experiment_id"].astype(str).eq("external_asset_confirmation").sum()
+        )
+        failures += (
+            len(invalid_selection_roles)
+            + duplicate_experiments
+            + inspected_final_rows
+            + int(planned_fold_local != 1)
+            + int(planned_confirmation != 1)
+        )
+        details.extend(
+            [
+                f"final_locked_rows={int(locked.sum())}",
+                f"inspected_final_rows={inspected_final_rows}",
+            ]
+        )
+        if invalid_selection_roles:
+            details.append(f"invalid_selection_roles={invalid_selection_roles}")
+        if duplicate_experiments:
+            details.append(f"duplicate_experiments={duplicate_experiments}")
+
+    missing_master_phrases = [
+        phrase for phrase in required_master_phrases if phrase not in master_text
+    ]
+    missing_gate_phrases = [
+        phrase for phrase in required_gate_phrases if phrase not in gates_text
+    ]
+    required_initializer_phrases = [
+        "Preserved human-reviewed paper draft",
+        "Preserved human-reviewed artifact map",
+        "Preserved human-reviewed submission checklist",
+    ]
+    missing_initializer_phrases = [
+        phrase for phrase in required_initializer_phrases if phrase not in paper_initializer_text
+    ]
+    required_design_phrases = [
+        "fit_training_scaler",
+        "fit_training_hmm",
+        "build_training_windows",
+        "encode_causal_rows",
+        "Outer-test rows never enter pair mining or epoch selection",
+        "all eight methods have equal outer-test coverage",
+    ]
+    missing_design_phrases = [
+        phrase for phrase in required_design_phrases if phrase not in fold_local_design_text
+    ]
+    failures += (
+        len(missing_master_phrases)
+        + len(missing_gate_phrases)
+        + len(missing_initializer_phrases)
+        + len(missing_design_phrases)
+    )
+    if missing_role_cols:
+        details.append(f"missing_role_cols={missing_role_cols}")
+    if missing_ledger_cols:
+        details.append(f"missing_ledger_cols={missing_ledger_cols}")
+    if missing_master_phrases:
+        details.append(f"missing_master_phrases={missing_master_phrases}")
+    if missing_gate_phrases:
+        details.append(f"missing_gate_phrases={missing_gate_phrases}")
+    if missing_initializer_phrases:
+        details.append(f"missing_initializer_phrases={missing_initializer_phrases}")
+    if missing_design_phrases:
+        details.append(f"missing_design_phrases={missing_design_phrases}")
+
+    record(
+        rows,
+        "phase38_control_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(details),
+        rows_checked=max(
+            len(roles)
+            + len(ledger)
+            + len(required_master_phrases)
+            + len(required_gate_phrases)
+            + len(required_initializer_phrases)
+            + len(required_design_phrases),
+            1,
+        ),
         rows_failed=failures,
     )
 
@@ -2935,6 +3152,7 @@ def main() -> None:
     audit_interpretability_artifacts(rows)
     audit_literature_positioning_artifacts(rows)
     audit_paper_protocol_artifacts(rows)
+    audit_phase38_control_artifacts(rows)
     audit_paper_draft_artifacts(rows)
     audit_reproducibility_artifacts(rows)
     audit_multiasset_universe_artifacts(rows)

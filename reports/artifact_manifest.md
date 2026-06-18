@@ -16,6 +16,8 @@ Committed artifacts are small summary files or visual outputs used by the dashbo
 | Robustness | `models/robustness_summary.csv`, `models/robustness_stress_summary.csv` | Horizon/scope and stress checks |
 | Statistical evidence | `models/statistical_test_summary.csv`, `models/paper_statistical_summary.csv` | Paper-safe claim tests |
 | Interpretability | `models/feature_importance_by_regime.csv`, `models/feature_family_summary.csv` | Fold-local feature attribution |
+| Phase 38 control layer | `reports/phase38_master_protocol.md`, `reports/data_role_registry.csv`, `reports/experiment_ledger.csv`, `reports/publication_acceptance_gates.md` | Data-role, experiment-lineage, scope, and acceptance control |
+| Phase 39 implementation contract | `reports/phase39_fold_local_encoder_design.md` | Exact fold-local encoder boundaries, modules, artifacts, tests, and compute gates |
 | Multi-asset protocol | `configs/crypto_universe_candidates.csv`, `models/asset_universe_crypto20.csv`, `models/crypto20_data_quality.csv`, `reports/crypto20_pipeline_plan.md` | Pre-specified crypto-universe expansion and data-quality gate |
 | Crypto-20 regimes | `models/crypto20_regime_benchmark_summary.csv`, `models/crypto20_regime_symbol_summary.csv` | First multi-asset regime benchmark before learned-regime retraining |
 | Crypto-20 guided readiness | `models/crypto20_guided_pair_summary.csv`, `models/crypto20_guided_compute_plan.csv`, `models/crypto20_guided_gate.csv` | Pair-mining and compute gate before full Crypto-20 guided encoder training |

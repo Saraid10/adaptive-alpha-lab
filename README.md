@@ -91,6 +91,7 @@ Binance OHLCV
 - Phase 35 full Crypto-20 HMM-guided encoder structural generalization run.
 - Phase 36 Crypto-20 fold-local downstream alpha retest.
 - Phase 37 paired-fold statistical adjudication, time-block DM diagnostics, and asset heterogeneity analysis.
+- Phase 38 research-control reset with explicit data roles, experiment lineage, fold-local validity requirements, and publication acceptance gates.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -198,6 +199,11 @@ python -m pip install -r requirements-research.txt
 | `models/crypto20_statistical_claims.csv` | Phase 37 multiple-testing-aware claim statuses |
 | `models/crypto20_statistical_asset_metrics.csv` | Secondary per-asset heterogeneity diagnostics |
 | `models/crypto20_statistical_ic_confidence_intervals.png` | Crypto-20 mean fold IC confidence intervals |
+| `reports/phase38_master_protocol.md` | Phase 38 scientific scope, data-use, fold-local, and model-selection protocol |
+| `reports/data_role_registry.csv` | Paper-facing registry of development-observed, descriptive, locked, and future datasets |
+| `reports/experiment_ledger.csv` | Complete inspected/planned experiment-family ledger |
+| `reports/publication_acceptance_gates.md` | Ordered scientific, paper, and BTech project completion gates |
+| `reports/phase39_fold_local_encoder_design.md` | Code-grounded implementation contract for the fully fold-local learned baseline |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
 | `models/regime_stability_summary.csv` | Persistence, switch-rate, confidence, and stable-vs-transition IC diagnostics |
@@ -630,7 +636,7 @@ The paper-safe conclusion is now sharper: the project can claim that sequential 
 
 ## Phase 27 Paper Skeleton
 
-Phase 27 converts the evidence stack into a manuscript scaffold. `src/paper_skeleton.py` generates `paper/main.md`, `reports/paper_artifact_map.csv`, and `reports/paper_submission_checklist.md` from the current benchmark and claim-test artifacts.
+Phase 27 converted the evidence stack into a manuscript scaffold. After the human-reviewed Phase 37/38 synchronization, `src/paper_skeleton.py` initializes those paper artifacts only when they are missing and preserves existing manuscript, artifact-map, and checklist edits.
 
 This phase does not add a new model or a new performance claim. It makes the paper argument auditable: each major manuscript section points back to the artifact that supports it, and the checklist keeps forbidden claims visible before the draft is moved into a venue template.
 
@@ -640,7 +646,7 @@ Phase 28 makes the project easier to reproduce and review. It adds `reproduce.ps
 
 | Mode | Command | Purpose |
 |---|---|---|
-| Smoke | `.\reproduce.ps1 -Mode smoke` | Compile code, regenerate the paper skeleton, and run the validation audit |
+| Smoke | `.\reproduce.ps1 -Mode smoke` | Compile code, verify or initialize paper artifacts, and run the validation audit |
 | Full | `.\reproduce.ps1 -Mode full` | Regenerate the full local research pipeline |
 | Dashboard | `.\reproduce.ps1 -Mode dashboard` | Launch the Streamlit dashboard locally |
 
@@ -773,7 +779,21 @@ The secondary asset view is mildly encouraging but not decisive. Guided-HMM impr
 .\run_phase37_crypto20_statistics.ps1
 ```
 
+## Phase 38 Research-Control Reset
+
+Phase 38 freezes the interpretation of all results through Phase 37 and prevents the already-inspected Crypto-20 evaluation from being reused as an untouched final test. All current BTC/ETH and Crypto-20 outcomes are classified as development-observed. The next predictive phase must train scaling, weak-supervision HMMs, contrastive pairs, encoders, assignment layers, calibration, thresholds, and alpha models within the outer walk-forward boundary, with decisions made only through inner chronological validation.
+
+The phase also restores the missing scientific ladder for the next benchmark: global and classical baselines, vanilla contrastive-GMM/HMM, and guided contrastive-GMM/HMM must use identical folds and test coverage. Calibration, soft gating, and pooled experts are authorized only after this fully fold-local baseline passes. Crypto-50 expansion, unrestricted tuning, and product deployment remain deferred.
+
+Control artifacts:
+
+- `reports/phase38_master_protocol.md`
+- `reports/data_role_registry.csv`
+- `reports/experiment_ledger.csv`
+- `reports/publication_acceptance_gates.md`
+- `reports/phase39_fold_local_encoder_design.md`
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, Phase 33 Crypto-20 classical regime benchmark artifacts, Phase 34 Crypto-20 guided-encoder readiness artifacts, Phase 35 Crypto-20 guided encoder structural results, Phase 36 Crypto-20 downstream alpha results, Phase 37 statistical adjudication, and a Streamlit research dashboard. The next scientific decision should be based on the Phase 37 null/inconclusive result rather than post-hoc epoch tuning.
+The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, Phase 33 Crypto-20 classical regime benchmark artifacts, Phase 34 Crypto-20 guided-encoder readiness artifacts, Phase 35 Crypto-20 guided encoder structural results, Phase 36 Crypto-20 downstream alpha results, Phase 37 statistical adjudication, Phase 38 research controls, and a Streamlit research dashboard. The next implementation target is the fully fold-local encoder baseline, not post-hoc tuning on Phase 36/37 outcomes.
 

@@ -36,16 +36,23 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Paper draft skeleton | 27 | Convert the evidence stack into a manuscript scaffold | `paper/main.md`, `paper_artifact_map.csv`, `paper_submission_checklist.md` | Writing and submission planning |
 | Reproducibility package | 28 | Document public reproduction commands, environment split, and artifact policy | `reproduce.ps1`, `environment.md`, `artifact_manifest.md`, `reproduction_checklist.md` | Public review readiness |
 | Paper prose pass | 29 | Turn the generated scaffold into manuscript-style prose while preserving claim discipline | `paper/main.md` | Paper writing |
+| Multi-asset universe and data | 31/32 | Pre-specify Crypto-20/Crypto-50 and build the quality-gated data pipeline | `asset_universe_crypto20.csv`, `crypto20_data_quality.csv` | Generalization protocol |
+| Crypto-20 classical benchmark | 33 | Establish multi-asset HMM, KMeans, and volatility references | `crypto20_regime_benchmark_summary.csv` | Multi-asset baseline |
+| Crypto-20 guided structure | 34/35 | Gate and run the full guided structural experiment | `crypto20_guided_gate.csv`, `crypto20_guided_encoder_summary.csv` | Structural transfer |
+| Crypto-20 downstream alpha | 36 | Run the equal-coverage fold-local downstream comparison | `crypto20_walkforward_experiment_results.csv` | Predictive generalization |
+| Crypto-20 statistical adjudication | 37 | Test fold uncertainty, calibration, corrections, and asset heterogeneity | `crypto20_statistical_method_summary.csv`, `crypto20_statistical_claims.csv` | Claim adjudication |
 
 ## Future Experiment Queue
 
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
-| 1 | 30 | Venue formatting and citation pass | Required before external submission | `paper/main.tex` or venue-formatted equivalent |
-| 2 | 31 | Figure/table numbering and appendix pass | Required before external submission | final figure table and appendix map |
-| 3 | 36 | Crypto-20 downstream alpha retest | Required before any multi-asset predictive claim | `crypto20_walkforward_experiment_results.csv`, `crypto20_walkforward_guided_alpha_comparison.csv`, `crypto20_alpha_generalization.md` |
-| 4 | 37 | Crypto-20 statistical adjudication | Fold-level uncertainty, corrected tests, time-block DM diagnostics, and asset heterogeneity | `crypto20_statistical_method_summary.csv`, `crypto20_statistical_claims.csv`, `crypto20_statistical_protocol.md` |
-| 5 | 38 | Crypto-50 or broader expansion | Conditional on Phase 37 evidence and compute budget | `crypto50_results.csv`, `generalization.md` |
+| 1 | 38 | Research-control reset | Required before new model development | `phase38_master_protocol.md`, `data_role_registry.csv`, `experiment_ledger.csv`, `publication_acceptance_gates.md` |
+| 2 | 39 | Fully fold-local encoder baseline ladder | Critical validity and baseline-completeness gate | fold-local encoder manifests, predictions, comparisons, and leakage tests |
+| 3 | 40 | Bounded calibration and soft-gating candidates | Conditional on the Phase 39 baseline passing | development-only candidate comparison and frozen selection record |
+| 4 | 41 | Cross-asset interpretation and execution hardening | Required for mechanism and economic discussion | fold-local attribution, transition diagnostics, and execution stress results |
+| 5 | 42 | Locked external evaluation | One frozen candidate evaluated once | registered holdout, immutable predictions, final comparison |
+| 6 | 43 | Final statistical adjudication | Required before final claim language | dependence-aware final claim table |
+| 7 | 44 | ICAIF-format paper package | Required before external submission | anonymous eight-page ACM paper and citation/claim audits |
 
 ## Minimal Ablation Definition
 
@@ -64,7 +71,7 @@ The completed Phase 25 table supports the assignment-layer mechanism most strong
 
 The project is submission-ready only when:
 
-1. Phase 24 protocol files are committed.
+1. Phase 38 control files exist and classify all inspected evidence as development-observed.
 2. Phase 25 ablation artifacts exist and are discussed.
 3. Phase 26 refreshed statistical evidence exists.
 4. Phase 27 paper skeleton and artifact map exist.
@@ -73,4 +80,8 @@ The project is submission-ready only when:
 7. The paper draft uses only claims allowed by `reports/claim_registry.md`.
 8. The validation audit passes with no critical failures.
 9. Reproduction commands are documented.
+10. The learned encoder and all downstream decisions are fully fold-local.
+11. Missing vanilla learned Crypto-20 baselines are present with equal coverage.
+12. One candidate is frozen before locked external evaluation.
+13. The final paper follows the current venue page, anonymity, citation, and self-containment rules.
 

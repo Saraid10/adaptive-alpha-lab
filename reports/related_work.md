@@ -166,15 +166,15 @@ The paper-style contribution should be framed as:
 | H2 | Vanilla contrastive embeddings create smooth but not necessarily alpha-relevant regimes. | Supported by Phase 16 regime-quality diagnostics. |
 | H3 | HMM-guided contrastive learning can improve learned-regime structure. | Strongly supported structurally by the 30-epoch Phase 19B run. |
 | H4 | Improved regime structure improves fold-local alpha performance. | Directionally supported by Phase 20 and strongly stress-supported by Phase 21; fold-level IC significance remains inconclusive. |
-| H5 | The finding generalizes beyond BTC and ETH. | Not tested yet; conditional multi-asset phase. |
+| H5 | The structural finding generalizes beyond BTC and ETH. | Supported structurally on Crypto-20; predictive dominance remains unsupported. |
 
 ## Reviewer Risk Register
 
 | Risk | Why It Matters | Mitigation |
 |---|---|---|
 | HMM is not ground truth | Agreement metrics could be misread as accuracy. | Describe HMM as a classical proxy/reference only. |
-| Single-universe crypto scope | Reviewers may question generalization. | Add a written gate for multi-asset expansion after statistical tests. |
-| Encoder trained offline | Representation learning may leak descriptive structure into predictive claims. | Use fold-local regime refit now; add fold-local encoder training later if compute allows. |
+| Single-asset-class crypto scope | Reviewers may question transfer beyond correlated crypto assets. | Report Crypto-20 as within-crypto evidence and require a registered external holdout for broader claims. |
+| Encoder trained offline | Representation learning may leak descriptive structure into predictive claims. | Treat fully fold-local encoder training as a critical validity requirement before the final predictive claim. |
 | Many tested variants | Multiple testing can inflate claims. | Use Phase 15 correction outputs for paper language. |
 | Weak trading performance | Negative Sharpe can look like failure. | Frame the project as a benchmark about regime structure and validation, not a deployed strategy. |
 

@@ -500,11 +500,19 @@ The Phase 37 conclusion is therefore narrower than the Phase 36 point-estimate r
 
 The result is also informative because it is weaker but consistent relative to the BTC/ETH pilot. The assignment-layer mechanism replicates: `hmm_guided_hmm` beats `hmm_guided_gmm` on NMI, ARI, purity, and silhouette. But the absolute HMM-reference alignment is lower than in the two-asset pilot (`NMI 0.694` versus `0.869`, purity `0.814` versus `0.957`), which is consistent with greater regime heterogeneity across 20 assets. The transition diagonal is higher on Crypto-20 (`0.890` versus about `0.825` in the BTC/ETH guided-HMM run), so regime persistence and HMM-reference agreement appear to decouple at larger scale. That nuance should be kept in the generalization section rather than hidden.
 
+## Phase 38 Research-Control Reset
+
+Phase 38 does not add a favorable model result. It protects the integrity of the next one. All inspected BTC/ETH and Crypto-20 outcomes are now classified as development-observed in `reports/data_role_registry.csv`, and every completed or planned experiment family is recorded in `reports/experiment_ledger.csv`. The ordered gates in `reports/publication_acceptance_gates.md` block candidate selection, locked evaluation, publication claims, and product expansion until their prerequisites pass.
+
+The most important protocol change is that fold-local assignment is no longer considered enough for the final learned-regime claim. The encoder itself must be trained inside each outer walk-forward fold. Scaling, weak-supervision HMM fitting, pair mining, encoder fitting, embedding assignment, calibration, threshold selection, and alpha fitting must respect the outer training boundary, while model decisions use only inner chronological validation.
+
+The next baseline must also restore the full mechanism ladder on Crypto-20: global and classical methods, vanilla contrastive-GMM/HMM, and guided contrastive-GMM/HMM with identical folds and coverage. Calibration, soft posterior gating, and partially pooled experts are authorized only after that validity baseline passes. Existing Phase 36/37 results remain useful development evidence but cannot be called an untouched final test.
+
 ## Limitations
 
 - Hourly OHLCV is a noisy signal source.
 - The current contrastive encoder is not a true Temporal Fusion Transformer.
-- The contrastive encoder is still trained as an offline/frozen representation; a future paper-grade upgrade is fold-local encoder retraining.
+- The contrastive encoder is still trained as an offline/frozen representation; Phase 38 makes fully fold-local encoder retraining a critical validity requirement rather than an optional upgrade.
 - Offline/global regime results and fold-local regime results should be interpreted separately.
 - HMM states are not ground truth market regimes. They are a classical proxy/reference state sequence used for comparison and weak supervision.
 - Regime-quality agreement metrics are diagnostic; agreement with HMM does not prove economic correctness.
@@ -529,8 +537,8 @@ The result is also informative because it is weaker but consistent relative to t
 
 ## Next Steps
 
-1. Convert the polished Markdown draft into the selected venue format.
-2. Add final citations and figure/table numbering.
-3. Add fold-local or expanding-window encoder retraining only if required by reviewer-style critique.
-4. Expand beyond BTC/ETH only if the written statistical gate is met.
-5. Treat multi-asset expansion as conditional on statistically reliable learned-encoder improvement.
+1. Implement the fully fold-local encoder baseline and leakage tests.
+2. Restore vanilla contrastive-GMM/HMM to the equal-coverage Crypto-20 mechanism ladder.
+3. Use inner validation to test only the pre-authorized calibration, soft-gating, and pooled-expert candidates.
+4. Freeze one candidate before a single registered external evaluation.
+5. Complete final dependence-aware statistics before venue formatting and product expansion.
