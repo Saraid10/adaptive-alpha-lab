@@ -33,7 +33,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bootstrap-samples", type=int, default=5000)
     parser.add_argument("--seed", type=int, default=RANDOM_STATE)
     parser.add_argument("--dm-lag", type=int, default=7, help="Newey-West lag for DM-style row-loss tests.")
+    parser.add_argument(
+        "--output-prefix",
+        default="",
+        help="Prefix for generated artifacts, e.g. crypto20_ for Phase 37.",
+    )
+    parser.add_argument(
+        "--reference-methods",
+        nargs="+",
+        default=REFERENCE_METHODS,
+        help="Reference methods used in paired comparisons.",
+    )
     return parser.parse_args()
+
+
+def artifact_path(output_dir: Path, prefix: str, stem: str, suffix: str = ".csv") -> Path:
+    return output_dir / f"{prefix}{stem}{suffix}"
 
 
 def safe_corr(left: pd.Series, right: pd.Series) -> float:
@@ -107,6 +122,25 @@ def fold_metrics(predictions: pd.DataFrame) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows).sort_values(["method", "fold"]).reset_index(drop=True)
+
+
+def asset_metrics(predictions: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    group_cols = ["method", "regime_method", "target", "horizon", "symbol"]
+    for key, group in predictions.groupby(group_cols, sort=False):
+        method, regime_method, target, horizon, symbol = key
+        metrics = summarize_group(group)
+        rows.append(
+            {
+                "method": method,
+                "regime_method": regime_method,
+                "target": target,
+                "horizon": horizon,
+                "symbol": symbol,
+                **metrics,
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["method", "symbol"]).reset_index(drop=True)
 
 
 def bootstrap_ci(values: pd.Series, rng: np.random.Generator, samples: int) -> tuple[float, float, float]:
@@ -223,7 +257,12 @@ def sign_test_p_value(diffs: np.ndarray, higher_is_better: bool) -> tuple[int, i
     return wins, n, float(min(1.0, 2.0 * tail))
 
 
-def fold_pairwise_tests(folds: pd.DataFrame, samples: int, seed: int) -> pd.DataFrame:
+def fold_pairwise_tests(
+    folds: pd.DataFrame,
+    samples: int,
+    seed: int,
+    reference_methods: list[str],
+) -> pd.DataFrame:
     rng = np.random.default_rng(seed + 1000)
     rows = []
     metrics = [
@@ -234,13 +273,18 @@ def fold_pairwise_tests(folds: pd.DataFrame, samples: int, seed: int) -> pd.Data
         ("drawdown", True),
         ("turnover", False),
     ]
-    for reference in REFERENCE_METHODS:
+    seen_pairs: set[tuple[str, str]] = set()
+    for reference in reference_methods:
         ref = folds[folds["method"] == reference]
         if ref.empty:
             continue
         for method in folds["method"].unique():
             if method == reference:
                 continue
+            pair_key = tuple(sorted((str(method), str(reference))))
+            if pair_key in seen_pairs:
+                continue
+            seen_pairs.add(pair_key)
             cur = folds[folds["method"] == method]
             paired = cur.merge(ref, on="fold", suffixes=("", "_reference"))
             for metric, higher_is_better in metrics:
@@ -268,6 +312,70 @@ def fold_pairwise_tests(folds: pd.DataFrame, samples: int, seed: int) -> pd.Data
                         "sign_test_non_ties": n_non_tie,
                         "sign_test_p_value": sign_p,
                         "n_paired_folds": int(len(paired)),
+                    }
+                )
+    return pd.DataFrame(rows)
+
+
+def asset_pairwise_tests(
+    assets: pd.DataFrame,
+    samples: int,
+    seed: int,
+    reference_methods: list[str],
+) -> pd.DataFrame:
+    rng = np.random.default_rng(seed + 3000)
+    rows = []
+    metrics = [
+        ("IC", True),
+        ("signal_IC", True),
+        ("Sharpe", True),
+        ("total_return", True),
+        ("drawdown", True),
+        ("turnover", False),
+    ]
+    seen_pairs: set[tuple[str, str]] = set()
+    for reference in reference_methods:
+        ref = assets[assets["method"] == reference]
+        if ref.empty:
+            continue
+        for method in assets["method"].unique():
+            if method == reference:
+                continue
+            pair_key = tuple(sorted((str(method), str(reference))))
+            if pair_key in seen_pairs:
+                continue
+            seen_pairs.add(pair_key)
+            cur = assets[assets["method"] == method]
+            paired = cur.merge(ref, on="symbol", suffixes=("", "_reference"))
+            for metric, higher_is_better in metrics:
+                diffs = paired[metric].to_numpy(dtype=float) - paired[f"{metric}_reference"].to_numpy(dtype=float)
+                stat, p_value = paired_t_test(diffs)
+                wins, n_non_tie, sign_p = sign_test_p_value(diffs, higher_is_better)
+                mean, low, high = bootstrap_ci(pd.Series(diffs), rng, samples)
+                dz = cohen_dz(diffs)
+                rows.append(
+                    {
+                        "comparison": f"{method} vs {reference}",
+                        "method": method,
+                        "reference_method": reference,
+                        "metric": metric,
+                        "higher_is_better": higher_is_better,
+                        "mean_difference": mean,
+                        "ci_low": low,
+                        "ci_high": high,
+                        "cohen_dz": dz,
+                        "effect_size": effect_size_label(dz),
+                        "paired_t_stat": stat,
+                        "paired_t_p_value": p_value,
+                        "wilcoxon_p_value": wilcoxon_p_value(diffs),
+                        "sign_test_wins": wins,
+                        "sign_test_non_ties": n_non_tie,
+                        "sign_test_p_value": sign_p,
+                        "n_paired_assets": int(len(paired)),
+                        "test_note": (
+                            "Secondary paired asset diagnostic. Crypto assets are cross-correlated, "
+                            "so asset-level p-values are descriptive and not the primary paper test."
+                        ),
                     }
                 )
     return pd.DataFrame(rows)
@@ -301,22 +409,37 @@ def newey_west_dm(loss_diff: np.ndarray, lag: int) -> tuple[float, float, float]
     return mean_diff, float(statistic), normal_two_sided_p(statistic)
 
 
-def dm_style_loss_tests(predictions: pd.DataFrame, lag: int) -> pd.DataFrame:
+def dm_style_loss_tests(
+    predictions: pd.DataFrame,
+    lag: int,
+    reference_methods: list[str],
+) -> pd.DataFrame:
     key_cols = ["row_id", "symbol", "feat_idx", "open_time", "fold"]
     work = predictions.copy()
     work["nll_loss"] = row_negative_log_likelihood(work)
     rows = []
-    for reference in REFERENCE_METHODS:
+    seen_pairs: set[tuple[str, str]] = set()
+    for reference in reference_methods:
         ref = work[work["method"] == reference][key_cols + ["nll_loss"]].rename(columns={"nll_loss": "reference_loss"})
         if ref.empty:
             continue
         for method in work["method"].unique():
             if method == reference:
                 continue
+            pair_key = tuple(sorted((str(method), str(reference))))
+            if pair_key in seen_pairs:
+                continue
+            seen_pairs.add(pair_key)
             cur = work[work["method"] == method][key_cols + ["nll_loss"]]
             paired = cur.merge(ref, on=key_cols)
             loss_diff = paired["nll_loss"].to_numpy(dtype=float) - paired["reference_loss"].to_numpy(dtype=float)
-            mean_diff, dm_stat, p_value = newey_west_dm(loss_diff, lag=lag)
+            paired["loss_diff"] = loss_diff
+            time_loss_diff = (
+                paired.groupby("open_time", sort=True)["loss_diff"]
+                .mean()
+                .to_numpy(dtype=float)
+            )
+            mean_diff, dm_stat, p_value = newey_west_dm(time_loss_diff, lag=lag)
             rows.append(
                 {
                     "comparison": f"{method} vs {reference}",
@@ -332,25 +455,45 @@ def dm_style_loss_tests(predictions: pd.DataFrame, lag: int) -> pd.DataFrame:
                     "paired_t_stat": np.nan,
                     "paired_t_p_value": np.nan,
                     "wilcoxon_p_value": np.nan,
-                    "sign_test_wins": int((loss_diff < 0).sum()),
-                    "sign_test_non_ties": int((~np.isclose(loss_diff, 0)).sum()),
+                    "sign_test_wins": int((time_loss_diff < 0).sum()),
+                    "sign_test_non_ties": int((~np.isclose(time_loss_diff, 0)).sum()),
                     "sign_test_p_value": np.nan,
                     "dm_stat": dm_stat,
                     "dm_p_value": p_value,
                     "n_paired_rows": int(len(paired)),
-                    "test_note": "Newey-West DM-style test on per-row multiclass negative log-likelihood.",
+                    "n_time_blocks": int(len(time_loss_diff)),
+                    "test_note": (
+                        "Secondary Newey-West DM-style test on multiclass negative log-likelihood. "
+                        "Loss differences are averaged across assets per timestamp before HAC correction."
+                    ),
                 }
             )
     return pd.DataFrame(rows)
 
 
-def build_pairwise_tests(folds: pd.DataFrame, predictions: pd.DataFrame, samples: int, seed: int, dm_lag: int) -> pd.DataFrame:
-    fold_tests = fold_pairwise_tests(folds, samples=samples, seed=seed)
+def build_pairwise_tests(
+    folds: pd.DataFrame,
+    predictions: pd.DataFrame,
+    samples: int,
+    seed: int,
+    dm_lag: int,
+    reference_methods: list[str],
+) -> pd.DataFrame:
+    fold_tests = fold_pairwise_tests(
+        folds,
+        samples=samples,
+        seed=seed,
+        reference_methods=reference_methods,
+    )
     fold_tests["dm_stat"] = np.nan
     fold_tests["dm_p_value"] = np.nan
     fold_tests["n_paired_rows"] = np.nan
     fold_tests["test_note"] = "Paired fold-level metric difference; bootstrap CI resamples folds."
-    dm_tests = dm_style_loss_tests(predictions, lag=dm_lag)
+    dm_tests = dm_style_loss_tests(
+        predictions,
+        lag=dm_lag,
+        reference_methods=reference_methods,
+    )
     out = pd.concat([fold_tests, dm_tests], ignore_index=True, sort=False)
     return out.sort_values(["reference_method", "method", "metric"]).reset_index(drop=True)
 
@@ -547,7 +690,7 @@ def sharpe_diagnostics(predictions: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values("psr_gt_0", ascending=False).reset_index(drop=True)
 
 
-def plot_multiple_testing(claims: pd.DataFrame, output_path: Path) -> None:
+def plot_multiple_testing(claims: pd.DataFrame, output_path: Path, title_prefix: str = "Phase 15B") -> None:
     plot_df = claims[claims["metric"].isin(["IC", "Sharpe", "nll_loss"])].copy()
     if plot_df.empty:
         return
@@ -562,7 +705,7 @@ def plot_multiple_testing(claims: pd.DataFrame, output_path: Path) -> None:
     ax.axvline(0.05, color="black", linewidth=0.8, linestyle="--")
     ax.set_xscale("log")
     ax.set_xlabel("p or q value, log scale")
-    ax.set_title("Phase 15B - Multiple-Testing Correction")
+    ax.set_title(f"{title_prefix} - Multiple-Testing Correction")
     ax.set_yticks(y)
     ax.set_yticklabels(labels, fontsize=7)
     ax.grid(True, axis="x", alpha=0.25)
@@ -572,7 +715,7 @@ def plot_multiple_testing(claims: pd.DataFrame, output_path: Path) -> None:
     plt.close(fig)
 
 
-def plot_psr(diagnostics: pd.DataFrame, output_path: Path) -> None:
+def plot_psr(diagnostics: pd.DataFrame, output_path: Path, title_prefix: str = "Phase 15B") -> None:
     if diagnostics.empty:
         return
     plot_df = diagnostics.sort_values("psr_gt_0", ascending=True)
@@ -581,14 +724,14 @@ def plot_psr(diagnostics: pd.DataFrame, output_path: Path) -> None:
     ax.axvline(0.5, color="black", linewidth=0.8, linestyle="--")
     ax.set_xlim(0, 1)
     ax.set_xlabel("Probabilistic Sharpe Ratio: P(SR > 0)")
-    ax.set_title("Phase 15B - Probabilistic Sharpe Diagnostics")
+    ax.set_title(f"{title_prefix} - Probabilistic Sharpe Diagnostics")
     ax.grid(True, axis="x", alpha=0.25)
     fig.tight_layout()
     fig.savefig(output_path, dpi=180)
     plt.close(fig)
 
 
-def plot_ic_ci(summary: pd.DataFrame, output_path: Path) -> None:
+def plot_ic_ci(summary: pd.DataFrame, output_path: Path, title_prefix: str = "Phase 15A") -> None:
     plot_df = summary.sort_values("IC_bootstrap_mean", ascending=True)
     fig, ax = plt.subplots(figsize=(10, 5))
     y = np.arange(len(plot_df))
@@ -608,7 +751,7 @@ def plot_ic_ci(summary: pd.DataFrame, output_path: Path) -> None:
     ax.set_yticks(y)
     ax.set_yticklabels(plot_df["method"])
     ax.set_xlabel("Mean fold IC with 95% bootstrap CI")
-    ax.set_title("Phase 15A - Fold-Level IC Confidence Intervals")
+    ax.set_title(f"{title_prefix} - Fold-Level IC Confidence Intervals")
     ax.grid(True, axis="x", alpha=0.25)
     fig.tight_layout()
     fig.savefig(output_path, dpi=180)
@@ -650,6 +793,7 @@ def main() -> None:
     experiment_results = pd.read_csv(args.experiment_results) if Path(args.experiment_results).exists() else pd.DataFrame()
 
     folds = fold_metrics(predictions)
+    assets = asset_metrics(predictions)
     summary = method_summary(folds, experiment_results, samples=args.bootstrap_samples, seed=args.seed)
     pairwise = build_pairwise_tests(
         folds,
@@ -657,22 +801,47 @@ def main() -> None:
         samples=args.bootstrap_samples,
         seed=args.seed,
         dm_lag=args.dm_lag,
+        reference_methods=args.reference_methods,
+    )
+    asset_pairwise = asset_pairwise_tests(
+        assets,
+        samples=args.bootstrap_samples,
+        seed=args.seed,
+        reference_methods=args.reference_methods,
     )
     compact = test_summary(pairwise)
     corrected = add_multiple_testing(pairwise)
     claims = build_claims(corrected)
     psr = sharpe_diagnostics(predictions)
+    title_prefix = "Phase 37 Crypto-20" if args.output_prefix == "crypto20_" else "Phase 15"
 
-    folds.to_csv(output_dir / "statistical_fold_metrics.csv", index=False)
-    summary.to_csv(output_dir / "statistical_method_summary.csv", index=False)
-    pairwise.to_csv(output_dir / "statistical_pairwise_tests.csv", index=False)
-    compact.to_csv(output_dir / "statistical_test_summary.csv", index=False)
-    corrected.to_csv(output_dir / "statistical_multiple_testing.csv", index=False)
-    claims.to_csv(output_dir / "statistical_claims.csv", index=False)
-    psr.to_csv(output_dir / "statistical_sharpe_diagnostics.csv", index=False)
-    plot_ic_ci(summary, output_dir / "statistical_ic_confidence_intervals.png")
-    plot_multiple_testing(claims, output_dir / "statistical_multiple_testing.png")
-    plot_psr(psr, output_dir / "statistical_sharpe_diagnostics.png")
+    folds.to_csv(artifact_path(output_dir, args.output_prefix, "statistical_fold_metrics"), index=False)
+    assets.to_csv(artifact_path(output_dir, args.output_prefix, "statistical_asset_metrics"), index=False)
+    summary.to_csv(artifact_path(output_dir, args.output_prefix, "statistical_method_summary"), index=False)
+    pairwise.to_csv(artifact_path(output_dir, args.output_prefix, "statistical_pairwise_tests"), index=False)
+    asset_pairwise.to_csv(
+        artifact_path(output_dir, args.output_prefix, "statistical_asset_pairwise_tests"),
+        index=False,
+    )
+    compact.to_csv(artifact_path(output_dir, args.output_prefix, "statistical_test_summary"), index=False)
+    corrected.to_csv(artifact_path(output_dir, args.output_prefix, "statistical_multiple_testing"), index=False)
+    claims.to_csv(artifact_path(output_dir, args.output_prefix, "statistical_claims"), index=False)
+    psr.to_csv(artifact_path(output_dir, args.output_prefix, "statistical_sharpe_diagnostics"), index=False)
+    plot_ic_ci(
+        summary,
+        artifact_path(output_dir, args.output_prefix, "statistical_ic_confidence_intervals", ".png"),
+        title_prefix=title_prefix,
+    )
+    plot_multiple_testing(
+        claims,
+        artifact_path(output_dir, args.output_prefix, "statistical_multiple_testing", ".png"),
+        title_prefix=title_prefix,
+    )
+    plot_psr(
+        psr,
+        artifact_path(output_dir, args.output_prefix, "statistical_sharpe_diagnostics", ".png"),
+        title_prefix=title_prefix,
+    )
 
     print("\nStatistical method summary:")
     display_cols = [
@@ -689,6 +858,22 @@ def main() -> None:
     print("\nFocused pairwise tests:")
     focused = compact[compact["metric"].isin(["IC", "Sharpe", "nll_loss"])]
     print(focused.to_string(index=False))
+
+    print("\nSecondary asset-level diagnostics:")
+    asset_focus = asset_pairwise[
+        asset_pairwise["metric"].isin(["IC", "Sharpe", "total_return"])
+        & asset_pairwise["method"].str.contains("hmm_guided_hmm", regex=False)
+    ]
+    asset_cols = [
+        "comparison",
+        "metric",
+        "mean_difference",
+        "ci_low",
+        "ci_high",
+        "sign_test_wins",
+        "n_paired_assets",
+    ]
+    print(asset_focus[asset_cols].to_string(index=False))
 
     print("\nMultiple-testing claim summary:")
     claim_cols = [

@@ -1624,13 +1624,13 @@ def audit_paper_draft_artifacts(rows: list[AuditRecord]) -> None:
         "Figure and Table Plan",
     ]
     required_paper_phrases = [
-        "not a claim of profitable trading",
         "HMM states are proxy states",
         "not statistically significant at 5%",
-        "controlled crypto setting",
-        "18 walk-forward test folds",
+        "controlled pilot",
+        "18 pilot folds and 16 Crypto-20 folds",
         "p=0.801",
         "The headline result is mechanistic",
+        "structural improvement does not guarantee",
         "fold-level",
     ]
     required_columns = {"paper_section", "artifact_type", "artifact", "paper_role"}
@@ -2464,6 +2464,186 @@ def audit_crypto20_alpha_retest_artifacts(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_crypto20_statistical_artifacts(rows: list[AuditRecord]) -> None:
+    prefix = Path(SAVE_DIR) / "crypto20_statistical_"
+    paths = {
+        "folds": Path(f"{prefix}fold_metrics.csv"),
+        "assets": Path(f"{prefix}asset_metrics.csv"),
+        "summary": Path(f"{prefix}method_summary.csv"),
+        "pairwise": Path(f"{prefix}pairwise_tests.csv"),
+        "asset_pairwise": Path(f"{prefix}asset_pairwise_tests.csv"),
+        "compact": Path(f"{prefix}test_summary.csv"),
+        "corrected": Path(f"{prefix}multiple_testing.csv"),
+        "claims": Path(f"{prefix}claims.csv"),
+        "psr": Path(f"{prefix}sharpe_diagnostics.csv"),
+        "ic_plot": Path(f"{prefix}ic_confidence_intervals.png"),
+        "correction_plot": Path(f"{prefix}multiple_testing.png"),
+        "psr_plot": Path(f"{prefix}sharpe_diagnostics.png"),
+        "protocol": Path(BASE_DIR) / "reports" / "crypto20_statistical_protocol.md",
+    }
+    missing = [str(path.relative_to(BASE_DIR)) for path in paths.values() if not path.exists()]
+    if missing:
+        record(
+            rows,
+            "crypto20_statistical_artifacts",
+            WARN,
+            "artifact",
+            f"Missing Phase 37 artifacts: {missing}",
+            rows_checked=len(paths),
+            rows_failed=len(missing),
+        )
+        return
+
+    folds = pd.read_csv(paths["folds"])
+    assets = pd.read_csv(paths["assets"])
+    summary = pd.read_csv(paths["summary"])
+    pairwise = pd.read_csv(paths["pairwise"])
+    asset_pairwise = pd.read_csv(paths["asset_pairwise"])
+    corrected = pd.read_csv(paths["corrected"])
+    claims = pd.read_csv(paths["claims"])
+    protocol_text = paths["protocol"].read_text(encoding="utf-8")
+
+    expected_methods = {
+        "global_lgbm",
+        "regime_lgbm_hmm",
+        "regime_lgbm_kmeans",
+        "regime_lgbm_vol_bucket",
+        "regime_lgbm_hmm_guided_gmm",
+        "regime_lgbm_hmm_guided_hmm",
+    }
+    expected_references = {"global_lgbm", "regime_lgbm_hmm", "regime_lgbm_kmeans"}
+    required_metric_cols = {
+        "method",
+        "regime_method",
+        "target",
+        "horizon",
+        "IC",
+        "Sharpe",
+        "total_return",
+        "drawdown",
+        "turnover",
+        "n_test_rows",
+    }
+    required_pairwise_cols = {
+        "method",
+        "reference_method",
+        "metric",
+        "mean_difference",
+        "ci_low",
+        "ci_high",
+        "paired_t_p_value",
+        "wilcoxon_p_value",
+        "sign_test_p_value",
+        "dm_p_value",
+        "test_note",
+    }
+    required_corrected_cols = {
+        "primary_p_value",
+        "bh_q_all_tests",
+        "holm_p_all_tests",
+        "bh_q_by_metric",
+        "holm_p_by_metric",
+        "claim_status",
+    }
+
+    failures = 0
+    details = [
+        f"fold_rows={len(folds)}",
+        f"asset_rows={len(assets)}",
+        f"summary_rows={len(summary)}",
+        f"pairwise_rows={len(pairwise)}",
+    ]
+
+    missing_fold_cols = sorted((required_metric_cols | {"fold"}) - set(folds.columns))
+    missing_asset_cols = sorted((required_metric_cols | {"symbol"}) - set(assets.columns))
+    missing_pairwise_cols = sorted(required_pairwise_cols - set(pairwise.columns))
+    missing_corrected_cols = sorted(required_corrected_cols - set(corrected.columns))
+    failures += len(missing_fold_cols) + len(missing_asset_cols)
+    failures += len(missing_pairwise_cols) + len(missing_corrected_cols)
+
+    if not missing_fold_cols:
+        fold_methods = set(folds["method"].astype(str))
+        method_failures = len(expected_methods - fold_methods)
+        fold_counts = folds.groupby("method")["fold"].nunique()
+        coverage_failures = int((fold_counts != 16).sum())
+        row_failures = int(len(folds) != 16 * len(expected_methods))
+        failures += method_failures + coverage_failures + row_failures
+        details.extend(
+            [
+                f"fold_methods={len(fold_methods)}",
+                f"fold_count_range={int(fold_counts.min())}-{int(fold_counts.max())}",
+            ]
+        )
+
+    if not missing_asset_cols:
+        asset_counts = assets.groupby("method")["symbol"].nunique()
+        asset_failures = int((asset_counts != 20).sum()) + int(len(assets) != 20 * len(expected_methods))
+        failures += asset_failures
+        details.append(f"asset_count_range={int(asset_counts.min())}-{int(asset_counts.max())}")
+
+    if not missing_pairwise_cols:
+        primary = pairwise[
+            (pairwise["method"] == "regime_lgbm_hmm_guided_hmm")
+            & pairwise["reference_method"].isin(expected_references)
+            & pairwise["metric"].isin({"IC", "Sharpe", "total_return", "nll_loss"})
+        ]
+        present_refs = set(primary["reference_method"].astype(str))
+        present_metrics = set(primary["metric"].astype(str))
+        primary_failures = len(expected_references - present_refs)
+        primary_failures += len({"IC", "Sharpe", "total_return", "nll_loss"} - present_metrics)
+        nll = pairwise[pairwise["metric"] == "nll_loss"]
+        time_block_failures = int(nll.empty)
+        time_block_failures += int(
+            not nll["test_note"].astype(str).str.contains("averaged across assets per timestamp").all()
+        )
+        time_block_failures += int("n_time_blocks" not in pairwise.columns)
+        failures += primary_failures + time_block_failures
+        details.append(f"primary_comparison_rows={len(primary)}")
+
+    asset_note_failures = int(
+        not asset_pairwise["test_note"].astype(str).str.contains("cross-correlated").all()
+    )
+    failures += asset_note_failures
+
+    required_protocol_phrases = [
+        "primary inferential unit is the walk-forward fold",
+        "asset-level p-values are descriptive",
+        "no broad superiority claim",
+        "no automatic epoch expansion",
+    ]
+    missing_phrases = [phrase for phrase in required_protocol_phrases if phrase not in protocol_text]
+    failures += len(missing_phrases)
+
+    if missing_fold_cols:
+        details.append(f"missing_fold_cols={missing_fold_cols}")
+    if missing_asset_cols:
+        details.append(f"missing_asset_cols={missing_asset_cols}")
+    if missing_pairwise_cols:
+        details.append(f"missing_pairwise_cols={missing_pairwise_cols}")
+    if missing_corrected_cols:
+        details.append(f"missing_corrected_cols={missing_corrected_cols}")
+    if missing_phrases:
+        details.append(f"missing_protocol_phrases={missing_phrases}")
+
+    guided_ic = corrected[
+        (corrected["method"] == "regime_lgbm_hmm_guided_hmm")
+        & (corrected["reference_method"] == "regime_lgbm_hmm")
+        & (corrected["metric"] == "IC")
+    ]
+    if not guided_ic.empty:
+        details.append(f"guided_vs_hmm_ic_p={float(guided_ic.iloc[0]['primary_p_value']):.3f}")
+
+    record(
+        rows,
+        "crypto20_statistical_artifacts",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(details),
+        rows_checked=max(len(folds) + len(assets) + len(pairwise) + len(claims), 1),
+        rows_failed=failures,
+    )
+
+
 def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
     fold_path = Path(SAVE_DIR) / "statistical_fold_metrics.csv"
     summary_path = Path(SAVE_DIR) / "statistical_method_summary.csv"
@@ -2762,6 +2942,7 @@ def main() -> None:
     audit_crypto20_guided_readiness_artifacts(rows)
     audit_crypto20_guided_encoder_artifacts(rows)
     audit_crypto20_alpha_retest_artifacts(rows)
+    audit_crypto20_statistical_artifacts(rows)
     audit_statistical_artifacts(rows)
     audit_run_registry(rows)
     audit = write_outputs(rows, fold_audit)
