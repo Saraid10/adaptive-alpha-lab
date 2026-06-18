@@ -44,7 +44,7 @@ This registry separates allowed paper claims from claims that are not supported 
 |---|---|---|
 | Time-frequency guided encoding improves the full model. | Open | Full-length time-frequency run plus downstream alpha retest; Phase 25 says not to expand this yet. |
 | Hard-negative mining improves guided regimes. | Open | Capped ablation suite. |
-| Downstream alpha results generalize beyond BTC/ETH. | Mixed | Phase 36 shows guided-HMM improves Crypto-20 IC versus global and raw-feature HMM, but raw-feature HMM still leads on Sharpe and total return. |
+| Downstream alpha results generalize beyond BTC/ETH. | Directional only | Phase 37 gives guided-HMM the highest mean fold IC, but the edge is not significant after paired testing or correction; Sharpe/return dominance is unsupported. |
 | Fold-local encoder retraining changes the conclusion. | Open | Expanding-window or fold-local encoder retraining experiment. |
 
 ## Forbidden Claims
@@ -55,7 +55,8 @@ This registry separates allowed paper claims from claims that are not supported 
 | The trading strategy is profitable. | Backtest returns are research diagnostics with limited assets and overlapping labels. |
 | Guided-HMM statistically dominates raw-feature HMM. | The current fold-level IC edge is not significant at 5%. |
 | The result generalizes to equities, FX, or commodities. | The expanded tests are still crypto-only and do not cover other asset classes. |
-| The result improves downstream alpha on Crypto-20. | Only as an IC claim. Phase 36 does not support a broad portfolio-performance dominance claim over raw-feature HMM. |
+| The result statistically improves downstream alpha on Crypto-20. | Unsupported. Phase 37 IC confidence intervals cross zero and corrected tests do not establish superiority over global, raw HMM, or KMeans. |
+| The guided model is better calibrated on Crypto-20. | Unsupported. Time-block DM tests show worse multiclass NLL than global LightGBM and raw-feature HMM. |
 | SHAP proves causal market drivers. | Feature attribution is model-specific and diagnostic. |
 | Offline/global regime assignments prove predictive performance. | Predictive claims require fold-local regime refits. |
 

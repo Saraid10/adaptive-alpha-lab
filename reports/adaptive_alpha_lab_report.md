@@ -488,6 +488,16 @@ The experiment compares a global LightGBM model, raw-feature HMM, raw-feature KM
 
 The completed run produces equal OOS coverage across all methods (`230,400` rows each). The strongest guided method, `regime_lgbm_hmm_guided_hmm`, reaches IC `0.0226`, beating the global model (`0.0175`) and raw-feature HMM (`0.0214`) on predictive correlation. However, raw-feature HMM still has stronger Sharpe (`0.1479` versus `-0.0573`) and total return (`0.1386` versus `-0.1257`). The paper interpretation is therefore deliberately mixed: HMM-guided regimes transfer structurally and directionally improve Crypto-20 IC, but do not yet dominate classical HMM at the portfolio-risk level.
 
+## Phase 37 Crypto-20 Statistical Adjudication
+
+Phase 37 tests whether the Phase 36 point-estimate differences survive fold uncertainty, dependence correction, and multiple comparisons. The primary tests pair the same 16 walk-forward folds across methods. A separate DM-style calibration test averages negative-log-likelihood differences across assets at each timestamp before applying a lag-7 Newey-West correction. Per-asset results are secondary because the 20 crypto assets are cross-correlated.
+
+Guided-HMM has the highest mean fold IC (`0.0117`), but its 95% bootstrap interval crosses zero (`-0.0132` to `0.0404`). Relative to raw-feature HMM, its mean fold IC difference is only `+0.00065` (`p=0.840`). Relative to global LightGBM, the difference is `+0.00712` with raw `p=0.094`, but it does not survive correction (`BH q=0.322`). Relative to KMeans, the difference is `+0.00243` (`p=0.631`). No guided-HMM fold-level Sharpe or total-return comparison is significant.
+
+The calibration evidence is negative. Guided-HMM has higher, therefore worse, multiclass NLL than global LightGBM (`DM p=1.51e-12`, surviving Holm correction) and raw-feature HMM (`DM p=0.0148`, surviving BH correction within the NLL family). The asset-level view is directionally stronger against global LightGBM: mean IC difference `+0.00521`, bootstrap interval `0.00037` to `0.00995`, with wins in 13 of 20 assets. Because those assets are correlated and the sign test is not significant, this remains descriptive rather than confirmatory.
+
+The Phase 37 conclusion is therefore narrower than the Phase 36 point-estimate result. Structural transfer is supported, and there is weak directional evidence that guided-HMM improves return ranking versus a global model. Statistical dominance over raw HMM or KMeans, superior risk-adjusted performance, and superior probability calibration are not supported.
+
 The result is also informative because it is weaker but consistent relative to the BTC/ETH pilot. The assignment-layer mechanism replicates: `hmm_guided_hmm` beats `hmm_guided_gmm` on NMI, ARI, purity, and silhouette. But the absolute HMM-reference alignment is lower than in the two-asset pilot (`NMI 0.694` versus `0.869`, purity `0.814` versus `0.957`), which is consistent with greater regime heterogeneity across 20 assets. The transition diagonal is higher on Crypto-20 (`0.890` versus about `0.825` in the BTC/ETH guided-HMM run), so regime persistence and HMM-reference agreement appear to decouple at larger scale. That nuance should be kept in the generalization section rather than hidden.
 
 ## Limitations

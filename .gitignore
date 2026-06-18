@@ -81,6 +81,15 @@ models/*.csv
 !models/crypto20_walkforward_regime_summary.csv
 !models/crypto20_walkforward_comparison.csv
 !models/crypto20_walkforward_guided_alpha_comparison.csv
+!models/crypto20_statistical_fold_metrics.csv
+!models/crypto20_statistical_asset_metrics.csv
+!models/crypto20_statistical_method_summary.csv
+!models/crypto20_statistical_pairwise_tests.csv
+!models/crypto20_statistical_asset_pairwise_tests.csv
+!models/crypto20_statistical_test_summary.csv
+!models/crypto20_statistical_multiple_testing.csv
+!models/crypto20_statistical_claims.csv
+!models/crypto20_statistical_sharpe_diagnostics.csv
 
 # Keep compact Crypto-20 regime summaries, not row-level assignments.
 models/crypto20_regime_assignments.csv

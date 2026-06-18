@@ -6,6 +6,7 @@ Validation,audit,models/validation_audit.csv; models/fold_audit.csv,"Documents e
 Methods,model card,reports/model_card.md; reports/paper_protocol.md,"Records architecture, frozen protocol, methods, metrics, and forbidden claims."
 Main results,result table,models/walkforward_experiment_results.csv; models/guided_alpha_comparison.csv,"Primary fold-local alpha comparison for global, classical, vanilla learned, and guided learned regimes."
 Statistical evidence,statistical test,models/statistical_test_summary.csv; models/paper_statistical_summary.csv,Separates point-estimate wins from fold-level significance and multiple-testing-safe claims.
+Crypto-20 generalization,statistical test,models/crypto20_statistical_method_summary.csv; models/crypto20_statistical_claims.csv; reports/crypto20_statistical_protocol.md,"Separates structural transfer and directional IC from unsupported alpha, calibration, and portfolio-dominance claims."
 Mechanism,regime quality,models/regime_quality_summary.csv; models/guided_encoder_comparison.csv,"Measures structural alignment, persistence, entropy, NMI, ARI, and purity."
 Ablations,ablation,models/ablation_summary.csv; models/paper_claim_tests.csv,"Tests objective guidance, assignment layer, augmentation view, and classical-reference comparisons."
 Robustness,stress test,models/robustness_summary.csv; models/robustness_stress_summary.csv,Checks symbol/horizon robustness and cost/threshold/period sensitivity.
