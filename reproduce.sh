@@ -69,7 +69,7 @@ case "$MODE" in
     ;;
   smoke)
     run_step "Compile Python sources" -m compileall src dashboard.py streamlit_app.py
-    run_step "Regenerate paper skeleton" src/paper_skeleton.py
+    run_step "Verify or initialize paper artifacts" src/paper_skeleton.py
     run_step "Run validation audit" src/validation_audit.py --symbols "${SYMBOLS[@]}"
     echo
     echo "Smoke reproduction complete."
@@ -93,7 +93,7 @@ case "$MODE" in
     run_step "Run interpretability" src/interpretability.py --symbols "${SYMBOLS[@]}"
     run_step "Run ablation suite" src/ablation_suite.py
     run_step "Run paper claim tests" src/paper_claim_tests.py
-    run_step "Regenerate paper skeleton" src/paper_skeleton.py
+    run_step "Verify or initialize paper artifacts" src/paper_skeleton.py
     run_step "Run validation audit" src/validation_audit.py --symbols "${SYMBOLS[@]}"
     run_step "Build backtest dashboard artifacts" src/backtest.py
     run_step "Compile Python sources" -m compileall src dashboard.py streamlit_app.py

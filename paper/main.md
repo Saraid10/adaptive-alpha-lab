@@ -2,7 +2,7 @@
 
 ## Paper Status
 
-Phase 37 statistical manuscript pass. This Markdown draft is synchronized with the completed BTC/ETH pilot and Crypto-20 generalization artifacts.
+Phase 38 controlled working draft. The completed Phase 37 findings are synchronized, while all inspected BTC/ETH and Crypto-20 outcomes are now explicitly development-observed pending a fully fold-local encoder and locked external evaluation.
 
 ## Abstract
 
@@ -130,7 +130,7 @@ The ablation suite tests objective guidance, assignment layer, augmentation view
 - The guided-HMM edge over raw-feature HMM is directionally supported but not statistically significant at 5%; the main IC comparison has `p=0.801`.
 - Backtest results are research diagnostics, not live trading claims.
 - Interpretability results are model-specific and not causal.
-- The encoder is trained offline; fold-local encoder retraining remains a possible appendix experiment if compute allows.
+- The current encoder is trained offline. Fully fold-local encoder training is a required validity experiment before the learned-regime path can support the final predictive claim; it is not delegated to an optional appendix.
 
 ## 11. Reproducibility
 

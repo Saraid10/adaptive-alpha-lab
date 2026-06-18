@@ -1,0 +1,26 @@
+experiment_id,phase_family,scope,method_family,selection_role,outcome_inspected,paper_role,status,next_action
+pilot_classical_regimes,4-13,BTC_ETH,"HMM; KMeans; volatility bucket",development,true,baseline,complete,retain
+pilot_global_alpha,4-13,BTC_ETH,global LightGBM,development,true,baseline,complete,retain
+pilot_vanilla_contrastive,6-16,BTC_ETH,"contrastive GMM; contrastive HMM",development,true,mechanism,complete,retain
+pilot_robustness,14A-14B,BTC_ETH,"symbol; horizon; cost; threshold; period",development,true,robustness,complete,retain
+pilot_statistics,15A-15B,BTC_ETH,"paired folds; correction; PSR",development,true,evidence control,complete,retain
+pilot_regime_quality,16,BTC_ETH,structural regime diagnostics,development,true,mechanism,complete,retain
+guided_smoke,18,BTC_ETH,HMM-guided contrastive smoke,development,true,prototype,complete,retain as development
+guided_full,19B,BTC_ETH,HMM-guided contrastive full run,development,true,proposed method,complete,retain as development
+guided_alpha,20,BTC_ETH,"guided GMM; guided HMM",development,true,main result,complete,retain as development
+guided_stress,21,BTC_ETH,guided robustness refresh,development,true,robustness,complete,retain as development
+time_frequency_prototype,22A,BTC_ETH,time-frequency guided encoder,development,true,negative ablation,complete,do not expand automatically
+pilot_interpretability,23,BTC_ETH,fold-local alpha attribution,development,true,interpretability,complete,retain diagnostically
+minimal_ablation,25,BTC_ETH,"objective; assignment; augmentation",development,true,mechanism,complete,retain
+paper_claim_tests,26,BTC_ETH,claim-level statistical mapping,development,true,evidence control,complete,retain
+crypto20_universe,31,Crypto20_Crypto50,pre-specified universe design,development,true,data protocol,complete,retain
+crypto20_pipeline,32,Crypto20,"ingestion; features; targets; quality gate",development,true,data quality,complete,retain
+crypto20_classical,33,Crypto20,"HMM; KMeans; volatility bucket",development,true,baseline,complete,retain
+crypto20_guided_readiness,34,Crypto20,guided compute gate,development,true,scope control,complete,retain
+crypto20_guided_structure,35,Crypto20,"guided GMM; guided HMM",development,true,structural transfer,complete,retain as development
+crypto20_alpha,36,Crypto20,"global; classical; guided",development,true,predictive generalization,complete,retain as development
+crypto20_statistics,37,Crypto20,"paired folds; time-block NLL; asset heterogeneity",development,true,statistical adjudication,complete,freeze artifacts
+fold_local_encoder_baseline,39,Crypto20,full baseline ladder,development,false,validity repair,planned,implement after Phase 38
+calibrated_soft_gating,40,Crypto20,"calibration; soft gating; pooled experts",development,false,candidate improvement,blocked,requires fold-local baseline
+external_asset_confirmation,43,Locked_asset_holdout,frozen selected candidate,final_locked,false,confirmatory result,blocked,requires model freeze
+future_temporal_confirmation,journal_extension,Future_data,frozen selected candidate,final_locked,false,temporal generalization,blocked,requires future collection

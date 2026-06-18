@@ -2,9 +2,9 @@
 
 ## Protocol Status
 
-This document freezes the paper-facing research protocol after Phase 23. Future experiments should change this file only through a new phase, not casually while running models.
+This document began as the paper-facing protocol after Phase 23 and is synchronized in Phase 38 with the completed Crypto-20 evidence. Future experiments should change it only through a named protocol phase, not casually while running models.
 
-Protocol version: Phase 24
+Protocol version: Phase 38
 
 Primary working title:
 
@@ -163,7 +163,7 @@ The paper must not claim:
 1. HMM states are ground-truth market regimes.
 2. The strategy is profitable or deployable.
 3. The guided-HMM method is statistically dominant over raw-feature HMM at 5% significance.
-4. The downstream alpha result generalizes beyond BTC/ETH before the Crypto-20 fold-local alpha retest is complete.
+4. The Crypto-20 downstream result establishes statistically proven alpha, calibration, or portfolio-performance dominance.
 5. The interpretability results are causal explanations.
 6. Offline/global regime artifacts prove predictive performance.
 
@@ -176,7 +176,7 @@ Phase 27 drafts the paper skeleton before additional scope expansion. Multi-asse
 1. a statistically meaningful guided-HMM improvement over raw-feature HMM, or
 2. a robust enough stress/interpretable result that a generalization appendix is worth the compute.
 
-The current Phase 26 read does not show statistically decisive guided-HMM dominance over raw-feature HMM. Therefore, the default paper is a crypto-market benchmark with multi-asset generalization as future work, unless a separate scope decision changes that plan.
+The historical Phase 26 read did not show statistically decisive guided-HMM dominance over raw-feature HMM. Phases 36 and 37 have now completed the first Crypto-20 predictive test and confirm that structural transfer does not establish predictive, calibration, or portfolio dominance. The default paper is therefore a controlled crypto benchmark and mechanism study unless later fully fold-local and locked evidence changes that conclusion.
 
 The multi-asset gate is a downstream alpha-claim gate. It does not prohibit structural generalization experiments that test whether the representation-learning objective transfers to a pre-specified wider universe. Those experiments must be labeled as structural diagnostics, must not be used as evidence of predictive alpha improvement, and must still be followed by a fold-local downstream alpha benchmark before the paper can claim multi-asset alpha generalization.
 
@@ -190,4 +190,14 @@ Reviewer-facing caveats must stay explicit in the paper draft:
 2. Eighteen walk-forward folds limit statistical power, but are more defensible than row-level independence over overlapping labels.
 3. The `p=0.801` guided-HMM versus raw-feature HMM IC result prevents a statistical dominance claim; the main contribution is the sequential-assignment mechanism.
 4. Phase 35 is a structural Crypto-20 generalization result, not a Crypto-20 alpha result.
+
+## Phase 38 Evidence And Data-Role Reset
+
+Phases 36 and 37 complete the first Crypto-20 downstream and statistical evaluation. Guided-HMM has the highest mean fold IC, but its edge over raw-feature HMM is non-significant (`p=0.840`), its risk-adjusted portfolio behavior is not dominant, and its multiclass NLL is worse than global LightGBM after correction. The multi-asset result is therefore structural transfer plus weak directional ranking evidence, not predictive or calibration superiority.
+
+All BTC/ETH and Crypto-20 results inspected through Phase 37 are now `development_observed` according to `reports/data_role_registry.csv`. They may support model development and historical comparison, but they may not be described as an untouched final test.
+
+The next critical validity requirement is a fully fold-local learned pipeline. Fold-local regime assignment is not sufficient when the encoder was trained offline. Scaling, HMM guidance, pair mining, encoder fitting, assignment fitting, calibration, threshold selection, and alpha fitting must respect the outer-fold boundary, with model decisions made only through inner chronological validation.
+
+The authorized next experiment family and its decision rules are defined in `reports/phase38_master_protocol.md` and `reports/publication_acceptance_gates.md`. Crypto-50 expansion, unrestricted architecture search, and product deployment remain blocked until the fold-local validity and baseline-completeness gates pass.
 

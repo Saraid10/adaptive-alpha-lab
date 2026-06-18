@@ -24,8 +24,9 @@ oos_prediction_no_duplicate_method_rows,PASS,critical,155520,0,No duplicated met
 oos_prediction_rows_match_test_folds,PASS,critical,155520,0,All prediction rows fall inside their recorded fold test windows.
 oos_prediction_schema,PASS,critical,0,0,alpha_oos_predictions.csv has required audit columns.
 paper_draft_artifacts,PASS,critical,29,0,paper_files=3/3; section_checks=13; artifact_map_rows=13
-paper_protocol_artifacts,PASS,critical,26,0,protocol_files=4/4; section_checks=22
+paper_protocol_artifacts,PASS,critical,40,0,protocol_files=6/6; section_checks=34
 paper_statistical_artifacts,PASS,critical,37,0,"test_rows=25; summary_rows=12; statuses={'directionally_supported': 3, 'mechanism_supported_no_fold_p_value': 2, 'do_not_expand_yet': 2, 'mixed_structural_evidence': 2, 'raw_suggestive': 1, 'not_supported': 1, 'mixed_directional': 1}"
+phase38_control_artifacts,PASS,critical,47,0,role_rows=5; ledger_rows=25; development_rows=2; locked_or_future_rows=2; invalid_inspected_locks=0; final_locked_rows=2; inspected_final_rows=0
 primary_target_columns_present,PASS,critical,2,0,"Primary target columns exist: ['tb_label_8h', 'forward_return_8h']."
 regime_assignment_common_coverage,PASS,critical,5,0,"Regime assignment rows by method: contrastive=34754, contrastive_hmm=34754, hmm=34754, kmeans=34754, vol_bucket=34754"
 regime_quality_artifacts,PASS,critical,90,0,"summary_rows=15, expected=15; all_scope_methods=5; agreement_rows=75, expected=75"
