@@ -47,7 +47,7 @@ This registry separates allowed paper claims from claims that are not supported 
 | Time-frequency guided encoding improves the full model. | Open | Full-length time-frequency run plus downstream alpha retest; Phase 25 says not to expand this yet. |
 | Hard-negative mining improves guided regimes. | Open | Capped ablation suite. |
 | Downstream alpha results generalize beyond BTC/ETH. | Directional only | Phase 37 gives guided-HMM the highest mean fold IC, but the edge is not significant after paired testing or correction; Sharpe/return dominance is unsupported. |
-| Fold-local encoder retraining changes the conclusion. | Open | Expanding-window or fold-local encoder retraining experiment. |
+| Fold-local encoder retraining changes the conclusion. | Open | Phase 39 machinery passes unit and one-fold smoke gates, but the frozen full development run has not been completed. |
 | Validation-only calibration repairs guided-HMM NLL without reducing IC. | Open | Inner-validation calibration followed by fully fold-local outer evaluation. |
 | Soft regime gating improves transition behavior. | Open | Pre-specified hard-versus-soft gating comparison on development folds. |
 | The selected method transfers to an untouched holdout. | Open | One frozen configuration evaluated once on a registered locked asset or temporal holdout. |
@@ -69,6 +69,12 @@ This registry separates allowed paper claims from claims that are not supported 
 ## Phase 38 Claim Control
 
 The source of truth for data roles is `reports/data_role_registry.csv`; the source of truth for tried and planned experiment families is `reports/experiment_ledger.csv`. New README, paper, dashboard, resume, or presentation language must remain inside both registries and the gates in `reports/publication_acceptance_gates.md`.
+
+## Phase 39 Claim Control
+
+Allowed: the fully fold-local pipeline passed boundary, reproducibility, causal-encoding, launcher, artifact, and equal-coverage smoke checks.
+
+Forbidden: interpreting the one-fold, one-epoch Phase 39 metric table as evidence that any method is better or worse. A full development run can update development claims only; it cannot restore untouched-test status to Crypto-20.
 
 ## Resume-Safe Language
 

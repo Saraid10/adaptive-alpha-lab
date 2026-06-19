@@ -1,0 +1,9 @@
+fold,method,train_rows,test_assignment_rows,test_prediction_rows
+1,global_lgbm,85220,14400,14400
+1,regime_lgbm_contrastive,85220,14400,14400
+1,regime_lgbm_contrastive_hmm,85220,14400,14400
+1,regime_lgbm_hmm,85220,14400,14400
+1,regime_lgbm_kmeans,85220,14400,14400
+1,regime_lgbm_vol_bucket,85220,14400,14400
+1,regime_lgbm_hmm_guided_gmm,85220,14400,14400
+1,regime_lgbm_hmm_guided_hmm,85220,14400,14400

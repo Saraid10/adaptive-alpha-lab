@@ -47,7 +47,7 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
 | 1 | 38 | Research-control reset | Required before new model development | `phase38_master_protocol.md`, `data_role_registry.csv`, `experiment_ledger.csv`, `publication_acceptance_gates.md` |
-| 2 | 39 | Fully fold-local encoder baseline ladder | Critical validity and baseline-completeness gate | fold-local encoder manifests, predictions, comparisons, and leakage tests |
+| 2 | 39 | Fully fold-local encoder baseline ladder | Implementation/smoke gate passed; full development run pending | fold-local encoder manifests, predictions, comparisons, and leakage tests |
 | 3 | 40 | Bounded calibration and soft-gating candidates | Conditional on the Phase 39 baseline passing | development-only candidate comparison and frozen selection record |
 | 4 | 41 | Cross-asset interpretation and execution hardening | Required for mechanism and economic discussion | fold-local attribution, transition diagnostics, and execution stress results |
 | 5 | 42 | Locked external evaluation | One frozen candidate evaluated once | registered holdout, immutable predictions, final comparison |

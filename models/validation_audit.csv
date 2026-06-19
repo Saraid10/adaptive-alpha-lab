@@ -1,4 +1,5 @@
 check,status,severity,rows_checked,rows_failed,detail
+phase39_full_development_run,WARN,research,1,15,Only a smoke/development gate is present (1 fold(s)); no Phase 39 performance claim is authorized.
 regime_discovery_protocol,WARN,methodological,173770,0,Legacy regime_assignments.csv is an offline/global artifact. Use walkforward_experiment_results.csv for fold-local predictive regime claims.
 ablation_artifacts,PASS,critical,60,0,"result_rows=48; summary_rows=12; families=4; decisions={'supported': 5, 'mixed': 3, 'do_not_expand_yet': 2, 'not_supported': 1, 'directional_support_statistical_refresh_needed': 1}"
 compute_plan_artifacts,PASS,critical,13,0,profile_rows=1; budget_rows=12; complete=2; active_next=0; prototype_pending=1; budget_status=green; summary_rows=8
@@ -27,6 +28,7 @@ paper_draft_artifacts,PASS,critical,29,0,paper_files=3/3; section_checks=13; art
 paper_protocol_artifacts,PASS,critical,40,0,protocol_files=6/6; section_checks=34
 paper_statistical_artifacts,PASS,critical,37,0,"test_rows=25; summary_rows=12; statuses={'directionally_supported': 3, 'mechanism_supported_no_fold_p_value': 2, 'do_not_expand_yet': 2, 'mixed_structural_evidence': 2, 'raw_suggestive': 1, 'not_supported': 1, 'mixed_directional': 1}"
 phase38_control_artifacts,PASS,critical,47,0,role_rows=5; ledger_rows=25; development_rows=2; locked_or_future_rows=2; invalid_inspected_locks=0; final_locked_rows=2; inspected_final_rows=0
+phase39_fold_local_validity,PASS,critical,10,0,"Validated temporal boundaries, hashes, encoder lineage, and equal coverage for 1 fold(s) and all eight methods."
 primary_target_columns_present,PASS,critical,2,0,"Primary target columns exist: ['tb_label_8h', 'forward_return_8h']."
 regime_assignment_common_coverage,PASS,critical,5,0,"Regime assignment rows by method: contrastive=34754, contrastive_hmm=34754, hmm=34754, kmeans=34754, vol_bucket=34754"
 regime_quality_artifacts,PASS,critical,90,0,"summary_rows=15, expected=15; all_scope_methods=5; agreement_rows=75, expected=75"

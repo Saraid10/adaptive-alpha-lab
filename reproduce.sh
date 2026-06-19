@@ -69,6 +69,7 @@ case "$MODE" in
     ;;
   smoke)
     run_step "Compile Python sources" -m compileall src dashboard.py streamlit_app.py
+    run_step "Test Phase 39 fold-local boundaries" -m unittest -v tests.test_fold_local_encoder
     run_step "Verify or initialize paper artifacts" src/paper_skeleton.py
     run_step "Run validation audit" src/validation_audit.py --symbols "${SYMBOLS[@]}"
     echo

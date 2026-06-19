@@ -1,0 +1,5 @@
+fold,encoder_method,stage,epoch,train_loss,validation_loss,loss,train_valid_anchor_pct,train_positive_pair_count,train_hard_negative_pair_count,validation_valid_anchor_pct,validation_positive_pair_count,validation_hard_negative_pair_count,valid_anchor_pct,positive_pair_count,hard_negative_pair_count
+1,vanilla,inner_selection,1,0.6277552611747523,2.965099388360977,,,,,,,,,,
+1,vanilla,outer_refit,1,,,0.5858618471655064,,,,,,,,,
+1,guided,inner_selection,1,1.0000828757882119,1.302054950594902,,0.996875,4770.5,4.45,0.9900390625,6652.7,655.85,,,
+1,guided,outer_refit,1,,,0.9926019608974457,,,,,,,0.990625,4353.5,3.65

@@ -3113,6 +3113,134 @@ def audit_run_registry(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_phase39_fold_local_artifacts(rows: list[AuditRecord]) -> None:
+    model_dir = Path(SAVE_DIR)
+    required = {
+        "manifest": model_dir / "crypto20_fold_local_encoder_manifest.csv",
+        "coverage": model_dir / "crypto20_fold_local_encoder_coverage.csv",
+        "results": model_dir / "crypto20_fold_local_experiment_results.csv",
+        "loss": model_dir / "crypto20_fold_local_encoder_loss.csv",
+        "report": Path(BASE_DIR) / "reports" / "phase39_fold_local_results.md",
+    }
+    missing = [str(path.relative_to(BASE_DIR)) for path in required.values() if not path.exists()]
+    if missing:
+        record(
+            rows,
+            "phase39_fold_local_artifacts",
+            WARN,
+            "research",
+            f"Phase 39 has not produced a complete artifact set: {missing}",
+            rows_checked=len(required),
+            rows_failed=len(missing),
+        )
+        return
+
+    manifest = pd.read_csv(required["manifest"])
+    coverage = pd.read_csv(required["coverage"])
+    results = pd.read_csv(required["results"])
+    expected_methods = {
+        "global_lgbm",
+        "regime_lgbm_vol_bucket",
+        "regime_lgbm_kmeans",
+        "regime_lgbm_hmm",
+        "regime_lgbm_contrastive",
+        "regime_lgbm_contrastive_hmm",
+        "regime_lgbm_hmm_guided_gmm",
+        "regime_lgbm_hmm_guided_hmm",
+    }
+    failures: list[str] = []
+    manifest_columns = {
+        "fold", "encoder_method", "outer_train_end", "inner_train_end",
+        "inner_validation_start", "inner_validation_end", "outer_test_start",
+        "outer_test_end", "selected_epoch", "max_epochs", "scaler_training_rows",
+        "input_hash", "model_hash",
+    }
+    coverage_columns = {
+        "fold", "method", "train_rows", "test_assignment_rows", "test_prediction_rows",
+    }
+    if not manifest_columns.issubset(manifest.columns):
+        failures.append(f"manifest columns missing={sorted(manifest_columns - set(manifest.columns))}")
+    if not coverage_columns.issubset(coverage.columns):
+        failures.append(f"coverage columns missing={sorted(coverage_columns - set(coverage.columns))}")
+    if "method" not in results:
+        failures.append("results method column missing")
+
+    if not failures:
+        encoders_by_fold = manifest.groupby("fold")["encoder_method"].agg(lambda x: set(x.astype(str)))
+        bad_encoders = encoders_by_fold[encoders_by_fold != {"vanilla", "guided"}]
+        if len(bad_encoders):
+            failures.append(f"encoder lineage incomplete for folds={bad_encoders.index.tolist()}")
+        boundary_bad = manifest[
+            (manifest["inner_train_end"] > manifest["inner_validation_start"])
+            | (manifest["inner_validation_start"] >= manifest["inner_validation_end"])
+            | (manifest["inner_validation_end"] > manifest["outer_train_end"])
+            | (manifest["outer_train_end"] >= manifest["outer_test_start"])
+            | (manifest["outer_test_start"] >= manifest["outer_test_end"])
+        ]
+        if len(boundary_bad):
+            failures.append(f"invalid temporal boundary rows={len(boundary_bad)}")
+        epoch_bad = manifest[
+            (manifest["selected_epoch"] < 1)
+            | (manifest["selected_epoch"] > manifest["max_epochs"])
+        ]
+        if len(epoch_bad):
+            failures.append(f"invalid selected epochs={len(epoch_bad)}")
+        hash_bad = manifest[
+            (manifest["input_hash"].astype(str).str.len() != 64)
+            | (manifest["model_hash"].astype(str).str.len() != 64)
+        ]
+        if len(hash_bad):
+            failures.append(f"invalid lineage hashes={len(hash_bad)}")
+
+        for fold, fold_coverage in coverage.groupby("fold"):
+            methods = set(fold_coverage["method"].astype(str))
+            if methods != expected_methods:
+                failures.append(f"fold {fold} method set mismatch")
+            if fold_coverage["train_rows"].nunique() != 1:
+                failures.append(f"fold {fold} unequal training coverage")
+            if fold_coverage["test_assignment_rows"].nunique() != 1:
+                failures.append(f"fold {fold} unequal assignment coverage")
+            if fold_coverage["test_prediction_rows"].nunique() != 1:
+                failures.append(f"fold {fold} unequal prediction coverage")
+            if not (fold_coverage["test_assignment_rows"] == fold_coverage["test_prediction_rows"]).all():
+                failures.append(f"fold {fold} assignment/prediction mismatch")
+        if set(results["method"].astype(str)) != expected_methods:
+            failures.append("result method set mismatch")
+
+    record(
+        rows,
+        "phase39_fold_local_validity",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(failures) if failures else (
+            f"Validated temporal boundaries, hashes, encoder lineage, and equal coverage for "
+            f"{manifest['fold'].nunique()} fold(s) and all eight methods."
+        ),
+        rows_checked=len(manifest) + len(coverage),
+        rows_failed=len(failures),
+    )
+
+    folds = int(manifest["fold"].nunique()) if "fold" in manifest else 0
+    full = folds == 16 and int(manifest["max_epochs"].min()) >= 30
+    if "run_kind" in manifest:
+        full = full and set(manifest["run_kind"].astype(str)) == {"full"}
+    if "window_cap" in manifest:
+        full = full and int(pd.to_numeric(manifest["window_cap"], errors="coerce").fillna(0).max()) == 0
+    record(
+        rows,
+        "phase39_full_development_run",
+        PASS if full else WARN,
+        "research",
+        (
+            "Full 16-fold, 30-epoch-cap uncapped development protocol is present."
+            if full
+            else f"Only a smoke/development gate is present ({folds} fold(s)); no Phase 39 performance claim is authorized."
+        ),
+        rows_checked=folds,
+        rows_failed=0 if full else max(1, 16 - folds),
+    )
+
+
 def write_outputs(rows: list[AuditRecord], fold_audit: pd.DataFrame) -> pd.DataFrame:
     out_dir = Path(SAVE_DIR)
     out_dir.mkdir(exist_ok=True)
@@ -3153,6 +3281,7 @@ def main() -> None:
     audit_literature_positioning_artifacts(rows)
     audit_paper_protocol_artifacts(rows)
     audit_phase38_control_artifacts(rows)
+    audit_phase39_fold_local_artifacts(rows)
     audit_paper_draft_artifacts(rows)
     audit_reproducibility_artifacts(rows)
     audit_multiasset_universe_artifacts(rows)

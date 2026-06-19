@@ -92,6 +92,7 @@ Binance OHLCV
 - Phase 36 Crypto-20 fold-local downstream alpha retest.
 - Phase 37 paired-fold statistical adjudication, time-block DM diagnostics, and asset heterogeneity analysis.
 - Phase 38 research-control reset with explicit data roles, experiment lineage, fold-local validity requirements, and publication acceptance gates.
+- Phase 39 fully fold-local learned-regime pipeline with inner chronological epoch selection, causal embeddings, deterministic lineage hashes, and equal-coverage smoke validation.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
 
@@ -204,6 +205,7 @@ python -m pip install -r requirements-research.txt
 | `reports/experiment_ledger.csv` | Complete inspected/planned experiment-family ledger |
 | `reports/publication_acceptance_gates.md` | Ordered scientific, paper, and BTech project completion gates |
 | `reports/phase39_fold_local_encoder_design.md` | Code-grounded implementation contract for the fully fold-local learned baseline |
+| `reports/phase39_fold_local_results.md` | Phase 39 run status and compact results; currently smoke-only and non-evidentiary |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
 | `models/regime_stability_summary.csv` | Persistence, switch-rate, confidence, and stable-vs-transition IC diagnostics |
@@ -793,7 +795,18 @@ Control artifacts:
 - `reports/publication_acceptance_gates.md`
 - `reports/phase39_fold_local_encoder_design.md`
 
+## Phase 39 Fully Fold-Local Encoder
+
+Phase 39 implements fold-local fitting for the feature scaler, weak-supervision HMM, contrastive pair construction, vanilla and guided encoders, sequential/non-sequential assignment layers, and downstream LightGBM models. Epoch count is selected only inside an inner chronological validation block and then refit on the authorized outer-training interval.
+
+The current artifact is a one-fold, one-epoch, 5,000-window smoke run. Seven leakage/reproducibility tests pass, all eight methods have equal coverage, and the end-to-end launcher/report path succeeds. Its metric values must not be interpreted as research evidence. The frozen full development run is the next compute step; calibration or gating experiments remain blocked until that run is adjudicated.
+
+```powershell
+.\env\Scripts\python.exe -m unittest -v tests.test_fold_local_encoder
+.\run_phase39_fold_local_encoder.ps1 -Epochs 1 -BatchSize 128 -MaxWindows 5000 -MaxFolds 1
+```
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, Phase 33 Crypto-20 classical regime benchmark artifacts, Phase 34 Crypto-20 guided-encoder readiness artifacts, Phase 35 Crypto-20 guided encoder structural results, Phase 36 Crypto-20 downstream alpha results, Phase 37 statistical adjudication, Phase 38 research controls, and a Streamlit research dashboard. The next implementation target is the fully fold-local encoder baseline, not post-hoc tuning on Phase 36/37 outcomes.
+The codebase now includes the complete Phase 39 fold-local encoder implementation and a passing smoke gate. The next research action is the frozen full development run, not post-hoc tuning on the Phase 36/37 outcomes or the Phase 39 smoke metrics.
 

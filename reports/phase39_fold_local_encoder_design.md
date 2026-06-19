@@ -6,6 +6,10 @@ This document is the implementation contract for Gate 1 in `reports/publication_
 
 Phase 39 must not change Phase 36/37 artifacts. It writes new prefixed outputs and treats all existing Crypto-20 outcomes as development-observed.
 
+## Implementation Status
+
+Implemented on 2026-06-19. Seven targeted unit tests pass, and the corrected one-fold end-to-end smoke run completed in 459.6 seconds with exact coverage parity across all eight methods. The run used one epoch and at most 5,000 windows, so its metric values are deliberately excluded from scientific interpretation. The full development gate remains pending.
+
 ## Current Boundary Problem
 
 `guided_encoder.py` currently fits one scaler across the loaded feature matrices, consumes a precomputed HMM assignment artifact, trains one encoder, and extracts one dense embedding matrix. `walkforward_regimes.py` then correctly refits GMM/HMM assignment layers inside each fold, but it consumes that previously trained dense embedding matrix.
@@ -123,6 +127,12 @@ Planned full command:
 ## Compute Strategy
 
 Phase 39 begins with one fold, one epoch, and capped windows. The full run is authorized only after boundary tests, coverage parity, deterministic manifests, and runtime estimates pass. Failed smoke gates are fixed before additional compute is spent.
+
+The observed smoke runtime implies that the uncapped 16-fold, up-to-30-epoch run may require many hours on CPU. It must therefore be launched as a deliberate long-running development experiment with stable power, sufficient disk space, and no configuration changes prompted by smoke metrics. Early stopping uses inner-validation loss only. Partial or failed runs must not be silently presented as full evidence.
+
+## Research Basis
+
+The protocol follows three established ideas: selection on repeatedly inspected backtests creates overfitting risk; contrastive time-series representations must preserve temporal context; and evaluation must separate representation fitting from future observations. Relevant primary sources include Bailey et al., *The Probability of Backtest Overfitting* (Journal of Computational Finance, 2016, DOI `10.21314/JCF.2016.322`), van den Oord et al., *Representation Learning with Contrastive Predictive Coding* (`arXiv:1807.03748`), and Yue et al., *TS2Vec: Towards Universal Representation of Time Series* (AAAI 2022, DOI `10.1609/aaai.v36i8.20881`). These sources motivate the separation and temporal controls; they do not validate this project's empirical claims.
 
 ## Phase 39 Exit Gate
 

@@ -2,7 +2,7 @@
 
 ## Paper Status
 
-Phase 38 controlled working draft. The completed Phase 37 findings are synchronized, while all inspected BTC/ETH and Crypto-20 outcomes are now explicitly development-observed pending a fully fold-local encoder and locked external evaluation.
+Phase 39 controlled working draft. The fully fold-local encoder pipeline has passed leakage/reproducibility tests and a one-fold smoke run. All inspected BTC/ETH and Crypto-20 outcomes remain development-observed; the full Phase 39 run and a later locked external evaluation are still pending.
 
 ## Abstract
 

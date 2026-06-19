@@ -59,6 +59,7 @@ if ($Mode -eq "dashboard") {
 
 if ($Mode -eq "smoke") {
     Invoke-PythonStep "Compile Python sources" @("-m", "compileall", "src", "dashboard.py", "streamlit_app.py")
+    Invoke-PythonStep "Test Phase 39 fold-local boundaries" @("-m", "unittest", "-v", "tests.test_fold_local_encoder")
     Invoke-PythonStep "Verify or initialize paper artifacts" @("src\paper_skeleton.py")
     Invoke-PythonStep "Run validation audit" (@("src\validation_audit.py", "--symbols") + $Symbols)
     Write-Host ""
