@@ -93,10 +93,23 @@ models/*.csv
 !models/crypto20_fold_local_encoder_manifest.csv
 !models/crypto20_fold_local_encoder_loss.csv
 !models/crypto20_fold_local_encoder_coverage.csv
+!models/crypto20_fold_local_fold_metrics.csv
 !models/crypto20_fold_local_experiment_results.csv
 !models/crypto20_fold_local_method_comparison.csv
 !models/crypto20_fold_local_regime_summary.csv
 !models/crypto20_fold_local_guided_comparison.csv
+!models/crypto20_fold_local_statistical_fold_metrics.csv
+!models/crypto20_fold_local_statistical_asset_metrics.csv
+!models/crypto20_fold_local_statistical_method_summary.csv
+!models/crypto20_fold_local_statistical_pairwise_tests.csv
+!models/crypto20_fold_local_statistical_asset_pairwise_tests.csv
+!models/crypto20_fold_local_statistical_test_summary.csv
+!models/crypto20_fold_local_statistical_multiple_testing.csv
+!models/crypto20_fold_local_statistical_claims.csv
+!models/crypto20_fold_local_statistical_sharpe_diagnostics.csv
+!models/crypto20_fold_local_statistical_ic_confidence_intervals.png
+!models/crypto20_fold_local_statistical_multiple_testing.png
+!models/crypto20_fold_local_statistical_sharpe_diagnostics.png
 
 # Keep compact Crypto-20 regime summaries, not row-level assignments.
 models/crypto20_regime_assignments.csv

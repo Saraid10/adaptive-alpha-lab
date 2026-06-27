@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from alpha_models import HORIZON_HOURS, TC_PER_TRADE
+from evaluation import evaluation_metrics, non_overlapping_returns, safe_corr
 from config import SAVE_DIR
 
 
@@ -51,17 +52,6 @@ def artifact_path(output_dir: Path, prefix: str, stem: str, suffix: str = ".csv"
     return output_dir / f"{prefix}{stem}{suffix}"
 
 
-def safe_corr(left: pd.Series, right: pd.Series) -> float:
-    left = pd.to_numeric(left, errors="coerce")
-    right = pd.to_numeric(right, errors="coerce")
-    valid = left.notna() & right.notna()
-    if valid.sum() < 3:
-        return np.nan
-    if left[valid].std(ddof=0) == 0 or right[valid].std(ddof=0) == 0:
-        return np.nan
-    return float(left[valid].corr(right[valid]))
-
-
 def balanced_accuracy(y_true: pd.Series, y_pred: pd.Series) -> float:
     recalls = []
     for label in sorted(pd.Series(y_true).dropna().unique()):
@@ -72,36 +62,24 @@ def balanced_accuracy(y_true: pd.Series, y_pred: pd.Series) -> float:
 
 
 def add_net_returns(pred: pd.DataFrame) -> pd.DataFrame:
-    rows = []
-    for _, group in pred.sort_values(["symbol", "open_time"]).groupby("symbol", sort=False):
-        group = group.copy()
-        trades = group["signal"].diff().abs().fillna(group["signal"].abs()) / 2.0
-        group["trade"] = trades
-        group["net_return"] = group["signal"].shift(1).fillna(0) * group["target_return"] - trades * TC_PER_TRADE
-        rows.append(group)
-    return pd.concat(rows, ignore_index=True)
+    return non_overlapping_returns(
+        pred,
+        horizon_hours=HORIZON_HOURS,
+        transaction_cost=TC_PER_TRADE,
+    )
 
 
 def summarize_group(group: pd.DataFrame) -> dict:
-    with_returns = add_net_returns(group)
-    portfolio_returns = with_returns.groupby("open_time")["net_return"].mean().sort_index()
-    cumulative = (1.0 + portfolio_returns).cumprod()
-    drawdown = (cumulative - cumulative.cummax()) / cumulative.cummax()
-    trades = with_returns["trade"]
-    annualize = np.sqrt(8760 / HORIZON_HOURS)
-    std = portfolio_returns.std()
+    metrics = evaluation_metrics(
+        group,
+        horizon_hours=HORIZON_HOURS,
+        transaction_cost=TC_PER_TRADE,
+    )
 
     return {
-        "IC": safe_corr(group["score"], group["target_return"]),
-        "signal_IC": safe_corr(group["signal"], group["target_return"]),
+        **metrics,
         "accuracy": float((group["target_label"] == group["pred_label"]).mean()),
         "balanced_accuracy": balanced_accuracy(group["target_label"], group["pred_label"]),
-        "Sharpe": float(portfolio_returns.mean() / (std + 1e-8) * annualize) if len(portfolio_returns) else np.nan,
-        "drawdown": float(drawdown.min()) if len(drawdown) else np.nan,
-        "turnover": float(trades.mean()) if len(trades) else np.nan,
-        "total_return": float(cumulative.iloc[-1] - 1.0) if len(cumulative) else np.nan,
-        "n_trades": int((trades > 0).sum()),
-        "n_test_rows": int(len(group)),
     }
 
 
@@ -813,7 +791,12 @@ def main() -> None:
     corrected = add_multiple_testing(pairwise)
     claims = build_claims(corrected)
     psr = sharpe_diagnostics(predictions)
-    title_prefix = "Phase 37 Crypto-20" if args.output_prefix == "crypto20_" else "Phase 15"
+    if args.output_prefix.startswith("crypto20_fold_local_"):
+        title_prefix = "Phase 39 Fold-Local Crypto-20"
+    elif args.output_prefix == "crypto20_":
+        title_prefix = "Phase 37 Crypto-20"
+    else:
+        title_prefix = "Phase 15"
 
     folds.to_csv(artifact_path(output_dir, args.output_prefix, "statistical_fold_metrics"), index=False)
     assets.to_csv(artifact_path(output_dir, args.output_prefix, "statistical_asset_metrics"), index=False)

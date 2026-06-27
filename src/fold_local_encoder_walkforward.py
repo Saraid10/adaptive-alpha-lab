@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import platform
 import sys
@@ -19,6 +20,7 @@ from alpha_models import (
     build_prediction_frame,
     fit_lgbm,
     aligned_proba,
+    align_to_common_calendar,
     fold_ranges,
     load_model_frame,
     predict_regime_models,
@@ -29,7 +31,15 @@ from alpha_models import (
 )
 from baselines import HMM_FEATURES
 from config import SAVE_DIR, WINDOW_SIZE
-from dataset import load_feature_matrix
+from dataset import load_feature_frame
+from fold_checkpoint import (
+    canonical_hash,
+    checkpoint_exists,
+    initialize_run_state,
+    load_fold_checkpoint,
+    sha256_file,
+    write_fold_checkpoint,
+)
 from fold_local_encoder import (
     FoldEncoderConfig,
     encode_causal_rows,
@@ -80,7 +90,12 @@ def parse_args() -> argparse.Namespace:
     add_symbol_args(parser)
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=128)
-    parser.add_argument("--max-windows", type=int, default=0)
+    parser.add_argument(
+        "--max-windows",
+        type=int,
+        default=5000,
+        help="Deterministic per-stage encoder window budget; 0 uses every eligible window.",
+    )
     parser.add_argument("--max-folds", type=int, default=None)
     parser.add_argument("--inner-validation-bars", type=int, default=720)
     parser.add_argument("--inner-embargo-bars", type=int, default=120)
@@ -90,39 +105,198 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--minimum-selection-epochs", type=int, default=3)
     parser.add_argument("--output-prefix", default="crypto20_fold_local_")
     parser.add_argument(
+        "--output-dir",
+        default=SAVE_DIR,
+        help="Directory for compact CSV outputs; use .tmp for isolated smoke runs.",
+    )
+    parser.add_argument(
+        "--report-path",
+        default=str(Path("reports") / "phase39_fold_local_results.md"),
+        help="Markdown report destination; use an isolated path for smoke runs.",
+    )
+    parser.add_argument(
+        "--run-name",
+        default="phase39_full",
+        help="Isolated checkpoint namespace below --heavy-dir.",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Validate lineage and reuse completed fold checkpoints.",
+    )
+    parser.add_argument(
         "--report-only",
         action="store_true",
         help="Rebuild the compact Markdown report from existing compact CSV artifacts.",
+    )
+    parser.add_argument(
+        "--calendar-audit-only",
+        action="store_true",
+        help="Validate the common panel and every global train/test timestamp boundary without training or writing artifacts.",
     )
     parser.add_argument(
         "--heavy-dir",
         default=str(Path(".tmp") / "phase39_fold_local"),
         help="Ignored directory for fold weights and run metadata.",
     )
+    parser.add_argument(
+        "--freeze-manifest",
+        default=str(Path(SAVE_DIR) / "crypto20_development_freeze_manifest.json"),
+        help="Required development-data freeze manifest for training and calendar audits.",
+    )
     return parser.parse_args()
 
 
-def output_path(prefix: str, stem: str) -> Path:
-    return Path(SAVE_DIR) / f"{prefix}{stem}.csv"
+def output_path(output_dir: str | Path, prefix: str, stem: str) -> Path:
+    path = Path(output_dir) / f"{prefix}{stem}.csv"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
 
 
-def load_raw_matrices(symbols: list[str]) -> dict[str, np.ndarray]:
-    matrices = {symbol: load_feature_matrix(symbol) for symbol in symbols}
+def verify_frozen_dataset(
+    manifest_path: str | Path,
+    symbols: list[str],
+    frame: pd.DataFrame,
+    folds: list[tuple[int, int, int]],
+    data_hash: str,
+) -> dict:
+    path = Path(manifest_path)
+    if not path.exists():
+        raise RuntimeError(
+            f"Development freeze manifest is missing: {path}. "
+            "Run src/freeze_development_dataset.py first."
+        )
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    failures = []
+    if manifest.get("data_role") != "development_observed":
+        failures.append("data role is not development_observed")
+    if manifest.get("symbols") != symbols:
+        failures.append("symbol order differs from frozen universe")
+    if manifest.get("experiment_data_sha256") != data_hash:
+        failures.append("experiment data hash differs from frozen snapshot")
+    if int(manifest.get("prediction_rows", -1)) != len(frame):
+        failures.append("prediction row count differs from frozen snapshot")
+    if int(manifest.get("fold_count", -1)) != len(folds):
+        failures.append("fold count differs from frozen snapshot")
+    if failures:
+        raise RuntimeError("Development dataset freeze verification failed: " + "; ".join(failures))
+    return manifest
+
+
+def load_raw_matrices(
+    symbols: list[str], aligned_frame: pd.DataFrame | None = None
+) -> dict[str, np.ndarray]:
+    feature_frames = {symbol: load_feature_frame(symbol) for symbol in symbols}
+    full_matrices = {
+        symbol: feature_frames[symbol][FEATURE_COLS].to_numpy(dtype=np.float32)
+        for symbol in symbols
+    }
+    if aligned_frame is None:
+        matrices = full_matrices
+    else:
+        matrices = {}
+        required = {"symbol", "source_feat_idx", "feat_idx"}
+        missing = sorted(required - set(aligned_frame.columns))
+        if missing:
+            raise ValueError(f"Aligned frame is missing matrix lineage columns: {missing}")
+        for symbol in symbols:
+            rows = aligned_frame[aligned_frame["symbol"] == symbol].sort_values("feat_idx")
+            source_indices = rows["source_feat_idx"].astype(int).drop_duplicates().to_numpy()
+            if len(source_indices) == 0:
+                raise RuntimeError(f"No aligned feature rows for {symbol}.")
+            expected = np.arange(source_indices[0], source_indices[-1] + 1, dtype=int)
+            if not np.array_equal(source_indices, expected):
+                raise RuntimeError(f"Aligned feature history for {symbol} is not contiguous.")
+            offsets = (
+                rows["source_feat_idx"].astype(int) - rows["feat_idx"].astype(int)
+            ).unique()
+            if len(offsets) != 1:
+                raise RuntimeError(f"Aligned index lineage for {symbol} is inconsistent.")
+            source_start = int(offsets[0])
+            source_timestamps = (
+                feature_frames[symbol]
+                .iloc[rows["source_feat_idx"].astype(int).to_numpy()]["open_time"]
+                .reset_index(drop=True)
+            )
+            aligned_timestamps = rows["open_time"].reset_index(drop=True)
+            if not source_timestamps.equals(aligned_timestamps):
+                raise RuntimeError(
+                    f"Timestamp/index lineage mismatch between features and model frame for {symbol}."
+                )
+            matrices[symbol] = np.ascontiguousarray(
+                full_matrices[symbol][source_start : source_indices[-1] + 1]
+            )
     short = {symbol: len(matrix) for symbol, matrix in matrices.items() if len(matrix) <= WINDOW_SIZE}
     if short:
         raise RuntimeError(f"Symbols with insufficient encoder history: {short}")
     return matrices
 
 
+def hash_experiment_data(
+    symbols: list[str], raw_matrices: dict[str, np.ndarray], frame: pd.DataFrame
+) -> str:
+    digest = hashlib.sha256()
+    for symbol in symbols:
+        matrix = np.ascontiguousarray(raw_matrices[symbol])
+        digest.update(symbol.encode("utf-8"))
+        digest.update(str(matrix.shape).encode("ascii"))
+        digest.update(str(matrix.dtype).encode("ascii"))
+        digest.update(matrix.tobytes())
+    lineage_columns = [
+        "symbol", "source_feat_idx", "feat_idx", "open_time", "target_class",
+        "target_return", *FEATURE_COLS
+    ]
+    frame_hashes = pd.util.hash_pandas_object(
+        frame[lineage_columns], index=False, categorize=True
+    ).to_numpy(dtype=np.uint64)
+    digest.update(frame_hashes.tobytes())
+    return digest.hexdigest()
+
+
+def hash_protocol_sources() -> str:
+    source_dir = Path(__file__).resolve().parent
+    paths = [
+        source_dir / name
+        for name in [
+            "fold_local_encoder_walkforward.py",
+            "fold_local_encoder.py",
+            "fold_checkpoint.py",
+            "alpha_models.py",
+            "walkforward_regimes.py",
+            "encoder.py",
+            "guided_encoder.py",
+        ]
+    ]
+    return canonical_hash({path.name: sha256_file(path) for path in paths})
+
+
+def absorb_fold_frames(
+    frames: dict[str, pd.DataFrame],
+    prediction_parts: dict[str, list[pd.DataFrame]],
+    test_assignments: list[pd.DataFrame],
+    implementation_rows: list[dict],
+    manifest_rows: list[dict],
+    loss_rows: list[dict],
+    coverage_rows: list[dict],
+) -> None:
+    predictions = frames["predictions"]
+    for method, part in predictions.groupby("method", sort=False):
+        if method not in prediction_parts:
+            raise RuntimeError(f"Checkpoint contains unexpected method: {method}")
+        prediction_parts[method].append(part.copy())
+    test_assignments.append(frames["assignments"])
+    implementation_rows.extend(frames["implementations"].to_dict("records"))
+    manifest_rows.extend(frames["manifest"].to_dict("records"))
+    loss_rows.extend(frames["losses"].to_dict("records"))
+    coverage_rows.extend(frames["coverage"].to_dict("records"))
+
+
 def build_common_frame(symbols: list[str]) -> pd.DataFrame:
     frame = load_model_frame(symbols)
-    frame = frame[frame["feat_idx"] >= WINDOW_SIZE - 1].copy()
     counts = frame.groupby("symbol")["feat_idx"].agg(["min", "max", "count"])
     if counts.empty or len(counts) != len(symbols):
         raise RuntimeError("Fold-local encoder universe is missing requested symbols.")
-    frame = frame.sort_values(["symbol", "open_time"]).reset_index(drop=True)
-    frame["row_id"] = np.arange(len(frame), dtype=int)
-    return frame
+    return align_to_common_calendar(frame, symbols, warmup_rows=WINDOW_SIZE - 1)
 
 
 def run_global_fold(
@@ -208,12 +382,14 @@ def write_results_report(
         .reset_index()
     )
     selected = markdown_table(selected_frame)
+    window_budget = int(pd.to_numeric(manifest.get("window_cap", pd.Series([0])), errors="coerce").fillna(0).max())
+    window_budget_text = "all eligible windows" if window_budget == 0 else f"at most {window_budget:,} deterministic windows per encoder stage"
     status = "smoke validation only; no performance claim" if smoke else "full development-observed benchmark"
     text = f"""# Phase 39 Fully Fold-Local Encoder Results
 
 ## Run Status
 
-This is a **{status}** over {folds} fold(s) and {len(symbols)} symbol(s). All outcomes remain development-observed and cannot be used as an untouched final test.
+This is a **{status}** over {folds} fold(s) and {len(symbols)} symbol(s), using {window_budget_text}. All outcomes remain development-observed and cannot be used as an untouched final test.
 
 ## Validity Contract
 
@@ -241,8 +417,8 @@ A smoke run validates code paths, leakage boundaries, artifacts, and coverage on
 def main() -> None:
     args = parse_args()
     if args.report_only:
-        results_path = output_path(args.output_prefix, "experiment_results")
-        manifest_path = output_path(args.output_prefix, "encoder_manifest")
+        results_path = output_path(args.output_dir, args.output_prefix, "experiment_results")
+        manifest_path = output_path(args.output_dir, args.output_prefix, "encoder_manifest")
         if not results_path.exists() or not manifest_path.exists():
             raise RuntimeError("Report-only mode requires existing result and manifest CSV files.")
         results = pd.read_csv(results_path)
@@ -251,7 +427,7 @@ def main() -> None:
         symbol_scope = str(results.iloc[0].get("symbol_scope", "")) if not results.empty else ""
         symbols = [symbol for symbol in symbol_scope.split("+") if symbol]
         write_results_report(
-            Path("reports") / "phase39_fold_local_results.md",
+            Path(args.report_path),
             results,
             manifest,
             folds,
@@ -277,17 +453,86 @@ def main() -> None:
 
     frame = build_common_frame(symbols)
     df_by_row = frame.set_index("row_id", drop=False)
-    raw_matrices = load_raw_matrices(symbols)
-    folds = fold_ranges(frame)
-    if args.max_folds is not None:
-        folds = folds[: args.max_folds]
-    if not folds:
+    raw_matrices = load_raw_matrices(symbols, frame)
+    all_folds = fold_ranges(frame)
+    if not all_folds:
         raise RuntimeError("No eligible walk-forward folds.")
+    data_hash = hash_experiment_data(symbols, raw_matrices, frame)
+    freeze_manifest = verify_frozen_dataset(
+        args.freeze_manifest, symbols, frame, all_folds, data_hash
+    )
+    folds = all_folds[: args.max_folds] if args.max_folds is not None else all_folds
+    if not folds:
+        raise RuntimeError("No folds remain after applying --max-folds.")
+
+    if args.calendar_audit_only:
+        audit_rows = []
+        for fold, (train_end, test_start, test_end) in enumerate(folds, start=1):
+            train_ids, test_ids = row_ids_for_fold(
+                df_by_row, train_end, test_start, test_end
+            )
+            audit_rows.append(
+                {
+                    "fold": fold,
+                    "latest_train": df_by_row.loc[train_ids, "open_time"].max(),
+                    "earliest_test": df_by_row.loc[test_ids, "open_time"].min(),
+                    "train_rows": len(train_ids),
+                    "test_rows": len(test_ids),
+                }
+            )
+        print(pd.DataFrame(audit_rows).to_string(index=False))
+        print(
+            f"OK: {len(symbols)} symbols share one calendar index and all "
+            f"{len(folds)} folds have strict global train/test separation under "
+            f"{freeze_manifest['freeze_id']}."
+        )
+        return
 
     raw_matrix = finite_matrix(df_by_row.sort_index(), FEATURE_COLS)
     hmm_matrix = finite_matrix(df_by_row.sort_index(), HMM_FEATURES)
-    heavy_dir = Path(args.heavy_dir)
-    heavy_dir.mkdir(parents=True, exist_ok=True)
+    if Path(args.run_name).name != args.run_name or args.run_name in {"", ".", ".."}:
+        raise ValueError("--run-name must be one safe directory name without path separators.")
+    run_dir = Path(args.heavy_dir) / args.run_name
+    source_hash = hash_protocol_sources()
+    fold_specification = [list(map(int, fold_range)) for fold_range in folds]
+    config_hash = canonical_hash(
+        {
+            "config": asdict(config),
+            "symbols": symbols,
+            "output_prefix": args.output_prefix,
+            "output_dir": str(Path(args.output_dir)),
+            "expected_methods": sorted(EXPECTED_METHODS),
+            "freeze_id": freeze_manifest["freeze_id"],
+            "freeze_manifest_sha256": sha256_file(Path(args.freeze_manifest)),
+        }
+    )
+    fold_hash = canonical_hash(fold_specification)
+    protocol_hash = canonical_hash(
+        {
+            "config_hash": config_hash,
+            "data_hash": data_hash,
+            "source_hash": source_hash,
+            "fold_hash": fold_hash,
+        }
+    )
+    run_state = {
+        "schema_version": 1,
+        "protocol_hash": protocol_hash,
+        "config_hash": config_hash,
+        "data_hash": data_hash,
+        "source_hash": source_hash,
+        "fold_hash": fold_hash,
+        "config": asdict(config),
+        "symbols": symbols,
+        "folds": fold_specification,
+        "expected_methods": sorted(EXPECTED_METHODS),
+        "output_prefix": args.output_prefix,
+        "output_dir": str(Path(args.output_dir)),
+        "run_name": args.run_name,
+        "freeze_id": freeze_manifest["freeze_id"],
+        "freeze_manifest_sha256": sha256_file(Path(args.freeze_manifest)),
+    }
+    initialize_run_state(run_dir, run_state, resume=args.resume)
 
     prediction_parts: dict[str, list[pd.DataFrame]] = {
         method: [] for method in EXPECTED_METHODS
@@ -302,14 +547,57 @@ def main() -> None:
         f"Phase 39 fold-local encoder benchmark: symbols={len(symbols)} folds={len(folds)} "
         f"epochs={config.epochs} max_windows={config.max_windows or 'all'} device={config.device}"
     )
-    smoke_run = len(folds) < EXPECTED_FULL_FOLDS or config.epochs < FULL_PROTOCOL_EPOCHS or config.max_windows > 0
+    smoke_run = len(folds) < EXPECTED_FULL_FOLDS or config.epochs < FULL_PROTOCOL_EPOCHS
     run_kind = "smoke" if smoke_run else "full"
     for fold, (train_end, test_start, test_end) in enumerate(folds, start=1):
         print(f"\nFold {fold:02d}: train_end={train_end} test=[{test_start}, {test_end})")
         bounds = make_fold_bounds(fold, train_end, test_start, test_end, config)
+        calendar_train = frame[frame["feat_idx"] < train_end]
+        calendar_test = frame[
+            (frame["feat_idx"] >= test_start) & (frame["feat_idx"] < test_end)
+        ]
+        if calendar_train.empty or calendar_test.empty:
+            raise RuntimeError(f"Fold {fold} has empty calendar train or test rows.")
+        calendar_bounds = {
+            "calendar_train_start": pd.Timestamp(calendar_train["open_time"].min()).isoformat(),
+            "calendar_train_end": pd.Timestamp(calendar_train["open_time"].max()).isoformat(),
+            "calendar_test_start": pd.Timestamp(calendar_test["open_time"].min()).isoformat(),
+            "calendar_test_end": pd.Timestamp(calendar_test["open_time"].max()).isoformat(),
+        }
+        if pd.Timestamp(calendar_bounds["calendar_train_end"]) >= pd.Timestamp(
+            calendar_bounds["calendar_test_start"]
+        ):
+            raise RuntimeError(f"Fold {fold} fails global calendar separation.")
+        bounds_dict = {**asdict(bounds), **calendar_bounds}
+        if checkpoint_exists(run_dir, fold):
+            if not args.resume:
+                raise RuntimeError(
+                    f"Completed checkpoint exists for fold {fold}. Re-run with --resume or use a new --run-name."
+                )
+            checkpoint_frames = load_fold_checkpoint(
+                run_dir, fold, protocol_hash, bounds_dict
+            )
+            absorb_fold_frames(
+                checkpoint_frames,
+                prediction_parts,
+                test_assignments,
+                implementation_rows,
+                manifest_rows,
+                loss_rows,
+                coverage_rows,
+            )
+            print(f"Fold {fold:02d}: validated and loaded completed checkpoint.")
+            continue
         train_ids, test_ids = row_ids_for_fold(df_by_row, train_end, test_start, test_end)
         if not train_ids or not test_ids:
             raise RuntimeError(f"Fold {fold} has empty train or test rows.")
+
+        fold_predictions: list[pd.DataFrame] = []
+        fold_assignments: list[pd.DataFrame] = []
+        fold_implementation_rows: list[dict] = []
+        fold_manifest_rows: list[dict] = []
+        fold_loss_rows: list[dict] = []
+        fold_coverage_rows: list[dict] = []
 
         vanilla = fit_fold_encoder("vanilla", raw_matrices, bounds, config)
         guided = fit_fold_encoder("guided", raw_matrices, bounds, config)
@@ -331,20 +619,21 @@ def main() -> None:
             total_rows=len(frame),
         )
 
-        fold_dir = heavy_dir / f"fold_{fold:02d}"
+        fold_dir = run_dir / "weights" / f"fold_{fold:02d}"
         fold_dir.mkdir(parents=True, exist_ok=True)
         torch.save(vanilla.model.state_dict(), fold_dir / "vanilla_encoder.pt")
         torch.save(guided.model.state_dict(), fold_dir / "guided_encoder.pt")
         (fold_dir / "bounds.json").write_text(
-            json.dumps(asdict(bounds), indent=2, sort_keys=True), encoding="utf-8"
+            json.dumps(bounds_dict, indent=2, sort_keys=True), encoding="utf-8"
         )
 
         for result in [vanilla, guided]:
-            manifest_rows.append(
+            fold_manifest_rows.append(
                 {
                     "fold": fold,
                     "encoder_method": result.method,
                     **asdict(bounds),
+                    **calendar_bounds,
                     "seed": config.seed,
                     "run_kind": run_kind,
                     "window_cap": config.max_windows,
@@ -370,7 +659,7 @@ def main() -> None:
                 history.insert(0, "stage", stage)
                 history.insert(0, "encoder_method", result.method)
                 history.insert(0, "fold", fold)
-                loss_rows.extend(history.to_dict("records"))
+                fold_loss_rows.extend(history.to_dict("records"))
 
         fold_outputs = fit_fold_assignments(
             df_by_row,
@@ -383,8 +672,8 @@ def main() -> None:
             guided_embeddings=guided_embeddings,
         )
         global_prediction = run_global_fold(df_by_row, train_ids, test_ids, fold)
-        prediction_parts["global_lgbm"].append(global_prediction)
-        coverage_rows.append(
+        fold_predictions.append(global_prediction)
+        fold_coverage_rows.append(
             {
                 "fold": fold,
                 "method": "global_lgbm",
@@ -395,7 +684,7 @@ def main() -> None:
         )
 
         for output in fold_outputs:
-            implementation_rows.append(
+            fold_implementation_rows.append(
                 {
                     "fold": fold,
                     "method": output.method,
@@ -404,7 +693,7 @@ def main() -> None:
                     "test_rows": int((output.assignments["split"] == "test").sum()),
                 }
             )
-            test_assignments.append(output.assignments[output.assignments["split"] == "test"])
+            fold_assignments.append(output.assignments[output.assignments["split"] == "test"])
             models = train_regime_models(df_by_row, output.assignments, train_ids)
             prediction = predict_regime_models(
                 df_by_row, output.assignments, models, test_ids, output.method, fold
@@ -412,8 +701,8 @@ def main() -> None:
             if prediction is None:
                 raise RuntimeError(f"No prediction for fold {fold} method {output.method}.")
             method_name = f"regime_lgbm_{output.method}"
-            prediction_parts[method_name].append(prediction)
-            coverage_rows.append(
+            fold_predictions.append(prediction)
+            fold_coverage_rows.append(
                 {
                     "fold": fold,
                     "method": method_name,
@@ -422,6 +711,32 @@ def main() -> None:
                     "test_prediction_rows": len(prediction),
                 }
             )
+
+        checkpoint_frames = {
+            "predictions": pd.concat(fold_predictions, ignore_index=True),
+            "assignments": pd.concat(fold_assignments, ignore_index=True),
+            "implementations": pd.DataFrame(fold_implementation_rows),
+            "manifest": pd.DataFrame(fold_manifest_rows),
+            "losses": pd.DataFrame(fold_loss_rows),
+            "coverage": pd.DataFrame(fold_coverage_rows),
+        }
+        checkpoint_path = write_fold_checkpoint(
+            run_dir,
+            fold,
+            protocol_hash,
+            bounds_dict,
+            checkpoint_frames,
+        )
+        absorb_fold_frames(
+            checkpoint_frames,
+            prediction_parts,
+            test_assignments,
+            implementation_rows,
+            manifest_rows,
+            loss_rows,
+            coverage_rows,
+        )
+        print(f"Fold {fold:02d}: checkpoint committed atomically at {checkpoint_path}.")
 
     outputs = []
     for method in sorted(EXPECTED_METHODS):
@@ -438,6 +753,15 @@ def main() -> None:
             for output in outputs
         ]
     )
+    fold_metric_rows = []
+    for output in outputs:
+        for fold, fold_predictions in output.frame.groupby("fold", sort=True):
+            row = summarize_predictions(
+                fold_predictions, output.method, output.regime_method, "+".join(symbols)
+            )
+            row["fold"] = int(fold)
+            fold_metric_rows.append(row)
+    fold_metrics = pd.DataFrame(fold_metric_rows)
     validate_complete_coverage(results, predictions, len(folds))
 
     assignments = pd.concat(test_assignments, ignore_index=True)
@@ -449,17 +773,19 @@ def main() -> None:
     comparison = build_historical_comparison(results)
     guided_comparison = build_guided_alpha_comparison(results)
 
-    manifest.to_csv(output_path(args.output_prefix, "encoder_manifest"), index=False)
-    losses.to_csv(output_path(args.output_prefix, "encoder_loss"), index=False)
-    coverage.to_csv(output_path(args.output_prefix, "encoder_coverage"), index=False)
-    results.to_csv(output_path(args.output_prefix, "experiment_results"), index=False)
-    comparison.to_csv(output_path(args.output_prefix, "method_comparison"), index=False)
-    regime_summary.to_csv(output_path(args.output_prefix, "regime_summary"), index=False)
-    guided_comparison.to_csv(output_path(args.output_prefix, "guided_comparison"), index=False)
-    predictions.to_csv(output_path(args.output_prefix, "alpha_oos_predictions"), index=False)
-    assignments.to_csv(output_path(args.output_prefix, "regime_assignments"), index=False)
+    manifest.to_csv(output_path(args.output_dir, args.output_prefix, "encoder_manifest"), index=False)
+    losses.to_csv(output_path(args.output_dir, args.output_prefix, "encoder_loss"), index=False)
+    coverage.to_csv(output_path(args.output_dir, args.output_prefix, "encoder_coverage"), index=False)
+    results.to_csv(output_path(args.output_dir, args.output_prefix, "experiment_results"), index=False)
+    fold_metrics.to_csv(output_path(args.output_dir, args.output_prefix, "fold_metrics"), index=False)
+    comparison.to_csv(output_path(args.output_dir, args.output_prefix, "method_comparison"), index=False)
+    regime_summary.to_csv(output_path(args.output_dir, args.output_prefix, "regime_summary"), index=False)
+    guided_comparison.to_csv(output_path(args.output_dir, args.output_prefix, "guided_comparison"), index=False)
+    predictions.to_csv(output_path(args.output_dir, args.output_prefix, "alpha_oos_predictions"), index=False)
+    assignments.to_csv(output_path(args.output_dir, args.output_prefix, "regime_assignments"), index=False)
 
-    report_path = Path("reports") / "phase39_fold_local_results.md"
+    report_path = Path(args.report_path)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
     write_results_report(
         report_path,
         results,
@@ -477,8 +803,12 @@ def main() -> None:
         "status": "complete",
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "command": " ".join(sys.argv),
+        "protocol_hash": protocol_hash,
+        "data_hash": data_hash,
+        "source_hash": source_hash,
+        "fold_hash": fold_hash,
     }
-    (heavy_dir / "run_metadata.json").write_text(
+    (run_dir / "run_metadata.json").write_text(
         json.dumps(run_metadata, indent=2, sort_keys=True), encoding="utf-8"
     )
 

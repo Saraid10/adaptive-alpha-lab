@@ -8,7 +8,9 @@ Phase 39 must not change Phase 36/37 artifacts. It writes new prefixed outputs a
 
 ## Implementation Status
 
-Implemented on 2026-06-19. Seven targeted unit tests pass, and the corrected one-fold end-to-end smoke run completed in 459.6 seconds with exact coverage parity across all eight methods. The run used one epoch and at most 5,000 windows, so its metric values are deliberately excluded from scientific interpretation. The full development gate remains pending.
+The original 2026-06-19 to 2026-06-20 run is invalidated because positional indices represented different dates across assets. The repaired implementation aligns all 20 symbols to one common timestamp panel, records calendar boundaries in every manifest, rejects pooled train/test overlap, passes the unit suite, passes all 16 real-data calendar folds, and completed the full repaired 16-fold neural/guided development run. The dataset is bound to `crypto20-development-v1` by database and experiment-data hashes. The repaired full run is development evidence only and found weak/inconclusive downstream alpha.
+
+The evaluation layer is also repaired before rerunning: `IC` now means mean per-asset time-series IC, cross-sectional and pooled IC are reported separately, and portfolio diagnostics use one pre-specified non-overlapping horizon grid with positions reset at fold boundaries. See `reports/evaluation_protocol.md`.
 
 ## Current Boundary Problem
 
@@ -86,6 +88,7 @@ Compact committed outputs:
 - `models/crypto20_fold_local_encoder_manifest.csv`
 - `models/crypto20_fold_local_encoder_loss.csv`
 - `models/crypto20_fold_local_encoder_coverage.csv`
+- `models/crypto20_fold_local_fold_metrics.csv`
 - `models/crypto20_fold_local_experiment_results.csv`
 - `models/crypto20_fold_local_method_comparison.csv`
 - `reports/phase39_fold_local_results.md`
@@ -96,6 +99,7 @@ Ignored heavy outputs:
 - dense train/test embeddings,
 - row-level outer predictions,
 - temporary pair-mining caches.
+- atomic per-fold resume checkpoints and fold-specific weights under `.tmp/phase39_fold_local/<run-name>/`.
 
 Every manifest row records fold, method, seed, timestamps, row counts, window counts, selected epoch, training epochs, device, input hashes, output hashes, and runtime.
 
@@ -109,26 +113,30 @@ Every manifest row records fold, method, seed, timestamps, row counts, window co
 6. Test embedding windows contain no timestamp after their prediction endpoint.
 7. All eight methods have identical outer-test row coverage.
 8. Repeated smoke runs with the same seed reproduce manifest hashes within the documented deterministic tolerance.
+9. Resume rejects any changed configuration, data lineage, source lineage, fold specification, or modified checkpoint file.
+10. An interrupted `.writing` checkpoint is replaced atomically without affecting completed folds.
 
 ## Smoke And Full Commands
 
 Planned smoke command:
 
 ```powershell
-.\run_phase39_fold_local_encoder.ps1 -MaxFolds 1 -Epochs 1 -MaxWindows 5000
+.\run_phase39_fold_local_encoder.ps1 -MaxFolds 1 -Epochs 1 -MaxWindows 5000 -RunName phase39_resume_smoke
 ```
 
 Planned full command:
 
 ```powershell
-.\run_phase39_fold_local_encoder.ps1
+.\run_phase39_fold_local_encoder.ps1 -Resume
 ```
 
 ## Compute Strategy
 
 Phase 39 begins with one fold, one epoch, and capped windows. The full run is authorized only after boundary tests, coverage parity, deterministic manifests, and runtime estimates pass. Failed smoke gates are fixed before additional compute is spent.
 
-The observed smoke runtime implies that the uncapped 16-fold, up-to-30-epoch run may require many hours on CPU. It must therefore be launched as a deliberate long-running development experiment with stable power, sufficient disk space, and no configuration changes prompted by smoke metrics. Early stopping uses inner-validation loss only. Partial or failed runs must not be silently presented as full evidence.
+The observed smoke runtime makes an all-window run disproportionate on the available CPU. Before inspecting the full outcomes, the full development protocol is therefore frozen at 16 folds, at most 30 epochs with inner-validation early stopping, batch size 128, seed 42, and at most 5,000 deterministically sampled windows per encoder stage. This is a compute-budget choice, not an outcome-tuned choice. Scaling, weak-supervision HMM fitting, assignment fitting, and alpha fitting continue to use every authorized fold row.
+
+Each completed fold is committed atomically with its predictions, assignments, manifests, losses, coverage, and implementation lineage. `-Resume` validates configuration, data, source, and fold hashes plus every checkpoint file hash before reuse. A mismatch stops the run; it never combines incompatible folds.
 
 ## Research Basis
 

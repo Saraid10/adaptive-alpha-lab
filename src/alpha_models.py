@@ -11,6 +11,11 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
 from config import DB_PATH, FEATURE_COLS, N_REGIMES, SAVE_DIR, SYMBOLS
+from evaluation import (
+    evaluation_metrics,
+    non_overlapping_returns,
+    portfolio_return_series,
+)
 
 
 warnings.filterwarnings("ignore", message="X does not have valid feature names")
@@ -143,6 +148,7 @@ def restrict_to_common_universe(
 
 
 def fold_ranges(df: pd.DataFrame) -> list[tuple[int, int, int]]:
+    validate_calendar_aligned_panel(df)
     max_common_feat_idx = int(df.groupby("symbol")["feat_idx"].max().min())
     folds = []
     train_end = INITIAL_TRAIN
@@ -154,9 +160,79 @@ def fold_ranges(df: pd.DataFrame) -> list[tuple[int, int, int]]:
     return folds
 
 
+def validate_calendar_aligned_panel(df: pd.DataFrame) -> None:
+    """Reject positional multi-asset folds whose indices represent different times."""
+    required = {"symbol", "feat_idx", "open_time"}
+    missing = sorted(required - set(df.columns))
+    if missing:
+        raise ValueError(f"Cannot validate calendar alignment; missing columns: {missing}")
+    if df.empty:
+        raise ValueError("Cannot build folds from an empty frame.")
+
+    timestamps_per_index = df.groupby("feat_idx")["open_time"].nunique()
+    misaligned = timestamps_per_index[timestamps_per_index > 1]
+    if not misaligned.empty:
+        example_idx = int(misaligned.index[0])
+        examples = (
+            df.loc[df["feat_idx"] == example_idx, ["symbol", "open_time"]]
+            .sort_values("symbol")
+            .astype(str)
+            .to_dict("records")
+        )
+        raise RuntimeError(
+            "Unsafe multi-asset positional folds: the same feat_idx maps to different "
+            f"calendar timestamps. Example feat_idx={example_idx}: {examples}. "
+            "Align the assets to a common timestamp panel before creating folds."
+        )
+
+
+def align_to_common_calendar(
+    df: pd.DataFrame, symbols: list[str], warmup_rows: int = 0
+) -> pd.DataFrame:
+    """Return a strict balanced panel with a shared timestamp-index mapping."""
+    requested = list(dict.fromkeys(symbols))
+    present = set(df["symbol"].astype(str).unique())
+    missing_symbols = sorted(set(requested) - present)
+    if missing_symbols:
+        raise RuntimeError(f"Calendar alignment is missing symbols: {missing_symbols}")
+
+    aligned = df[df["symbol"].isin(requested)].copy()
+    aligned["source_feat_idx"] = aligned["feat_idx"].astype(int)
+    common_times = (
+        aligned.groupby("open_time")["symbol"]
+        .nunique()
+        .loc[lambda values: values == len(requested)]
+        .index
+    )
+    aligned = aligned[aligned["open_time"].isin(common_times)].copy()
+    if aligned.empty:
+        raise RuntimeError("Requested symbols have no common calendar timestamps.")
+    aligned = aligned.sort_values(["symbol", "open_time"]).reset_index(drop=True)
+    aligned["feat_idx"] = aligned.groupby("symbol").cumcount().astype(int)
+    validate_calendar_aligned_panel(aligned)
+
+    counts = aligned.groupby("symbol").size()
+    if counts.nunique() != 1:
+        raise RuntimeError(f"Common calendar produced unequal symbol rows: {counts.to_dict()}")
+    if warmup_rows:
+        aligned = aligned[aligned["feat_idx"] >= int(warmup_rows)].copy()
+    aligned = aligned.sort_values(["symbol", "open_time"]).reset_index(drop=True)
+    aligned["row_id"] = np.arange(len(aligned), dtype=int)
+    return aligned
+
+
 def row_ids_for_fold(df: pd.DataFrame, train_end: int, test_start: int, test_end: int) -> tuple[list[int], list[int]]:
     train = df[df["feat_idx"] < train_end]["row_id"].astype(int).tolist()
     test = df[(df["feat_idx"] >= test_start) & (df["feat_idx"] < test_end)]["row_id"].astype(int).tolist()
+    if train and test and "open_time" in df.columns:
+        train_latest = pd.Timestamp(df.loc[df["row_id"].isin(train), "open_time"].max())
+        test_earliest = pd.Timestamp(df.loc[df["row_id"].isin(test), "open_time"].min())
+        if train_latest >= test_earliest:
+            raise RuntimeError(
+                "Calendar leakage detected: latest pooled training timestamp "
+                f"{train_latest} is not earlier than earliest pooled test timestamp "
+                f"{test_earliest}."
+            )
     return train, test
 
 
@@ -192,23 +268,16 @@ def signal_from_probs(probs: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.nda
     return score, pred_label, signal
 
 
-def apply_transaction_costs(signal: pd.Series, returns: pd.Series) -> pd.Series:
-    trades = signal.diff().abs().fillna(signal.abs()) / 2.0
-    return signal.shift(1).fillna(0) * returns - trades * TC_PER_TRADE
-
-
 def add_net_returns(pred: pd.DataFrame) -> pd.DataFrame:
-    rows = []
-    for _, group in pred.sort_values(["symbol", "open_time"]).groupby("symbol", sort=False):
-        group = group.copy()
-        group["net_return"] = apply_transaction_costs(group["signal"], group["target_return"])
-        rows.append(group)
-    return pd.concat(rows, ignore_index=True).sort_values(["open_time", "symbol"]).reset_index(drop=True)
+    return non_overlapping_returns(
+        pred,
+        horizon_hours=HORIZON_HOURS,
+        transaction_cost=TC_PER_TRADE,
+    )
 
 
 def portfolio_net_returns(pred: pd.DataFrame) -> pd.Series:
-    pred = add_net_returns(pred)
-    return pred.groupby("open_time")["net_return"].mean().sort_index()
+    return portfolio_return_series(add_net_returns(pred))
 
 
 def build_prediction_frame(
@@ -345,6 +414,12 @@ def summarize_predictions(pred: pd.DataFrame, method: str, regime_method: str, s
             "regime_method": regime_method,
             "symbol_scope": symbol_scope,
             "IC": np.nan,
+            "mean_asset_IC": np.nan,
+            "median_asset_IC": np.nan,
+            "cross_sectional_IC": np.nan,
+            "median_cross_sectional_IC": np.nan,
+            "pooled_IC": np.nan,
+            "signal_IC": np.nan,
             "accuracy": np.nan,
             "balanced_accuracy": np.nan,
             "Sharpe": np.nan,
@@ -352,17 +427,15 @@ def summarize_predictions(pred: pd.DataFrame, method: str, regime_method: str, s
             "turnover": np.nan,
             "total_return": np.nan,
             "n_trades": 0,
+            "n_return_observations": 0,
             "n_test_rows": 0,
         }
 
-    pred = add_net_returns(pred)
-    portfolio_returns = portfolio_net_returns(pred)
-    cumulative = (1.0 + portfolio_returns).cumprod()
-    drawdown = (cumulative - cumulative.cummax()) / cumulative.cummax()
-    annualize = np.sqrt(8760 / HORIZON_HOURS)
-    trades = pred.groupby("symbol")["signal"].diff().abs().fillna(pred["signal"].abs()) / 2.0
-    turnover = trades.mean()
-    ic = pred["score"].corr(pred["target_return"])
+    metrics = evaluation_metrics(
+        pred,
+        horizon_hours=HORIZON_HOURS,
+        transaction_cost=TC_PER_TRADE,
+    )
 
     return {
         "method": method,
@@ -370,15 +443,9 @@ def summarize_predictions(pred: pd.DataFrame, method: str, regime_method: str, s
         "horizon": f"{HORIZON_HOURS}h",
         "regime_method": regime_method,
         "symbol_scope": symbol_scope,
-        "IC": float(ic) if pd.notna(ic) else np.nan,
+        **metrics,
         "accuracy": float(accuracy_score(pred["target_label"], pred["pred_label"])),
         "balanced_accuracy": float(balanced_accuracy_score(pred["target_label"], pred["pred_label"])),
-        "Sharpe": float(portfolio_returns.mean() / (portfolio_returns.std() + 1e-8) * annualize),
-        "drawdown": float(drawdown.min()),
-        "turnover": float(turnover),
-        "total_return": float(cumulative.iloc[-1] - 1.0),
-        "n_trades": int((trades > 0).sum()),
-        "n_test_rows": int(len(pred)),
     }
 
 

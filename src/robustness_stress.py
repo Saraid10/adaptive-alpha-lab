@@ -9,6 +9,11 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
 from alpha_models import HORIZON_HOURS, PRIMARY_TARGET, SAVE_DIR
 from config import DB_PATH
+from evaluation import (
+    information_coefficients,
+    non_overlapping_returns,
+    portfolio_metrics_from_returns,
+)
 
 
 DEFAULT_THRESHOLDS = [0.03, 0.05, 0.07, 0.10]
@@ -130,14 +135,11 @@ def apply_threshold(pred: pd.DataFrame, threshold: float) -> pd.DataFrame:
 
 
 def add_net_returns(pred: pd.DataFrame, transaction_cost: float) -> pd.DataFrame:
-    rows = []
-    for _, group in pred.sort_values(["symbol", "open_time"]).groupby("symbol", sort=False):
-        group = group.copy()
-        trades = group["signal"].diff().abs().fillna(group["signal"].abs()) / 2.0
-        group["trade"] = trades
-        group["net_return"] = group["signal"].shift(1).fillna(0) * group["target_return"] - trades * transaction_cost
-        rows.append(group)
-    return pd.concat(rows, ignore_index=True)
+    return non_overlapping_returns(
+        pred,
+        horizon_hours=HORIZON_HOURS,
+        transaction_cost=transaction_cost,
+    )
 
 
 def summarize_subset(
@@ -178,13 +180,12 @@ def summarize_subset(
             "n_test_rows": 0,
         }
 
-    portfolio_returns = subset.groupby("open_time")["net_return"].mean().sort_index()
-    cumulative = (1.0 + portfolio_returns).cumprod()
-    drawdown = (cumulative - cumulative.cummax()) / cumulative.cummax()
-    annualize = np.sqrt(8760 / HORIZON_HOURS)
-
-    score_ic = subset["score"].corr(subset["target_return"])
-    signal_ic = subset["signal"].corr(subset["target_return"])
+    transaction_cost = cost_bps / 10000.0
+    with_returns = add_net_returns(pred, transaction_cost)
+    if market_period != "all":
+        with_returns = with_returns[with_returns["market_period"] == market_period].copy()
+    portfolio = portfolio_metrics_from_returns(with_returns, HORIZON_HOURS)
+    ic = information_coefficients(subset)
     unique_labels = subset["target_label"].nunique()
     balanced = (
         balanced_accuracy_score(subset["target_label"], subset["pred_label"])
@@ -194,15 +195,15 @@ def summarize_subset(
 
     return {
         **base,
-        "score_IC": float(score_ic) if pd.notna(score_ic) else np.nan,
-        "signal_IC": float(signal_ic) if pd.notna(signal_ic) else np.nan,
+        "score_IC": ic["IC"],
+        "mean_asset_IC": ic["mean_asset_IC"],
+        "median_asset_IC": ic["median_asset_IC"],
+        "cross_sectional_IC": ic["cross_sectional_IC"],
+        "pooled_IC": ic["pooled_IC"],
+        "signal_IC": ic["signal_IC"],
         "accuracy": float(accuracy_score(subset["target_label"], subset["pred_label"])),
         "balanced_accuracy": float(balanced) if pd.notna(balanced) else np.nan,
-        "Sharpe": float(portfolio_returns.mean() / (portfolio_returns.std() + 1e-8) * annualize),
-        "drawdown": float(drawdown.min()),
-        "turnover": float(subset["trade"].mean()),
-        "total_return": float(cumulative.iloc[-1] - 1.0),
-        "n_trades": int((subset["trade"] > 0).sum()),
+        **portfolio,
         "n_test_rows": int(len(subset)),
     }
 
@@ -212,14 +213,12 @@ def run_stress_grid(pred: pd.DataFrame, thresholds: list[float], cost_bps_values
     for threshold in thresholds:
         thresholded = apply_threshold(pred, threshold)
         for cost_bps in cost_bps_values:
-            transaction_cost = cost_bps / 10000.0
             for method, group in thresholded.groupby("method", sort=False):
-                with_returns = add_net_returns(group, transaction_cost)
-                regime_method = str(with_returns["regime_method"].iloc[0])
+                regime_method = str(group["regime_method"].iloc[0])
                 for period in MARKET_PERIODS:
                     rows.append(
                         summarize_subset(
-                            with_returns,
+                            group,
                             method=method,
                             regime_method=regime_method,
                             market_period=period,

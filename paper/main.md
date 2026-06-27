@@ -2,7 +2,7 @@
 
 ## Paper Status
 
-Phase 39 controlled working draft. The fully fold-local encoder pipeline has passed leakage/reproducibility tests and a one-fold smoke run. All inspected BTC/ETH and Crypto-20 outcomes remain development-observed; the full Phase 39 run and a later locked external evaluation are still pending.
+Phase 39 repair working draft. The original 16-fold Crypto-20 run is invalidated as predictive evidence because positional folds allowed cross-asset calendar overlap for 95% of test rows. The repaired pipeline now uses a strict common timestamp panel and rejects any fold whose latest pooled training timestamp is not earlier than its earliest pooled test timestamp. New full-run evidence has not yet been generated.
 
 ## Abstract
 

@@ -41,18 +41,22 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Crypto-20 guided structure | 34/35 | Gate and run the full guided structural experiment | `crypto20_guided_gate.csv`, `crypto20_guided_encoder_summary.csv` | Structural transfer |
 | Crypto-20 downstream alpha | 36 | Run the equal-coverage fold-local downstream comparison | `crypto20_walkforward_experiment_results.csv` | Predictive generalization |
 | Crypto-20 statistical adjudication | 37 | Test fold uncertainty, calibration, corrections, and asset heterogeneity | `crypto20_statistical_method_summary.csv`, `crypto20_statistical_claims.csv` | Claim adjudication |
+| Crypto-20 validity repair and development freeze | 39R-A/B | Repair global calendar folds and evaluation, then freeze the exact development snapshot | `crypto20_development_freeze_manifest.json`, `crypto20_development_fold_calendar.csv`, `evaluation_protocol.md` | Required validity foundation before repaired baselines |
+| Repaired Crypto-20 classical baseline | 39R-C | Rerun global LightGBM and raw-regime LightGBM baselines on the frozen calendar-safe development panel | `crypto20_repaired_classical_experiment_results.csv`, `crypto20_repaired_classical_fold_metrics.csv`, `crypto20_repaired_classical_coverage.csv` | Leakage-safe baseline foundation; does not support positive alpha for the classical ladder |
+| Repaired Crypto-20 neural/guided baseline | 39R-D | Rerun vanilla contrastive, contrastive-HMM, and HMM-guided fold-local encoders on the same frozen calendar-safe panel | `crypto20_repaired_fold_local_experiment_results.csv`, `crypto20_repaired_fold_local_fold_metrics.csv`, `phase39r_neural_fold_local_results.md` | Leakage-safe neural/guided development benchmark; does not support robust positive alpha |
+| Research-grade regression gate | 39R-QA | Add a repeatable artifact/full check loop for future feature changes | `research_grade_check_report.csv`, `research_grade_check_report.md`, `src/research_grade_checks.py` | Reproducibility and regression control |
 
 ## Future Experiment Queue
 
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
 | 1 | 38 | Research-control reset | Required before new model development | `phase38_master_protocol.md`, `data_role_registry.csv`, `experiment_ledger.csv`, `publication_acceptance_gates.md` |
-| 2 | 39 | Fully fold-local encoder baseline ladder | Implementation/smoke gate passed; full development run pending | fold-local encoder manifests, predictions, comparisons, and leakage tests |
-| 3 | 40 | Bounded calibration and soft-gating candidates | Conditional on the Phase 39 baseline passing | development-only candidate comparison and frozen selection record |
-| 4 | 41 | Cross-asset interpretation and execution hardening | Required for mechanism and economic discussion | fold-local attribution, transition diagnostics, and execution stress results |
-| 5 | 42 | Locked external evaluation | One frozen candidate evaluated once | registered holdout, immutable predictions, final comparison |
-| 6 | 43 | Final statistical adjudication | Required before final claim language | dependence-aware final claim table |
-| 7 | 44 | ICAIF-format paper package | Required before external submission | anonymous eight-page ACM paper and citation/claim audits |
+| 2 | 40 | Repaired statistical adjudication | Repaired classical and neural/guided benchmarks complete; compare methods with paired fold/asset tests and corrected uncertainty | repaired statistical method summary, pairwise tests, corrected claims, and diagnostic plots |
+| 3 | 41 | Bounded calibration and soft-gating candidates | Conditional on repaired statistical adjudication; no tuning against locked data | development-only candidate comparison and frozen selection record |
+| 4 | 42 | Cross-asset interpretation and execution hardening | Required for mechanism and economic discussion | fold-local attribution, transition diagnostics, and execution stress results |
+| 5 | 43 | Locked external evaluation | One frozen candidate evaluated once | registered holdout, immutable predictions, final comparison |
+| 6 | 44 | Final statistical adjudication | Required before final claim language | dependence-aware final claim table |
+| 7 | 45 | ICAIF-format paper package | Required before external submission | anonymous eight-page ACM paper and citation/claim audits |
 
 ## Minimal Ablation Definition
 
