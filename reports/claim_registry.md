@@ -39,6 +39,7 @@ This registry separates allowed paper claims from claims that are not supported 
 | Claim | Status | Evidence Artifact | Safe Wording |
 |---|---|---|---|
 | Structural regime-learning behavior transfers beyond BTC/ETH. | Diagnostic | `models/crypto20_guided_encoder_summary.csv`, `models/crypto20_guided_encoder_comparison.csv`, `reports/multiasset_universe_plan.md` | Phase 35 shows the HMM-guided objective scales structurally to Crypto-20, but this is not evidence of downstream alpha generalization. |
+| Repaired classical Crypto-20 baselines are weak/negative. | Diagnostic | `models/crypto20_repaired_classical_experiment_results.csv`, `models/crypto20_repaired_classical_fold_metrics.csv`, `reports/phase39r_classical_baseline_protocol.md` | On the repaired frozen development panel, global and raw-regime LightGBM baselines do not show convincing positive alpha under mean per-asset IC and non-overlapping cost-adjusted portfolio diagnostics. |
 
 ## Open Claims
 
@@ -47,7 +48,8 @@ This registry separates allowed paper claims from claims that are not supported 
 | Time-frequency guided encoding improves the full model. | Open | Full-length time-frequency run plus downstream alpha retest; Phase 25 says not to expand this yet. |
 | Hard-negative mining improves guided regimes. | Open | Capped ablation suite. |
 | Downstream alpha results generalize beyond BTC/ETH. | Directional only | Phase 37 gives guided-HMM the highest mean fold IC, but the edge is not significant after paired testing or correction; Sharpe/return dominance is unsupported. |
-| Fold-local encoder retraining changes the conclusion. | Open | Expanding-window or fold-local encoder retraining experiment. |
+| Fold-local encoder retraining changes the conclusion. | Diagnostic | The repaired 16-fold development run is complete. It weakens the earlier alpha story: downstream alpha remains weak/inconclusive under calendar-safe validation. |
+| The repaired neural/guided encoder beats the repaired classical baselines. | Unsupported | The repaired full run does not show robust positive alpha or convincing guided-method dominance over the repaired classical baselines. |
 | Validation-only calibration repairs guided-HMM NLL without reducing IC. | Open | Inner-validation calibration followed by fully fold-local outer evaluation. |
 | Soft regime gating improves transition behavior. | Open | Pre-specified hard-versus-soft gating comparison on development folds. |
 | The selected method transfers to an untouched holdout. | Open | One frozen configuration evaluated once on a registered locked asset or temporal holdout. |
@@ -69,6 +71,16 @@ This registry separates allowed paper claims from claims that are not supported 
 ## Phase 38 Claim Control
 
 The source of truth for data roles is `reports/data_role_registry.csv`; the source of truth for tried and planned experiment families is `reports/experiment_ledger.csv`. New README, paper, dashboard, resume, or presentation language must remain inside both registries and the gates in `reports/publication_acceptance_gates.md`.
+
+## Phase 39 Claim Control
+
+Allowed: the repaired pipeline passes common-calendar alignment, strict pooled timestamp separation, causal-encoding, atomic-checkpoint, resume-lineage, and equal-coverage smoke checks.
+
+Forbidden: interpreting the one-fold, one-epoch Phase 39 metric table as evidence that any method is better or worse. A full development run can update development claims only; it cannot restore untouched-test status to Crypto-20.
+
+The earlier full run is computationally complete but scientifically invalidated: 95% of each fold's test rows overlapped the pooled training calendar. Its metrics may be retained only as debugging history. Forbidden: using them for superiority, inferiority, calibration, profitability, or generalization claims.
+
+The repaired classical full run is complete and valid as a development-observed baseline. It supports only a diagnostic claim that these classical baselines are weak/negative under the repaired protocol. It does not support any claim that a neural/guided method is better, because the repaired neural/guided run has not yet been completed.
 
 ## Resume-Safe Language
 

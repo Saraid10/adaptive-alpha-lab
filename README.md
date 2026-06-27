@@ -92,8 +92,28 @@ Binance OHLCV
 - Phase 36 Crypto-20 fold-local downstream alpha retest.
 - Phase 37 paired-fold statistical adjudication, time-block DM diagnostics, and asset heterogeneity analysis.
 - Phase 38 research-control reset with explicit data roles, experiment lineage, fold-local validity requirements, and publication acceptance gates.
+- Phase 39 fold-local benchmark engineering plus a calendar-leakage repair: the original positional Crypto-20 run is retained as invalidated development evidence, while the repaired pipeline enforces one shared timestamp index and strict pooled train/test separation.
+- Repaired evaluation protocol with mean per-asset IC as the primary ranking metric, separate cross-sectional and pooled IC diagnostics, and a pre-specified non-overlapping eight-hour portfolio grid with fold-boundary position resets.
+- Completed repaired Crypto-20 classical and fold-local neural/guided development benchmarks. Under the repaired protocol, downstream alpha remains weak/inconclusive rather than a positive trading result.
+- Research-grade regression gate for future feature changes: artifact checks validate frozen data, method coverage, completed checkpoints, repaired outputs, and claim-control docs; full checks additionally rerun freeze verification, unit tests, and the calendar audit.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
+
+## Research-Grade Check Loop
+
+Run this after every new feature or experiment-script change:
+
+```powershell
+.\run_research_grade_checks.ps1
+```
+
+Run the stronger gate before committing or interpreting results:
+
+```powershell
+.\run_research_grade_checks.ps1 -Mode full
+```
+
+The full gate checks the frozen development dataset, repaired artifact schemas, equal method coverage, 16 completed neural checkpoints, claim-control wording, unit tests, and common-calendar train/test separation.
 
 ## Run Order
 
@@ -147,6 +167,8 @@ python src/crypto20_guided_readiness.py --universe crypto20
 .\run_phase35_crypto20_guided.ps1
 .\run_phase36_crypto20_alpha.ps1
 .\run_phase37_crypto20_statistics.ps1
+python src/freeze_development_dataset.py --verify-only
+.\run_phase39r_classical_baseline.ps1 -MaxFolds 1 -RunName phase39r_classical_smoke -OutputDir .tmp\phase39r_classical_smoke -OutputPrefix smoke_
 ```
 
 Optional dashboard:
@@ -201,9 +223,20 @@ python -m pip install -r requirements-research.txt
 | `models/crypto20_statistical_ic_confidence_intervals.png` | Crypto-20 mean fold IC confidence intervals |
 | `reports/phase38_master_protocol.md` | Phase 38 scientific scope, data-use, fold-local, and model-selection protocol |
 | `reports/data_role_registry.csv` | Paper-facing registry of development-observed, descriptive, locked, and future datasets |
+| `configs/crypto20_development_freeze_v1.json` | Versioned asset, timestamp, target, fold, and role contract for the repaired development benchmark |
+| `models/crypto20_development_freeze_manifest.json` | Database, experiment-data, universe, symbol-manifest, and fold-calendar hashes |
+| `models/crypto20_development_symbol_manifest.csv` | Per-symbol frozen row counts, gaps, timestamps, and hashes |
+| `models/crypto20_development_fold_calendar.csv` | All 16 globally separated calendar folds |
+| `reports/crypto20_development_data_freeze.md` | Honest provenance and integrity statement for the development snapshot |
+| `reports/phase39r_classical_baseline_protocol.md` | Frozen four-method gate before repaired neural retraining |
+| `run_phase39r_classical_baseline.ps1` | Resume-safe PowerShell runner for the repaired classical benchmark |
 | `reports/experiment_ledger.csv` | Complete inspected/planned experiment-family ledger |
 | `reports/publication_acceptance_gates.md` | Ordered scientific, paper, and BTech project completion gates |
 | `reports/phase39_fold_local_encoder_design.md` | Code-grounded implementation contract for the fully fold-local learned baseline |
+| `reports/phase39_fold_local_results.md` | Invalidated original Phase 39 history retained only for audit |
+| `reports/phase39r_neural_fold_local_results.md` | Completed repaired 16-fold fold-local neural/guided development benchmark |
+| `models/crypto20_repaired_fold_local_experiment_results.csv` | Repaired neural/guided method summary under common-calendar validation |
+| `models/research_grade_check_report.csv` | Latest automated artifact/full research-grade check result |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
 | `models/regime_stability_summary.csv` | Persistence, switch-rate, confidence, and stable-vs-transition IC diagnostics |
@@ -793,7 +826,21 @@ Control artifacts:
 - `reports/publication_acceptance_gates.md`
 - `reports/phase39_fold_local_encoder_design.md`
 
+## Phase 39 Fully Fold-Local Encoder
+
+Phase 39 implements fold-local fitting for the feature scaler, weak-supervision HMM, contrastive pair construction, vanilla and guided encoders, sequential/non-sequential assignment layers, and downstream LightGBM models. Epoch count is selected only inside an inner chronological validation block and then refit on the authorized outer-training interval.
+
+The original full artifact covers 16 folds and equal method coverage but is invalidated as predictive evidence because per-symbol positional folds overlapped in calendar time. It is retained only as audit history. The repaired common-calendar implementation, data freeze, unit suite, classical baseline, and full 16-fold neural/guided run now complete under `crypto20-development-v1`.
+
+```powershell
+.\env\Scripts\python.exe -m unittest discover -s tests -p test_*.py -v
+.\run_phase39_fold_local_encoder.ps1 -Epochs 1 -BatchSize 128 -MaxWindows 5000 -MaxFolds 1 -RunName phase39_resume_smoke
+.\run_phase39_fold_local_encoder.ps1 -Epochs 1 -BatchSize 128 -MaxWindows 5000 -MaxFolds 1 -RunName phase39_resume_smoke -Resume
+```
+
+The repaired development protocol uses 16 folds, up to 30 epochs with inner-validation early stopping, batch size 128, seed 42, and a pre-frozen 5,000-window encoder budget. Training is additionally bound to `crypto20-development-v1`; it stops on changed code, data, configuration, asset order, folds, freeze hash, or checkpoint hash. The repaired full run found weak/inconclusive downstream alpha rather than a positive trading result.
+
 ## Current Status
 
-The codebase now produces offline/global and fold-local regime benchmarks, a validation audit, Phase 14A symbol/horizon robustness, Phase 14B cost/threshold/period stress robustness, a frozen baseline run registry, Phase 15A/15B statistical significance and multiple-testing artifacts, Phase 16 structural regime-quality diagnostics, Phase 17 compute-planning artifacts, Phase 18/19B HMM-guided encoder diagnostics, Phase 19A literature-positioning artifacts, Phase 20 guided downstream alpha retest artifacts, Phase 21 guided robustness/stress refresh artifacts, Phase 22A time-frequency encoder prototype artifacts, Phase 23 fold-local interpretability artifacts, Phase 24 paper-protocol artifacts, Phase 25 minimal ablation artifacts, Phase 26 paper statistical claim artifacts, Phase 27 manuscript skeleton artifacts, Phase 28 reproducibility artifacts, Phase 29 paper prose artifacts, Phase 30 reviewer-defense framing, Phase 31 multi-asset universe protocol artifacts, Phase 32 Crypto-20 data-pipeline quality-gate artifacts, Phase 33 Crypto-20 classical regime benchmark artifacts, Phase 34 Crypto-20 guided-encoder readiness artifacts, Phase 35 Crypto-20 guided encoder structural results, Phase 36 Crypto-20 downstream alpha results, Phase 37 statistical adjudication, Phase 38 research controls, and a Streamlit research dashboard. The next implementation target is the fully fold-local encoder baseline, not post-hoc tuning on Phase 36/37 outcomes.
+The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the research-grade regression gate passes. The next step is repaired statistical adjudication, not post-hoc model tuning.
 

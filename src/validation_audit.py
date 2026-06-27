@@ -2735,10 +2735,15 @@ def audit_crypto20_statistical_artifacts(rows: list[AuditRecord]) -> None:
         "target",
         "horizon",
         "IC",
+        "mean_asset_IC",
+        "median_asset_IC",
+        "cross_sectional_IC",
+        "pooled_IC",
         "Sharpe",
         "total_return",
         "drawdown",
         "turnover",
+        "n_return_observations",
         "n_test_rows",
     }
     required_pairwise_cols = {
@@ -2909,7 +2914,12 @@ def audit_statistical_artifacts(rows: list[AuditRecord]) -> None:
         if not path.exists()
     ]
     missing_fold_cols = sorted(
-        {"method", "fold", "IC", "signal_IC", "Sharpe", "total_return", "n_test_rows"} - set(folds.columns)
+        {
+            "method", "fold", "IC", "mean_asset_IC", "median_asset_IC",
+            "cross_sectional_IC", "pooled_IC", "signal_IC", "Sharpe",
+            "total_return", "n_return_observations", "n_test_rows",
+        }
+        - set(folds.columns)
     )
     missing_summary_cols = sorted(
         {"method", "mean_fold_IC", "IC_ci_low", "IC_ci_high", "positive_ic_folds"} - set(summary.columns)
@@ -3113,6 +3123,174 @@ def audit_run_registry(rows: list[AuditRecord]) -> None:
     )
 
 
+def audit_phase39_fold_local_artifacts(rows: list[AuditRecord]) -> None:
+    model_dir = Path(SAVE_DIR)
+    required = {
+        "manifest": model_dir / "crypto20_fold_local_encoder_manifest.csv",
+        "coverage": model_dir / "crypto20_fold_local_encoder_coverage.csv",
+        "results": model_dir / "crypto20_fold_local_experiment_results.csv",
+        "loss": model_dir / "crypto20_fold_local_encoder_loss.csv",
+        "fold_metrics": model_dir / "crypto20_fold_local_fold_metrics.csv",
+        "statistical_summary": model_dir / "crypto20_fold_local_statistical_method_summary.csv",
+        "statistical_claims": model_dir / "crypto20_fold_local_statistical_claims.csv",
+        "report": Path(BASE_DIR) / "reports" / "phase39_fold_local_results.md",
+    }
+    missing = [str(path.relative_to(BASE_DIR)) for path in required.values() if not path.exists()]
+    if missing:
+        record(
+            rows,
+            "phase39_fold_local_artifacts",
+            WARN,
+            "research",
+            f"Phase 39 has not produced a complete artifact set: {missing}",
+            rows_checked=len(required),
+            rows_failed=len(missing),
+        )
+        return
+
+    manifest = pd.read_csv(required["manifest"])
+    coverage = pd.read_csv(required["coverage"])
+    results = pd.read_csv(required["results"])
+    fold_metrics = pd.read_csv(required["fold_metrics"])
+    statistical_summary = pd.read_csv(required["statistical_summary"])
+    statistical_claims = pd.read_csv(required["statistical_claims"])
+    expected_methods = {
+        "global_lgbm",
+        "regime_lgbm_vol_bucket",
+        "regime_lgbm_kmeans",
+        "regime_lgbm_hmm",
+        "regime_lgbm_contrastive",
+        "regime_lgbm_contrastive_hmm",
+        "regime_lgbm_hmm_guided_gmm",
+        "regime_lgbm_hmm_guided_hmm",
+    }
+    failures: list[str] = []
+    manifest_columns = {
+        "fold", "encoder_method", "outer_train_end", "inner_train_end",
+        "inner_validation_start", "inner_validation_end", "outer_test_start",
+        "outer_test_end", "selected_epoch", "max_epochs", "scaler_training_rows",
+        "calendar_train_start", "calendar_train_end", "calendar_test_start",
+        "calendar_test_end", "input_hash", "model_hash",
+    }
+    coverage_columns = {
+        "fold", "method", "train_rows", "test_assignment_rows", "test_prediction_rows",
+    }
+    if not manifest_columns.issubset(manifest.columns):
+        failures.append(f"manifest columns missing={sorted(manifest_columns - set(manifest.columns))}")
+    if not coverage_columns.issubset(coverage.columns):
+        failures.append(f"coverage columns missing={sorted(coverage_columns - set(coverage.columns))}")
+    if "method" not in results:
+        failures.append("results method column missing")
+
+    if not failures:
+        encoders_by_fold = manifest.groupby("fold")["encoder_method"].agg(lambda x: set(x.astype(str)))
+        bad_encoders = encoders_by_fold[encoders_by_fold != {"vanilla", "guided"}]
+        if len(bad_encoders):
+            failures.append(f"encoder lineage incomplete for folds={bad_encoders.index.tolist()}")
+        boundary_bad = manifest[
+            (manifest["inner_train_end"] > manifest["inner_validation_start"])
+            | (manifest["inner_validation_start"] >= manifest["inner_validation_end"])
+            | (manifest["inner_validation_end"] > manifest["outer_train_end"])
+            | (manifest["outer_train_end"] >= manifest["outer_test_start"])
+            | (manifest["outer_test_start"] >= manifest["outer_test_end"])
+        ]
+        if len(boundary_bad):
+            failures.append(f"invalid temporal boundary rows={len(boundary_bad)}")
+        calendar_train_end = pd.to_datetime(manifest["calendar_train_end"], errors="coerce")
+        calendar_test_start = pd.to_datetime(manifest["calendar_test_start"], errors="coerce")
+        calendar_bad = manifest[
+            calendar_train_end.isna()
+            | calendar_test_start.isna()
+            | (calendar_train_end >= calendar_test_start)
+        ]
+        if len(calendar_bad):
+            failures.append(f"cross-asset calendar overlap rows={len(calendar_bad)}")
+        epoch_bad = manifest[
+            (manifest["selected_epoch"] < 1)
+            | (manifest["selected_epoch"] > manifest["max_epochs"])
+        ]
+        if len(epoch_bad):
+            failures.append(f"invalid selected epochs={len(epoch_bad)}")
+        hash_bad = manifest[
+            (manifest["input_hash"].astype(str).str.len() != 64)
+            | (manifest["model_hash"].astype(str).str.len() != 64)
+        ]
+        if len(hash_bad):
+            failures.append(f"invalid lineage hashes={len(hash_bad)}")
+
+        for fold, fold_coverage in coverage.groupby("fold"):
+            methods = set(fold_coverage["method"].astype(str))
+            if methods != expected_methods:
+                failures.append(f"fold {fold} method set mismatch")
+            if fold_coverage["train_rows"].nunique() != 1:
+                failures.append(f"fold {fold} unequal training coverage")
+            if fold_coverage["test_assignment_rows"].nunique() != 1:
+                failures.append(f"fold {fold} unequal assignment coverage")
+            if fold_coverage["test_prediction_rows"].nunique() != 1:
+                failures.append(f"fold {fold} unequal prediction coverage")
+            if not (fold_coverage["test_assignment_rows"] == fold_coverage["test_prediction_rows"]).all():
+                failures.append(f"fold {fold} assignment/prediction mismatch")
+        if set(results["method"].astype(str)) != expected_methods:
+            failures.append("result method set mismatch")
+        phase39_metric_columns = {
+            "fold", "method", "IC", "mean_asset_IC", "median_asset_IC",
+            "cross_sectional_IC", "pooled_IC", "Sharpe",
+            "n_return_observations", "n_test_rows",
+        }
+        if not phase39_metric_columns.issubset(fold_metrics.columns):
+            failures.append("fold metrics schema mismatch")
+        else:
+            expected_fold_metric_rows = manifest["fold"].nunique() * len(expected_methods)
+            if len(fold_metrics) != expected_fold_metric_rows:
+                failures.append(
+                    f"fold metric rows={len(fold_metrics)} expected={expected_fold_metric_rows}"
+                )
+            if set(fold_metrics["method"].astype(str)) != expected_methods:
+                failures.append("fold metric method set mismatch")
+        if set(statistical_summary.get("method", pd.Series(dtype=str)).astype(str)) != expected_methods:
+            failures.append("statistical summary method set mismatch")
+        if "n_folds" not in statistical_summary or not (
+            pd.to_numeric(statistical_summary["n_folds"], errors="coerce")
+            == manifest["fold"].nunique()
+        ).all():
+            failures.append("statistical summary fold coverage mismatch")
+        if statistical_claims.empty or not {
+            "comparison", "metric", "claim_status"
+        }.issubset(statistical_claims.columns):
+            failures.append("statistical claims missing or incomplete")
+
+    record(
+        rows,
+        "phase39_fold_local_validity",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(failures) if failures else (
+            f"Validated temporal boundaries, hashes, encoder lineage, and equal coverage for "
+            f"{manifest['fold'].nunique()} fold(s) and all eight methods."
+        ),
+        rows_checked=len(manifest) + len(coverage) + len(statistical_summary) + len(statistical_claims),
+        rows_failed=len(failures),
+    )
+
+    folds = int(manifest["fold"].nunique()) if "fold" in manifest else 0
+    full = folds == 16 and int(manifest["max_epochs"].min()) >= 30
+    if "run_kind" in manifest:
+        full = full and set(manifest["run_kind"].astype(str)) == {"full"}
+    record(
+        rows,
+        "phase39_full_development_run",
+        PASS if full else WARN,
+        "research",
+        (
+            "Full 16-fold, 30-epoch-cap frozen-budget development protocol is present."
+            if full
+            else f"Only a smoke/development gate is present ({folds} fold(s)); no Phase 39 performance claim is authorized."
+        ),
+        rows_checked=folds,
+        rows_failed=0 if full else max(1, 16 - folds),
+    )
+
+
 def write_outputs(rows: list[AuditRecord], fold_audit: pd.DataFrame) -> pd.DataFrame:
     out_dir = Path(SAVE_DIR)
     out_dir.mkdir(exist_ok=True)
@@ -3122,6 +3300,104 @@ def write_outputs(rows: list[AuditRecord], fold_audit: pd.DataFrame) -> pd.DataF
     audit.to_csv(out_dir / "validation_audit.csv", index=False)
     fold_audit.to_csv(out_dir / "fold_audit.csv", index=False)
     return audit
+
+
+def audit_development_freeze(rows: list[AuditRecord]) -> None:
+    try:
+        from freeze_development_dataset import (
+            DEFAULT_CONFIG,
+            build_artifacts,
+            verify_existing,
+        )
+
+        summary, symbols, folds, universe = build_artifacts(DEFAULT_CONFIG)
+        verify_existing(summary, symbols, folds, universe)
+        record(
+            rows,
+            "crypto20_development_freeze",
+            PASS,
+            "critical",
+            f"{summary['freeze_id']} verified: {summary['symbol_count']} symbols, "
+            f"{summary['prediction_rows']} rows, {summary['fold_count']} folds, "
+            "and matching database/experiment-data hashes.",
+            rows_checked=int(summary["prediction_rows"]),
+            rows_failed=0,
+        )
+    except Exception as exc:
+        record(
+            rows,
+            "crypto20_development_freeze",
+            FAIL,
+            "critical",
+            str(exc),
+            rows_checked=1,
+            rows_failed=1,
+        )
+
+
+def audit_repaired_classical_baseline(rows: list[AuditRecord]) -> None:
+    prefix = Path(SAVE_DIR) / "crypto20_repaired_classical_"
+    paths = {
+        "results": Path(f"{prefix}experiment_results.csv"),
+        "folds": Path(f"{prefix}fold_metrics.csv"),
+        "coverage": Path(f"{prefix}coverage.csv"),
+        "manifest": Path(f"{prefix}manifest.csv"),
+    }
+    missing = [path.name for path in paths.values() if not path.exists()]
+    if missing:
+        record(
+            rows,
+            "repaired_classical_baseline",
+            WARN,
+            "artifact",
+            f"Full repaired classical run is pending; missing={missing}",
+            rows_checked=1,
+            rows_failed=len(missing),
+        )
+        return
+    results = pd.read_csv(paths["results"])
+    folds = pd.read_csv(paths["folds"])
+    coverage = pd.read_csv(paths["coverage"])
+    manifest = pd.read_csv(paths["manifest"])
+    expected = {
+        "global_lgbm",
+        "regime_lgbm_hmm",
+        "regime_lgbm_kmeans",
+        "regime_lgbm_vol_bucket",
+    }
+    failures = []
+    if set(results.get("method", pd.Series(dtype=str)).astype(str)) != expected:
+        failures.append("result method set mismatch")
+    required_metrics = {
+        "IC", "mean_asset_IC", "median_asset_IC", "cross_sectional_IC",
+        "pooled_IC", "Sharpe", "n_return_observations", "n_test_rows",
+    }
+    if not required_metrics.issubset(folds.columns):
+        failures.append("repaired metric columns missing")
+    if len(folds) != 16 * len(expected) or folds["fold"].nunique() != 16:
+        failures.append("fold metric coverage mismatch")
+    if coverage.groupby("fold")["test_rows"].nunique().max() != 1:
+        failures.append("unequal method coverage")
+    if set(manifest.get("freeze_id", pd.Series(dtype=str)).astype(str)) != {
+        "crypto20-development-v1"
+    }:
+        failures.append("freeze ID mismatch")
+    train_end = pd.to_datetime(manifest.get("calendar_train_end"), errors="coerce")
+    test_start = pd.to_datetime(manifest.get("calendar_test_start"), errors="coerce")
+    if train_end.isna().any() or test_start.isna().any() or (train_end >= test_start).any():
+        failures.append("calendar separation failure")
+    record(
+        rows,
+        "repaired_classical_baseline",
+        FAIL if failures else PASS,
+        "critical",
+        "; ".join(failures) if failures else (
+            "Validated 16 frozen calendar folds, four classical methods, equal coverage, "
+            "and repaired evaluation metrics."
+        ),
+        rows_checked=len(folds) + len(coverage) + len(manifest),
+        rows_failed=len(failures),
+    )
 
 
 def main() -> None:
@@ -3153,6 +3429,9 @@ def main() -> None:
     audit_literature_positioning_artifacts(rows)
     audit_paper_protocol_artifacts(rows)
     audit_phase38_control_artifacts(rows)
+    audit_development_freeze(rows)
+    audit_repaired_classical_baseline(rows)
+    audit_phase39_fold_local_artifacts(rows)
     audit_paper_draft_artifacts(rows)
     audit_reproducibility_artifacts(rows)
     audit_multiasset_universe_artifacts(rows)

@@ -19,11 +19,12 @@ from alpha_models import (
     validate_test_coverage,
 )
 from config import DB_PATH
+from evaluation import evaluation_metrics, non_overlapping_returns
 from walkforward_regimes import (
     PHASE20_REGIME_METHODS,
     fit_fold_assignments,
     finite_matrix,
-    load_dense_contrastive_universe,
+    load_benchmark_universe,
     load_guided_embedding_matrix,
 )
 from baselines import HMM_FEATURES
@@ -247,18 +248,12 @@ def run_regime_model(
     return pd.concat(predictions, ignore_index=True) if predictions else pd.DataFrame()
 
 
-def apply_transaction_costs(signal: pd.Series, returns: pd.Series) -> pd.Series:
-    trades = signal.diff().abs().fillna(signal.abs()) / 2.0
-    return signal.shift(1).fillna(0) * returns - trades * TC_PER_TRADE
-
-
-def add_net_returns(pred: pd.DataFrame) -> pd.DataFrame:
-    rows = []
-    for _, group in pred.sort_values(["symbol", "open_time"]).groupby("symbol", sort=False):
-        group = group.copy()
-        group["net_return"] = apply_transaction_costs(group["signal"], group["target_return"])
-        rows.append(group)
-    return pd.concat(rows, ignore_index=True).sort_values(["open_time", "symbol"]).reset_index(drop=True)
+def add_net_returns(pred: pd.DataFrame, horizon: int) -> pd.DataFrame:
+    return non_overlapping_returns(
+        pred,
+        horizon_hours=horizon,
+        transaction_cost=TC_PER_TRADE,
+    )
 
 
 def summarize_predictions(pred: pd.DataFrame, method: str, regime_method: str, symbol_scope: str, target: str, horizon: int) -> dict:
@@ -270,6 +265,10 @@ def summarize_predictions(pred: pd.DataFrame, method: str, regime_method: str, s
             "method": method,
             "regime_method": regime_method,
             "IC": np.nan,
+            "mean_asset_IC": np.nan,
+            "median_asset_IC": np.nan,
+            "cross_sectional_IC": np.nan,
+            "pooled_IC": np.nan,
             "accuracy": np.nan,
             "balanced_accuracy": np.nan,
             "Sharpe": np.nan,
@@ -277,18 +276,17 @@ def summarize_predictions(pred: pd.DataFrame, method: str, regime_method: str, s
             "turnover": np.nan,
             "total_return": np.nan,
             "n_trades": 0,
+            "n_return_observations": 0,
             "n_test_rows": 0,
         }
 
     from sklearn.metrics import accuracy_score, balanced_accuracy_score
 
-    pred = add_net_returns(pred)
-    portfolio_returns = pred.groupby("open_time")["net_return"].mean().sort_index()
-    cumulative = (1.0 + portfolio_returns).cumprod()
-    drawdown = (cumulative - cumulative.cummax()) / cumulative.cummax()
-    annualize = np.sqrt(8760 / horizon)
-    trades = pred.groupby("symbol")["signal"].diff().abs().fillna(pred["signal"].abs()) / 2.0
-    ic = pred["score"].corr(pred["target_return"])
+    metrics = evaluation_metrics(
+        pred,
+        horizon_hours=horizon,
+        transaction_cost=TC_PER_TRADE,
+    )
 
     return {
         "symbol_scope": symbol_scope,
@@ -296,15 +294,9 @@ def summarize_predictions(pred: pd.DataFrame, method: str, regime_method: str, s
         "horizon": f"{horizon}h",
         "method": method,
         "regime_method": regime_method,
-        "IC": float(ic) if pd.notna(ic) else np.nan,
+        **metrics,
         "accuracy": float(accuracy_score(pred["target_label"], pred["pred_label"])),
         "balanced_accuracy": float(balanced_accuracy_score(pred["target_label"], pred["pred_label"])),
-        "Sharpe": float(portfolio_returns.mean() / (portfolio_returns.std() + 1e-8) * annualize),
-        "drawdown": float(drawdown.min()),
-        "turnover": float(trades.mean()),
-        "total_return": float(cumulative.iloc[-1] - 1.0),
-        "n_trades": int((trades > 0).sum()),
-        "n_test_rows": int(len(pred)),
     }
 
 
@@ -387,8 +379,20 @@ def run_scope(
         return pd.DataFrame()
 
     print(f"\n=== Robustness scope: {symbol_scope} ===")
-    base_df, embeddings = load_dense_contrastive_universe(scope)
-    guided_embeddings = load_guided_embedding_matrix(base_df) if include_guided else None
+    base_df, embeddings = load_benchmark_universe(
+        scope,
+        False,
+        str(Path(SAVE_DIR) / "regime_posteriors.csv"),
+        str(Path(SAVE_DIR) / "embeddings.npy"),
+    )
+    guided_embeddings = None
+    if include_guided:
+        base_df, embeddings, guided_embeddings = load_guided_embedding_matrix(
+            base_df,
+            str(Path(SAVE_DIR) / "guided_encoder_assignments.csv"),
+            str(Path(SAVE_DIR) / "guided_embeddings.npy"),
+            companion_embeddings=embeddings,
+        )
     regime_methods = PHASE20_REGIME_METHODS if include_guided else REGIME_METHODS
     folds = fold_ranges(base_df)
     if not folds:

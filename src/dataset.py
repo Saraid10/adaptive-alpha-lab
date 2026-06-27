@@ -8,8 +8,8 @@ from torch.utils.data import Dataset
 from config import DB_PATH, WINDOW_SIZE, FEATURE_COLS
 
 
-def load_feature_matrix(symbol: str = "BTCUSDT") -> np.ndarray:
-    """Load all 22 features for a symbol as a numpy array, time-ordered."""
+def load_feature_frame(symbol: str = "BTCUSDT") -> pd.DataFrame:
+    """Load timestamped features for a symbol in strict chronological order."""
     if not Path(DB_PATH).exists():
         raise FileNotFoundError(
             f"Market database not found at {DB_PATH}. "
@@ -19,13 +19,19 @@ def load_feature_matrix(symbol: str = "BTCUSDT") -> np.ndarray:
     con = duckdb.connect(DB_PATH, read_only=True)
     cols = ", ".join(FEATURE_COLS)
     df = con.execute(f"""
-        SELECT {cols}
+        SELECT open_time, {cols}
         FROM features
         WHERE symbol = ?
         ORDER BY open_time
     """, [symbol]).df()
     con.close()
-    return df.values.astype(np.float32)
+    df["open_time"] = pd.to_datetime(df["open_time"])
+    return df
+
+
+def load_feature_matrix(symbol: str = "BTCUSDT") -> np.ndarray:
+    """Load all 22 features for a symbol as a numpy array, time-ordered."""
+    return load_feature_frame(symbol)[FEATURE_COLS].to_numpy(dtype=np.float32)
 
 
 def normalize(X: np.ndarray):

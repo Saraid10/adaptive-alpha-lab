@@ -6,9 +6,8 @@ import numpy as np
 import pandas as pd
 
 from config import SAVE_DIR
-
-
-TC_PER_TRADE = 0.001
+from alpha_models import HORIZON_HOURS, TC_PER_TRADE
+from evaluation import non_overlapping_returns, portfolio_return_series
 
 
 def load_predictions() -> pd.DataFrame:
@@ -20,27 +19,11 @@ def load_predictions() -> pd.DataFrame:
     return df
 
 
-def apply_transaction_costs(signal: pd.Series, returns: pd.Series) -> pd.Series:
-    trades = signal.diff().abs().fillna(signal.abs()) / 2.0
-    return signal.shift(1).fillna(0) * returns - trades * TC_PER_TRADE
-
-
 def method_curves(predictions: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for method, group in predictions.groupby("method"):
-        symbol_rows = []
-        for _, symbol_group in group.sort_values(["symbol", "open_time"]).groupby("symbol", sort=False):
-            symbol_group = symbol_group.copy()
-            symbol_group["net_return"] = apply_transaction_costs(
-                symbol_group["signal"], symbol_group["target_return"]
-            )
-            symbol_rows.append(symbol_group)
-        method_df = pd.concat(symbol_rows, ignore_index=True)
-        curve = (
-            method_df.groupby("open_time", as_index=False)["net_return"]
-            .mean()
-            .sort_values("open_time")
-        )
+        method_df = non_overlapping_returns(group, HORIZON_HOURS, TC_PER_TRADE)
+        curve = portfolio_return_series(method_df).rename("net_return").reset_index()
         curve["method"] = method
         curve["equity"] = (1.0 + curve["net_return"]).cumprod()
         curve["drawdown"] = (curve["equity"] - curve["equity"].cummax()) / curve["equity"].cummax()

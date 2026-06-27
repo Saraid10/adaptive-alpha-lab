@@ -6,6 +6,12 @@ This document is the implementation contract for Gate 1 in `reports/publication_
 
 Phase 39 must not change Phase 36/37 artifacts. It writes new prefixed outputs and treats all existing Crypto-20 outcomes as development-observed.
 
+## Implementation Status
+
+The original 2026-06-19 to 2026-06-20 run is invalidated because positional indices represented different dates across assets. The repaired implementation aligns all 20 symbols to one common timestamp panel, records calendar boundaries in every manifest, rejects pooled train/test overlap, passes the unit suite, passes all 16 real-data calendar folds, and completed the full repaired 16-fold neural/guided development run. The dataset is bound to `crypto20-development-v1` by database and experiment-data hashes. The repaired full run is development evidence only and found weak/inconclusive downstream alpha.
+
+The evaluation layer is also repaired before rerunning: `IC` now means mean per-asset time-series IC, cross-sectional and pooled IC are reported separately, and portfolio diagnostics use one pre-specified non-overlapping horizon grid with positions reset at fold boundaries. See `reports/evaluation_protocol.md`.
+
 ## Current Boundary Problem
 
 `guided_encoder.py` currently fits one scaler across the loaded feature matrices, consumes a precomputed HMM assignment artifact, trains one encoder, and extracts one dense embedding matrix. `walkforward_regimes.py` then correctly refits GMM/HMM assignment layers inside each fold, but it consumes that previously trained dense embedding matrix.
@@ -82,6 +88,7 @@ Compact committed outputs:
 - `models/crypto20_fold_local_encoder_manifest.csv`
 - `models/crypto20_fold_local_encoder_loss.csv`
 - `models/crypto20_fold_local_encoder_coverage.csv`
+- `models/crypto20_fold_local_fold_metrics.csv`
 - `models/crypto20_fold_local_experiment_results.csv`
 - `models/crypto20_fold_local_method_comparison.csv`
 - `reports/phase39_fold_local_results.md`
@@ -92,6 +99,7 @@ Ignored heavy outputs:
 - dense train/test embeddings,
 - row-level outer predictions,
 - temporary pair-mining caches.
+- atomic per-fold resume checkpoints and fold-specific weights under `.tmp/phase39_fold_local/<run-name>/`.
 
 Every manifest row records fold, method, seed, timestamps, row counts, window counts, selected epoch, training epochs, device, input hashes, output hashes, and runtime.
 
@@ -105,24 +113,34 @@ Every manifest row records fold, method, seed, timestamps, row counts, window co
 6. Test embedding windows contain no timestamp after their prediction endpoint.
 7. All eight methods have identical outer-test row coverage.
 8. Repeated smoke runs with the same seed reproduce manifest hashes within the documented deterministic tolerance.
+9. Resume rejects any changed configuration, data lineage, source lineage, fold specification, or modified checkpoint file.
+10. An interrupted `.writing` checkpoint is replaced atomically without affecting completed folds.
 
 ## Smoke And Full Commands
 
 Planned smoke command:
 
 ```powershell
-.\run_phase39_fold_local_encoder.ps1 -MaxFolds 1 -Epochs 1 -MaxWindows 5000
+.\run_phase39_fold_local_encoder.ps1 -MaxFolds 1 -Epochs 1 -MaxWindows 5000 -RunName phase39_resume_smoke
 ```
 
 Planned full command:
 
 ```powershell
-.\run_phase39_fold_local_encoder.ps1
+.\run_phase39_fold_local_encoder.ps1 -Resume
 ```
 
 ## Compute Strategy
 
 Phase 39 begins with one fold, one epoch, and capped windows. The full run is authorized only after boundary tests, coverage parity, deterministic manifests, and runtime estimates pass. Failed smoke gates are fixed before additional compute is spent.
+
+The observed smoke runtime makes an all-window run disproportionate on the available CPU. Before inspecting the full outcomes, the full development protocol is therefore frozen at 16 folds, at most 30 epochs with inner-validation early stopping, batch size 128, seed 42, and at most 5,000 deterministically sampled windows per encoder stage. This is a compute-budget choice, not an outcome-tuned choice. Scaling, weak-supervision HMM fitting, assignment fitting, and alpha fitting continue to use every authorized fold row.
+
+Each completed fold is committed atomically with its predictions, assignments, manifests, losses, coverage, and implementation lineage. `-Resume` validates configuration, data, source, and fold hashes plus every checkpoint file hash before reuse. A mismatch stops the run; it never combines incompatible folds.
+
+## Research Basis
+
+The protocol follows three established ideas: selection on repeatedly inspected backtests creates overfitting risk; contrastive time-series representations must preserve temporal context; and evaluation must separate representation fitting from future observations. Relevant primary sources include Bailey et al., *The Probability of Backtest Overfitting* (Journal of Computational Finance, 2016, DOI `10.21314/JCF.2016.322`), van den Oord et al., *Representation Learning with Contrastive Predictive Coding* (`arXiv:1807.03748`), and Yue et al., *TS2Vec: Towards Universal Representation of Time Series* (AAAI 2022, DOI `10.1609/aaai.v36i8.20881`). These sources motivate the separation and temporal controls; they do not validate this project's empirical claims.
 
 ## Phase 39 Exit Gate
 

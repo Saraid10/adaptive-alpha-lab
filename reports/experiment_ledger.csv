@@ -20,7 +20,7 @@ crypto20_guided_readiness,34,Crypto20,guided compute gate,development,true,scope
 crypto20_guided_structure,35,Crypto20,"guided GMM; guided HMM",development,true,structural transfer,complete,retain as development
 crypto20_alpha,36,Crypto20,"global; classical; guided",development,true,predictive generalization,complete,retain as development
 crypto20_statistics,37,Crypto20,"paired folds; time-block NLL; asset heterogeneity",development,true,statistical adjudication,complete,freeze artifacts
-fold_local_encoder_baseline,39,Crypto20,full baseline ladder,development,false,validity repair,planned,implement after Phase 38
+fold_local_encoder_baseline,39,Crypto20,full baseline ladder,development,true,validity repair,complete,preserve full negative/inconclusive result; predictive H8 not supported
 calibrated_soft_gating,40,Crypto20,"calibration; soft gating; pooled experts",development,false,candidate improvement,blocked,requires fold-local baseline
 external_asset_confirmation,43,Locked_asset_holdout,frozen selected candidate,final_locked,false,confirmatory result,blocked,requires model freeze
 future_temporal_confirmation,journal_extension,Future_data,frozen selected candidate,final_locked,false,temporal generalization,blocked,requires future collection
