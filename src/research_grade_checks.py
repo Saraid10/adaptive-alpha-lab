@@ -260,8 +260,9 @@ def check_classical_artifacts(results: list[CheckResult]) -> None:
 def check_claim_control_docs(results: list[CheckResult]) -> None:
     required_phrases = {
         BASE_DIR / "reports" / "claim_registry.md": [
-            "The repaired classical full run is complete",
-            "does not support any claim that a neural/guided method is better",
+            "The repaired classical full run and repaired neural/guided full run are complete",
+            "no repaired method currently supports a robust positive-alpha or dominance claim",
+            "Phase 40 must statistically adjudicate these repaired outputs",
             "Existing Crypto-20 results are an untouched final test",
         ],
         BASE_DIR / "reports" / "phase39r_neural_fold_local_results.md": [

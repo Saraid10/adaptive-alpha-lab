@@ -4,11 +4,22 @@
 
 **Live Demo:** [adaptive-alpha-engine.streamlit.app](https://adaptive-alpha-engine.streamlit.app/)
 
-## Key Finding
+## Current Research Finding After Phase 39R
 
-The strongest current result is mechanistic: HMM-guided representation learning produces strongly state-aligned regimes, but the translation from structural quality to downstream alpha depends on the assignment layer and market universe.
+Phase 39R is the current scientific checkpoint for the Crypto-20 track. It repaired a serious validation weakness in the earlier Crypto-20 fold-local experiment: the original per-symbol positional folds overlapped in calendar time when assets were pooled. That earlier Phase 39 run is therefore kept only as audit history, not as predictive evidence.
 
-On the BTC/ETH pilot, Phase 20's guided-HMM path reaches `IC=0.0094`, `Sharpe=0.099`, and `PSR(SR>0)=0.633`, beating raw-feature HMM point estimates while keeping equal OOS coverage, although its fold-level IC edge is not significant. On the pre-specified Crypto-20 extension, guided-HMM transfers structurally and has the highest mean fold IC, but its edge over raw HMM is non-significant (`p=0.840`) and its calibrated NLL is worse than global LightGBM after correction. The paper-shaped finding is therefore not universal model dominance: sequential guidance improves learned regime structure, while structural quality, ranking IC, calibration, and portfolio performance remain distinct outcomes.
+Under the repaired `crypto20-development-v1` protocol, every method is evaluated on the same globally separated calendar folds, with a frozen development dataset, fold-local fitting, equal coverage, mean per-asset IC as the primary ranking metric, and a non-overlapping transaction-cost-aware portfolio diagnostic.
+
+The honest Phase 39R result is:
+
+- the repaired classical baselines are weak/negative;
+- the repaired neural/guided methods do not show convincing positive alpha;
+- HMM-guided and contrastive methods do not currently establish robust dominance over the simpler repaired baselines;
+- the project’s strongest contribution is now the research-grade benchmark, leakage repair, validation discipline, and clear separation between structural regime quality and tradable alpha.
+
+This makes the project more scientifically defensible, not less. The current claim is no longer “our model beats HMM.” The current claim is: **strict financial validation exposes that structural regime learning can look meaningful while downstream alpha remains weak, noisy, and method-sensitive.**
+
+The next required step is Phase 40: repaired statistical adjudication of the Phase 39R outputs. No post-hoc tuning or locked-test evaluation should happen before that.
 
 ## Research Question
 
@@ -826,11 +837,13 @@ Control artifacts:
 - `reports/publication_acceptance_gates.md`
 - `reports/phase39_fold_local_encoder_design.md`
 
-## Phase 39 Fully Fold-Local Encoder
+## Phase 39R Repaired Fully Fold-Local Encoder
 
-Phase 39 implements fold-local fitting for the feature scaler, weak-supervision HMM, contrastive pair construction, vanilla and guided encoders, sequential/non-sequential assignment layers, and downstream LightGBM models. Epoch count is selected only inside an inner chronological validation block and then refit on the authorized outer-training interval.
+Phase 39 originally implemented fold-local fitting for the feature scaler, weak-supervision HMM, contrastive pair construction, vanilla and guided encoders, sequential/non-sequential assignment layers, and downstream LightGBM models. Phase 39R is the repaired version of that milestone.
 
-The original full artifact covers 16 folds and equal method coverage but is invalidated as predictive evidence because per-symbol positional folds overlapped in calendar time. It is retained only as audit history. The repaired common-calendar implementation, data freeze, unit suite, classical baseline, and full 16-fold neural/guided run now complete under `crypto20-development-v1`.
+The repair matters because the first full Phase 39 Crypto-20 run used per-symbol positional folds. Each symbol looked separated individually, but when all 20 assets were pooled, the training and test sets overlapped heavily in real calendar time. That made the original result unsafe as scientific evidence.
+
+The original full artifact covers 16 folds and equal method coverage but is invalidated as predictive evidence because per-symbol positional folds overlapped in calendar time. It is retained only as audit history. The repaired common-calendar implementation, data freeze, unit suite, classical baseline, and full 16-fold neural/guided run are now complete under `crypto20-development-v1`.
 
 ```powershell
 .\env\Scripts\python.exe -m unittest discover -s tests -p test_*.py -v
@@ -839,6 +852,15 @@ The original full artifact covers 16 folds and equal method coverage but is inva
 ```
 
 The repaired development protocol uses 16 folds, up to 30 epochs with inner-validation early stopping, batch size 128, seed 42, and a pre-frozen 5,000-window encoder budget. Training is additionally bound to `crypto20-development-v1`; it stops on changed code, data, configuration, asset order, folds, freeze hash, or checkpoint hash. The repaired full run found weak/inconclusive downstream alpha rather than a positive trading result.
+
+Phase 39R completed artifacts include:
+
+- repaired development freeze manifest and fold calendar;
+- repaired classical baseline results;
+- repaired 16-fold neural/guided fold-local results;
+- repaired method comparison and coverage files;
+- automated research-grade check reports;
+- claim-control documentation that prevents the invalidated run from being used as evidence.
 
 ## Current Status
 
