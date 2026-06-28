@@ -302,6 +302,71 @@ def check_statistical_artifacts(results: list[CheckResult]) -> None:
         )
 
 
+def check_phase41_artifacts(results: list[CheckResult]) -> None:
+    config_path = BASE_DIR / "configs" / "phase41_bounded_candidates_v1.json"
+    registry_path = BASE_DIR / "models" / "phase41_candidate_registry.csv"
+    rules_path = BASE_DIR / "models" / "phase41_selection_rules.csv"
+    report_path = BASE_DIR / "reports" / "phase41_bounded_improvement_protocol.md"
+
+    if require_file(results, config_path, "phase41_config_exists"):
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        failures = []
+        if config.get("selection_boundary") != "inner_chronological_validation_only":
+            failures.append("selection_boundary")
+        if not config.get("hard_constraints", {}).get("outer_test_selection_forbidden", False):
+            failures.append("outer_test_selection_forbidden")
+        forbidden = set(config.get("forbidden_selection_inputs", []))
+        if "models/crypto20_repaired_fold_local_alpha_oos_predictions.csv" not in forbidden:
+            failures.append("forbidden_oos_predictions")
+        add(
+            results,
+            "phase41_config_guardrails",
+            FAIL if failures else PASS,
+            f"failed={failures}" if failures else "inner-validation-only guardrails present",
+        )
+
+    registry = read_csv_checked(results, registry_path, "phase41_candidate_registry")
+    rules = read_csv_checked(results, rules_path, "phase41_selection_rules")
+    if registry is not None:
+        families = set(registry["family"].astype(str)) if "family" in registry else set()
+        scopes = set(registry["selection_scope"].astype(str)) if "selection_scope" in registry else set()
+        expected = {"probability_calibration", "soft_regime_gating", "execution_control"}
+        add(
+            results,
+            "phase41_candidate_registry_guardrails",
+            PASS if expected.issubset(families) and scopes == {"inner_validation_only"} else FAIL,
+            f"families={sorted(families)}; scopes={sorted(scopes)}",
+        )
+    if rules is not None:
+        rule_text = " ".join(rules.astype(str).agg(" ".join, axis=1).tolist())
+        required = [
+            "Do not select candidate parameters from repaired outer-test predictions",
+            "Use inner_validation_nll as the primary candidate selector",
+            "Reject candidates that increase turnover by more than 25%",
+        ]
+        missing = [phrase for phrase in required if phrase not in rule_text]
+        add(
+            results,
+            "phase41_selection_rules_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "mandatory Phase 41 rules present",
+        )
+    if require_file(results, report_path, "phase41_report_exists"):
+        text = report_path.read_text(encoding="utf-8")
+        required = [
+            "does **not** tune against Phase 40 outer-test results",
+            "Forbidden Selection Inputs",
+            "not a performance claim",
+        ]
+        missing = [phrase for phrase in required if phrase not in text]
+        add(
+            results,
+            "phase41_report_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 41 report guardrails present",
+        )
+
+
 def check_classical_artifacts(results: list[CheckResult]) -> None:
     models = BASE_DIR / "models"
     summary = read_csv_checked(
@@ -352,6 +417,11 @@ def check_claim_control_docs(results: list[CheckResult]) -> None:
             "does not support a robust positive-alpha or method-dominance claim",
             "not an untouched final-test claim",
             "must not tune directly against Phase 40 outer-test outcomes",
+        ],
+        BASE_DIR / "reports" / "phase41_bounded_improvement_protocol.md": [
+            "does **not** tune against Phase 40 outer-test results",
+            "Forbidden Selection Inputs",
+            "not a performance claim",
         ],
     }
     for path, phrases in required_phrases.items():
@@ -418,6 +488,7 @@ def main() -> int:
         expected_rows_per_method=230_400,
     )
     check_statistical_artifacts(results)
+    check_phase41_artifacts(results)
     check_checkpoint_run(
         results,
         "phase39r_neural_full_v1",

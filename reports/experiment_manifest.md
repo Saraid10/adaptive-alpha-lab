@@ -46,13 +46,14 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Repaired Crypto-20 neural/guided baseline | 39R-D | Rerun vanilla contrastive, contrastive-HMM, and HMM-guided fold-local encoders on the same frozen calendar-safe panel | `crypto20_repaired_fold_local_experiment_results.csv`, `crypto20_repaired_fold_local_fold_metrics.csv`, `phase39r_neural_fold_local_results.md` | Leakage-safe neural/guided development benchmark; does not support robust positive alpha |
 | Research-grade regression gate | 39R-QA | Add a repeatable artifact/full check loop for future feature changes | `research_grade_check_report.csv`, `research_grade_check_report.md`, `src/research_grade_checks.py` | Reproducibility and regression control |
 | Repaired statistical adjudication | 40 | Compare repaired Phase 39R methods with paired fold tests, secondary asset diagnostics, NLL diagnostics, multiple-testing correction, and PSR | `crypto20_repaired_fold_local_statistical_method_summary.csv`, `crypto20_repaired_fold_local_statistical_claims.csv`, `phase40_repaired_statistical_adjudication.md` | No corrected IC/Sharpe superiority or positive-alpha claim is supported; guides bounded development-only next steps |
+| Bounded calibration and soft-gating protocol | 41 | Register probability calibration, prior blending, posterior-temperature, shrinkage, and score-threshold candidates with inner-validation-only selection rules | `phase41_candidate_registry.csv`, `phase41_selection_rules.csv`, `phase41_bounded_improvement_protocol.md` | Improvement infrastructure only; no performance claim and no Phase 40 outer-test tuning |
 
 ## Future Experiment Queue
 
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
 | 1 | 38 | Research-control reset | Required before new model development | `phase38_master_protocol.md`, `data_role_registry.csv`, `experiment_ledger.csv`, `publication_acceptance_gates.md` |
-| 2 | 41 | Bounded calibration and soft-gating candidates | Phase 40 complete; use only inner-development evidence and do not tune against repaired outer-test outcomes | development-only candidate comparison and frozen selection record |
+| 2 | 41B | Inner-validation candidate implementation run | Phase 41 protocol complete; candidate parameters must be selected inside each outer fold | development-only candidate comparison and frozen selection record |
 | 3 | 42 | Cross-asset interpretation and execution hardening | Required for mechanism and economic discussion | fold-local attribution, transition diagnostics, and execution stress results |
 | 4 | 43 | Locked external evaluation | One frozen candidate evaluated once | registered holdout, immutable predictions, final comparison |
 | 5 | 44 | Final statistical adjudication | Required before final claim language | dependence-aware final claim table |

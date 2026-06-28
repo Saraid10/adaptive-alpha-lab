@@ -1,6 +1,6 @@
 # Research Grade Check Report
 
-- Checks: 53
+- Checks: 65
 - Failures: 0
 - Warnings: 0
 
@@ -47,6 +47,16 @@
 | phase40_repaired_statistical_summary_invariants | PASS | methods=['global_lgbm', 'regime_lgbm_contrastive', 'regime_lgbm_contrastive_hmm', 'regime_lgbm_hmm', 'regime_lgbm_hmm_guided_gmm', 'regime_lgbm_hmm_guided_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket']; bad_folds={}; bad_rows={} |
 | phase40_repaired_statistical_no_corrected_alpha_claim | PASS | missing_cols=[]; corrected_ic_sharpe_claims=0 |
 | phase40_repaired_statistical_reference_methods | PASS | references=['global_lgbm', 'regime_lgbm_hmm', 'regime_lgbm_kmeans'] |
+| phase41_config_exists | PASS | configs\phase41_bounded_candidates_v1.json |
+| phase41_config_guardrails | PASS | inner-validation-only guardrails present |
+| phase41_candidate_registry_exists | PASS | models\phase41_candidate_registry.csv |
+| phase41_candidate_registry_readable | PASS | rows=5 columns=8 |
+| phase41_selection_rules_exists | PASS | models\phase41_selection_rules.csv |
+| phase41_selection_rules_readable | PASS | rows=5 columns=4 |
+| phase41_candidate_registry_guardrails | PASS | families=['execution_control', 'probability_calibration', 'soft_regime_gating']; scopes=['inner_validation_only'] |
+| phase41_selection_rules_guardrails | PASS | mandatory Phase 41 rules present |
+| phase41_report_exists | PASS | reports\phase41_bounded_improvement_protocol.md |
+| phase41_report_guardrails | PASS | Phase 41 report guardrails present |
 | phase39r_neural_full_v1_run_state_exists | PASS | .tmp\phase39_fold_local\phase39r_neural_full_v1\run_state.json |
 | phase39r_neural_full_v1_checkpoint_count | PASS | 16/16 |
 | phase39r_neural_full_v1_checkpoint_methods | PASS | observed=['global_lgbm', 'regime_lgbm_contrastive', 'regime_lgbm_contrastive_hmm', 'regime_lgbm_hmm', 'regime_lgbm_hmm_guided_gmm', 'regime_lgbm_hmm_guided_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket'] |
@@ -56,6 +66,8 @@
 | phase39r_neural_fold_local_results_claim_control | PASS | required claim-control phrases present |
 | phase40_repaired_statistical_adjudication_exists | PASS | reports\phase40_repaired_statistical_adjudication.md |
 | phase40_repaired_statistical_adjudication_claim_control | PASS | required claim-control phrases present |
+| phase41_bounded_improvement_protocol_exists | PASS | reports\phase41_bounded_improvement_protocol.md |
+| phase41_bounded_improvement_protocol_claim_control | PASS | required claim-control phrases present |
 | freeze_verify_command | PASS | returncode=0; last_output=OK: crypto20-development-v1 matches its configuration, database, symbol manifest, and fold calendar. |
 | unit_tests_command | PASS | returncode=0; last_output=OK |
 | calendar_audit_command | PASS | returncode=0; last_output=OK: 20 symbols share one calendar index and all 16 folds have strict global train/test separation under crypto20-development-v1. |
