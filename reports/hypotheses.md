@@ -61,6 +61,10 @@ The original Phase 39 run is invalidated by cross-asset calendar overlap caused 
 
 Phase 40 statistically adjudicates those repaired outputs. H8 is now resolved diagnostically: the fully fold-local repaired benchmark does not support robust guided-method dominance or positive-alpha claims. It remains useful because it gives the project a clean, reviewer-safe development baseline and a disciplined reason for bounded Phase 41 improvements.
 
+## Phase 41 Status Update
+
+Phase 41 registers H9 candidates but does not yet claim that H9 is supported. The registered families are probability temperature scaling, class-prior blending, posterior-temperature soft gating, global-regime shrinkage, and score-threshold control. Candidate parameters must be selected only on inner chronological validation inside each outer fold. Phase 40 outer-test metrics and repaired statistical outputs are explicitly forbidden as selection inputs.
+
 ## Claim Language
 
 Use:

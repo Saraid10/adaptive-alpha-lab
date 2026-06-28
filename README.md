@@ -20,7 +20,7 @@ The honest Phase 39R/40 result is:
 
 This makes the project more scientifically defensible, not less. The current claim is no longer “our model beats HMM.” The current claim is: **strict financial validation exposes that structural regime learning can look meaningful while downstream alpha remains weak, noisy, and method-sensitive.**
 
-The next required step is Phase 41: bounded development-only calibration and soft-gating experiments. No post-hoc tuning or locked-test evaluation should happen before that.
+Phase 41 now registers bounded calibration and soft-gating candidates. It is a control/protocol phase, not a performance claim: candidate parameters must be selected only inside each outer fold using inner chronological validation, never from Phase 40 outer-test results.
 
 ## Research Question
 
@@ -251,6 +251,9 @@ python -m pip install -r requirements-research.txt
 | `reports/phase40_repaired_statistical_adjudication.md` | Phase 40 repaired statistical adjudication and paper-safe interpretation |
 | `models/crypto20_repaired_fold_local_statistical_method_summary.csv` | Phase 40 repaired fold-level statistical summary |
 | `models/crypto20_repaired_fold_local_statistical_claims.csv` | Phase 40 corrected claim statuses for repaired outputs |
+| `reports/phase41_bounded_improvement_protocol.md` | Phase 41 bounded calibration and soft-gating protocol |
+| `models/phase41_candidate_registry.csv` | Registered Phase 41 candidate families and grids |
+| `models/phase41_selection_rules.csv` | Mandatory inner-validation selection and guardrail rules |
 | `models/research_grade_check_report.csv` | Latest automated artifact/full research-grade check result |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
@@ -868,5 +871,5 @@ Phase 39R completed artifacts include:
 
 ## Current Status
 
-The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. The research-grade regression gate passes. The next step is bounded development-only improvement, not post-hoc tuning against repaired outer-test results.
+The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41 has registered bounded calibration and soft-gating candidates with explicit inner-validation-only selection rules. The research-grade regression gate passes.
 
