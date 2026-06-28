@@ -41,6 +41,7 @@ This registry separates allowed paper claims from claims that are not supported 
 | Structural regime-learning behavior transfers beyond BTC/ETH. | Diagnostic | `models/crypto20_guided_encoder_summary.csv`, `models/crypto20_guided_encoder_comparison.csv`, `reports/multiasset_universe_plan.md` | Phase 35 shows the HMM-guided objective scales structurally to Crypto-20, but this is not evidence of downstream alpha generalization. |
 | Repaired classical Crypto-20 baselines are weak/negative. | Diagnostic | `models/crypto20_repaired_classical_experiment_results.csv`, `models/crypto20_repaired_classical_fold_metrics.csv`, `reports/phase39r_classical_baseline_protocol.md` | On the repaired frozen development panel, global and raw-regime LightGBM baselines do not show convincing positive alpha under mean per-asset IC and non-overlapping cost-adjusted portfolio diagnostics. |
 | Repaired neural/guided Crypto-20 baselines are weak/inconclusive. | Diagnostic | `models/crypto20_repaired_fold_local_experiment_results.csv`, `models/crypto20_repaired_fold_local_fold_metrics.csv`, `reports/phase39r_neural_fold_local_results.md` | On the repaired frozen development panel, vanilla contrastive, contrastive-HMM, and HMM-guided fold-local methods do not show convincing positive alpha or robust dominance over simpler repaired baselines. |
+| Phase 40 repaired statistical adjudication rejects a robust dominance claim. | Diagnostic | `models/crypto20_repaired_fold_local_statistical_method_summary.csv`, `models/crypto20_repaired_fold_local_statistical_claims.csv`, `reports/phase40_repaired_statistical_adjudication.md` | Corrected Phase 40 tests do not support IC/Sharpe superiority for repaired guided or contrastive methods; all alpha claims must remain weak, diagnostic, and development-observed. |
 
 ## Open Claims
 
@@ -81,7 +82,7 @@ Forbidden: interpreting the one-fold, one-epoch Phase 39 metric table as evidenc
 
 The earlier full run is computationally complete but scientifically invalidated: 95% of each fold's test rows overlapped the pooled training calendar. Its metrics may be retained only as debugging history. Forbidden: using them for superiority, inferiority, calibration, profitability, or generalization claims.
 
-The repaired classical full run and repaired neural/guided full run are complete and valid as development-observed benchmarks. They support only diagnostic claims: repaired classical baselines are weak/negative, repaired neural/guided methods remain weak/inconclusive, and no repaired method currently supports a robust positive-alpha or dominance claim. Phase 40 must statistically adjudicate these repaired outputs before any stronger language is used.
+The repaired classical full run, repaired neural/guided full run, and Phase 40 repaired statistical adjudication are complete and valid as development-observed benchmarks. They support only diagnostic claims: repaired classical baselines are weak/negative, repaired neural/guided methods remain weak/inconclusive, and no repaired method currently supports a robust positive-alpha or dominance claim. Phase 41 may test bounded improvements only through inner-development evidence; it must not tune directly against Phase 40 outer-test outcomes.
 
 ## Resume-Safe Language
 
