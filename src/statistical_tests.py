@@ -791,7 +791,9 @@ def main() -> None:
     corrected = add_multiple_testing(pairwise)
     claims = build_claims(corrected)
     psr = sharpe_diagnostics(predictions)
-    if args.output_prefix.startswith("crypto20_fold_local_"):
+    if args.output_prefix.startswith("crypto20_repaired_fold_local_"):
+        title_prefix = "Phase 40 Repaired Crypto-20"
+    elif args.output_prefix.startswith("crypto20_fold_local_"):
         title_prefix = "Phase 39 Fold-Local Crypto-20"
     elif args.output_prefix == "crypto20_":
         title_prefix = "Phase 37 Crypto-20"

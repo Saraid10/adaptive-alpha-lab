@@ -15,7 +15,7 @@ This file freezes the paper hypotheses after Phase 23. Every future experiment s
 | H5 | Guided-HMM robustness survives realistic trading assumptions. | Phase 21 stress grid shows guided-HMM as the most frequent winner across IC, Sharpe, drawdown, and total return under threshold/cost/period variation. | Supported on primary BTC+ETH 8h setup | Keep stress result as robustness evidence; do not overgeneralize. |
 | H6 | Guided-HMM regimes are economically interpretable. | Phase 23 shows fold-local feature attribution dominated by volatility state, momentum/autocorrelation, and distribution-shape features. | Supported diagnostically | Include interpretability in paper; avoid causal language. |
 | H7 | The structural regime-learning mechanism transfers beyond BTC/ETH. | Phase 31-35 support structural transfer. Phase 36/37 give guided-HMM the highest mean fold IC, but its edge over raw HMM is non-significant (`p=0.840`) and its probability calibration is worse than global LightGBM. | Structurally supported, predictive dominance not supported | Discuss structural transfer separately from portfolio-level and calibration claims. |
-| H8 | The structural and assignment-layer findings survive fully fold-local encoder training. | The original Phase 39 run failed the later cross-asset calendar audit. The repaired full development run is complete and shows weak/inconclusive downstream alpha rather than robust guided-method dominance. | Diagnostic / not supported as an alpha claim | Do not reuse invalidated metrics as evidence; use the repaired run for development-only statistical adjudication. |
+| H8 | The structural and assignment-layer findings survive fully fold-local encoder training. | The original Phase 39 run failed the later cross-asset calendar audit. The repaired full development run and Phase 40 adjudication are complete and show weak/inconclusive downstream alpha rather than robust guided-method dominance. | Diagnostic / not supported as an alpha claim | Do not reuse invalidated metrics as evidence; use Phase 41 only for bounded development improvements selected inside training/validation boundaries. |
 | H9 | Validation-only calibration and soft posterior gating improve probability quality without sacrificing ranking IC. | Phase 37 identifies worse guided-HMM NLL despite weak positive IC direction. | Open | Test only after the fold-local baseline passes; select using inner validation. |
 | H10 | The selected conclusion transfers to an untouched asset or temporal holdout. | Existing BTC/ETH and Crypto-20 outcomes have been inspected and are development-observed. | Open | Freeze one candidate and run a single locked external evaluation. |
 
@@ -55,9 +55,11 @@ H8 is the next validity hypothesis and must be resolved before a new model-impro
 
 The historical H4 result remains directionally supported in the BTC/ETH pilot and unsupported as a broad Crypto-20 dominance claim. A failed H8, H9, or H10 test must remain in the final evidence record and must not trigger tuning on the same outer or locked data.
 
-## Phase 39 Status Update
+## Phase 39R/40 Status Update
 
-The original Phase 39 run is invalidated by cross-asset calendar overlap caused by per-symbol positional folds. The repaired implementation aligns all 20 symbols to one timestamp index, passes all 16 global calendar boundaries, and passes an isolated one-fold smoke with equal coverage across eight methods. H8 remains open until a repaired full development run is completed.
+The original Phase 39 run is invalidated by cross-asset calendar overlap caused by per-symbol positional folds. The repaired implementation aligns all 20 symbols to one timestamp index, passes all 16 global calendar boundaries, and completed the repaired 16-fold classical plus neural/guided development benchmarks with equal coverage across eight methods.
+
+Phase 40 statistically adjudicates those repaired outputs. H8 is now resolved diagnostically: the fully fold-local repaired benchmark does not support robust guided-method dominance or positive-alpha claims. It remains useful because it gives the project a clean, reviewer-safe development baseline and a disciplined reason for bounded Phase 41 improvements.
 
 ## Claim Language
 

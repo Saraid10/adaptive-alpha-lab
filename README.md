@@ -10,16 +10,17 @@ Phase 39R is the current scientific checkpoint for the Crypto-20 track. It repai
 
 Under the repaired `crypto20-development-v1` protocol, every method is evaluated on the same globally separated calendar folds, with a frozen development dataset, fold-local fitting, equal coverage, mean per-asset IC as the primary ranking metric, and a non-overlapping transaction-cost-aware portfolio diagnostic.
 
-The honest Phase 39R result is:
+The honest Phase 39R/40 result is:
 
 - the repaired classical baselines are weak/negative;
 - the repaired neural/guided methods do not show convincing positive alpha;
 - HMM-guided and contrastive methods do not currently establish robust dominance over the simpler repaired baselines;
+- Phase 40 statistical adjudication finds no corrected IC/Sharpe superiority claim;
 - the project’s strongest contribution is now the research-grade benchmark, leakage repair, validation discipline, and clear separation between structural regime quality and tradable alpha.
 
 This makes the project more scientifically defensible, not less. The current claim is no longer “our model beats HMM.” The current claim is: **strict financial validation exposes that structural regime learning can look meaningful while downstream alpha remains weak, noisy, and method-sensitive.**
 
-The next required step is Phase 40: repaired statistical adjudication of the Phase 39R outputs. No post-hoc tuning or locked-test evaluation should happen before that.
+The next required step is Phase 41: bounded development-only calibration and soft-gating experiments. No post-hoc tuning or locked-test evaluation should happen before that.
 
 ## Research Question
 
@@ -247,6 +248,9 @@ python -m pip install -r requirements-research.txt
 | `reports/phase39_fold_local_results.md` | Invalidated original Phase 39 history retained only for audit |
 | `reports/phase39r_neural_fold_local_results.md` | Completed repaired 16-fold fold-local neural/guided development benchmark |
 | `models/crypto20_repaired_fold_local_experiment_results.csv` | Repaired neural/guided method summary under common-calendar validation |
+| `reports/phase40_repaired_statistical_adjudication.md` | Phase 40 repaired statistical adjudication and paper-safe interpretation |
+| `models/crypto20_repaired_fold_local_statistical_method_summary.csv` | Phase 40 repaired fold-level statistical summary |
+| `models/crypto20_repaired_fold_local_statistical_claims.csv` | Phase 40 corrected claim statuses for repaired outputs |
 | `models/research_grade_check_report.csv` | Latest automated artifact/full research-grade check result |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
@@ -864,5 +868,5 @@ Phase 39R completed artifacts include:
 
 ## Current Status
 
-The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the research-grade regression gate passes. The next step is repaired statistical adjudication, not post-hoc model tuning.
+The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. The research-grade regression gate passes. The next step is bounded development-only improvement, not post-hoc tuning against repaired outer-test results.
 

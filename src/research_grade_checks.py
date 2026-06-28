@@ -224,6 +224,84 @@ def check_result_artifacts(
         )
 
 
+def check_statistical_artifacts(results: list[CheckResult]) -> None:
+    models = BASE_DIR / "models"
+    prefix = "crypto20_repaired_fold_local_statistical_"
+    summary = read_csv_checked(
+        results,
+        models / f"{prefix}method_summary.csv",
+        "phase40_repaired_statistical_method_summary",
+    )
+    claims = read_csv_checked(
+        results,
+        models / f"{prefix}claims.csv",
+        "phase40_repaired_statistical_claims",
+    )
+    pairwise = read_csv_checked(
+        results,
+        models / f"{prefix}pairwise_tests.csv",
+        "phase40_repaired_statistical_pairwise_tests",
+    )
+
+    for stem in [
+        "fold_metrics",
+        "asset_metrics",
+        "asset_pairwise_tests",
+        "test_summary",
+        "multiple_testing",
+        "sharpe_diagnostics",
+    ]:
+        read_csv_checked(results, models / f"{prefix}{stem}.csv", f"phase40_repaired_statistical_{stem}")
+
+    for stem in [
+        "ic_confidence_intervals",
+        "multiple_testing",
+        "sharpe_diagnostics",
+    ]:
+        require_file(results, models / f"{prefix}{stem}.png", f"phase40_repaired_statistical_{stem}_png")
+
+    if summary is not None:
+        methods = set(summary["method"].astype(str)) if "method" in summary else set()
+        folds = summary.set_index("method")["n_folds"].to_dict() if {"method", "n_folds"}.issubset(summary.columns) else {}
+        rows = (
+            summary.set_index("method")["full_sample_n_test_rows"].to_dict()
+            if {"method", "full_sample_n_test_rows"}.issubset(summary.columns)
+            else {}
+        )
+        bad_folds = {method: value for method, value in folds.items() if int(value) != 16}
+        bad_rows = {method: value for method, value in rows.items() if int(value) != 230_400}
+        add(
+            results,
+            "phase40_repaired_statistical_summary_invariants",
+            FAIL if methods != EXPECTED_REPAIRED_NEURAL or bad_folds or bad_rows else PASS,
+            f"methods={sorted(methods)}; bad_folds={bad_folds}; bad_rows={bad_rows}",
+        )
+
+    if claims is not None:
+        required_cols = {"metric", "claim_status", "comparison"}
+        missing_cols = sorted(required_cols - set(claims.columns))
+        positive_alpha_claims = claims[
+            claims["metric"].isin(["IC", "Sharpe"])
+            & claims["claim_status"].astype(str).str.contains("survives", case=False, na=False)
+        ] if not missing_cols else pd.DataFrame()
+        add(
+            results,
+            "phase40_repaired_statistical_no_corrected_alpha_claim",
+            FAIL if missing_cols or not positive_alpha_claims.empty else PASS,
+            f"missing_cols={missing_cols}; corrected_ic_sharpe_claims={len(positive_alpha_claims)}",
+        )
+
+    if pairwise is not None:
+        references = set(pairwise["reference_method"].dropna().astype(str)) if "reference_method" in pairwise else set()
+        expected_refs = {"global_lgbm", "regime_lgbm_hmm", "regime_lgbm_kmeans"}
+        add(
+            results,
+            "phase40_repaired_statistical_reference_methods",
+            PASS if expected_refs.issubset(references) else FAIL,
+            f"references={sorted(references)}",
+        )
+
+
 def check_classical_artifacts(results: list[CheckResult]) -> None:
     models = BASE_DIR / "models"
     summary = read_csv_checked(
@@ -260,15 +338,20 @@ def check_classical_artifacts(results: list[CheckResult]) -> None:
 def check_claim_control_docs(results: list[CheckResult]) -> None:
     required_phrases = {
         BASE_DIR / "reports" / "claim_registry.md": [
-            "The repaired classical full run and repaired neural/guided full run are complete",
+            "The repaired classical full run, repaired neural/guided full run, and Phase 40 repaired statistical adjudication are complete",
             "no repaired method currently supports a robust positive-alpha or dominance claim",
-            "Phase 40 must statistically adjudicate these repaired outputs",
+            "must not tune directly against Phase 40 outer-test outcomes",
             "Existing Crypto-20 results are an untouched final test",
         ],
         BASE_DIR / "reports" / "phase39r_neural_fold_local_results.md": [
             "full development-observed benchmark",
             "cannot be used as an untouched final test",
             "Outer-test metrics do not influence training or model selection",
+        ],
+        BASE_DIR / "reports" / "phase40_repaired_statistical_adjudication.md": [
+            "does not support a robust positive-alpha or method-dominance claim",
+            "not an untouched final-test claim",
+            "must not tune directly against Phase 40 outer-test outcomes",
         ],
     }
     for path, phrases in required_phrases.items():
@@ -334,6 +417,7 @@ def main() -> int:
         EXPECTED_REPAIRED_NEURAL,
         expected_rows_per_method=230_400,
     )
+    check_statistical_artifacts(results)
     check_checkpoint_run(
         results,
         "phase39r_neural_full_v1",
