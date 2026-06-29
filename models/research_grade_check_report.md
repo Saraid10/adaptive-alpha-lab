@@ -1,6 +1,6 @@
 # Research Grade Check Report
 
-- Checks: 65
+- Checks: 69
 - Failures: 0
 - Warnings: 0
 
@@ -57,6 +57,10 @@
 | phase41_selection_rules_guardrails | PASS | mandatory Phase 41 rules present |
 | phase41_report_exists | PASS | reports\phase41_bounded_improvement_protocol.md |
 | phase41_report_guardrails | PASS | Phase 41 report guardrails present |
+| phase41b_runner_exists | PASS | src\phase41_inner_validation_candidates.py |
+| phase41b_runner_tests_exist | PASS | tests\test_phase41_inner_validation_candidates.py |
+| phase41b_runner_ps1_exists | PASS | run_phase41_inner_validation_candidates.ps1 |
+| phase41b_runner_sh_exists | PASS | run_phase41_inner_validation_candidates.sh |
 | phase39r_neural_full_v1_run_state_exists | PASS | .tmp\phase39_fold_local\phase39r_neural_full_v1\run_state.json |
 | phase39r_neural_full_v1_checkpoint_count | PASS | 16/16 |
 | phase39r_neural_full_v1_checkpoint_methods | PASS | observed=['global_lgbm', 'regime_lgbm_contrastive', 'regime_lgbm_contrastive_hmm', 'regime_lgbm_hmm', 'regime_lgbm_hmm_guided_gmm', 'regime_lgbm_hmm_guided_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket'] |

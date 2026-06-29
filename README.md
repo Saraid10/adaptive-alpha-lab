@@ -254,6 +254,7 @@ python -m pip install -r requirements-research.txt
 | `reports/phase41_bounded_improvement_protocol.md` | Phase 41 bounded calibration and soft-gating protocol |
 | `models/phase41_candidate_registry.csv` | Registered Phase 41 candidate families and grids |
 | `models/phase41_selection_rules.csv` | Mandatory inner-validation selection and guardrail rules |
+| `src/phase41_inner_validation_candidates.py` | Phase 41B inner-validation candidate runner for the global/classical ladder |
 | `models/research_grade_check_report.csv` | Latest automated artifact/full research-grade check result |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |

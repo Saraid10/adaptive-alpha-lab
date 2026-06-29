@@ -307,6 +307,10 @@ def check_phase41_artifacts(results: list[CheckResult]) -> None:
     registry_path = BASE_DIR / "models" / "phase41_candidate_registry.csv"
     rules_path = BASE_DIR / "models" / "phase41_selection_rules.csv"
     report_path = BASE_DIR / "reports" / "phase41_bounded_improvement_protocol.md"
+    runner_path = BASE_DIR / "src" / "phase41_inner_validation_candidates.py"
+    runner_test_path = BASE_DIR / "tests" / "test_phase41_inner_validation_candidates.py"
+    runner_ps1_path = BASE_DIR / "run_phase41_inner_validation_candidates.ps1"
+    runner_sh_path = BASE_DIR / "run_phase41_inner_validation_candidates.sh"
 
     if require_file(results, config_path, "phase41_config_exists"):
         config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -365,6 +369,13 @@ def check_phase41_artifacts(results: list[CheckResult]) -> None:
             FAIL if missing else PASS,
             f"missing={missing}" if missing else "Phase 41 report guardrails present",
         )
+    for path, check in [
+        (runner_path, "phase41b_runner_exists"),
+        (runner_test_path, "phase41b_runner_tests_exist"),
+        (runner_ps1_path, "phase41b_runner_ps1_exists"),
+        (runner_sh_path, "phase41b_runner_sh_exists"),
+    ]:
+        require_file(results, path, check)
 
 
 def check_classical_artifacts(results: list[CheckResult]) -> None:

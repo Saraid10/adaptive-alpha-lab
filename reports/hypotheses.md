@@ -65,6 +65,8 @@ Phase 40 statistically adjudicates those repaired outputs. H8 is now resolved di
 
 Phase 41 registers H9 candidates but does not yet claim that H9 is supported. The registered families are probability temperature scaling, class-prior blending, posterior-temperature soft gating, global-regime shrinkage, and score-threshold control. Candidate parameters must be selected only on inner chronological validation inside each outer fold. Phase 40 outer-test metrics and repaired statistical outputs are explicitly forbidden as selection inputs.
 
+Phase 41B adds the first implementation scaffold for H9 on the global/classical ladder. It supports a fast global-only smoke and an explicit longer global/classical run. Smoke outputs are not hypothesis evidence.
+
 ## Claim Language
 
 Use:
