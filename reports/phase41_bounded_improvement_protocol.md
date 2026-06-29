@@ -10,6 +10,8 @@ The current data role remains `development_observed`. Candidate selection is res
 
 Phase 40 found no corrected IC/Sharpe superiority claim and showed weak probability/portfolio behavior. The right response is not to search the already-inspected outer-test table for a nicer result. The right response is to define bounded candidates, select them inside each outer fold using inner validation, and then evaluate the frozen choices once on the outer fold.
 
+Execution-control score-threshold candidates are registered but deferred. They are not part of the Phase 41B probability-calibration/soft-gating run because they alter trade execution signals rather than probability calibration; they require a separate execution-focused protocol.
+
 ## Forbidden Selection Inputs
 
 - `models/crypto20_repaired_fold_local_alpha_oos_predictions.csv`
@@ -25,7 +27,7 @@ Phase 40 found no corrected IC/Sharpe superiority claim and showed weak probabil
 | `p41_prior_blend` | probability_calibration | inner_validation_nll | registered_not_selected |
 | `p41_posterior_temperature` | soft_regime_gating | inner_validation_nll | registered_not_selected |
 | `p41_global_regime_shrinkage` | soft_regime_gating | inner_validation_nll | registered_not_selected |
-| `p41_score_threshold` | execution_control | inner_validation_nll_then_turnover | registered_not_selected |
+| `p41_score_threshold` | execution_control | inner_validation_nll_then_turnover | registered_deferred |
 
 ## Mandatory Rules
 

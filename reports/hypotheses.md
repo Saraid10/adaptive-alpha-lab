@@ -63,9 +63,9 @@ Phase 40 statistically adjudicates those repaired outputs. H8 is now resolved di
 
 ## Phase 41 Status Update
 
-Phase 41 registers H9 candidates but does not yet claim that H9 is supported. The registered families are probability temperature scaling, class-prior blending, posterior-temperature soft gating, global-regime shrinkage, and score-threshold control. Candidate parameters must be selected only on inner chronological validation inside each outer fold. Phase 40 outer-test metrics and repaired statistical outputs are explicitly forbidden as selection inputs.
+Phase 41 registers H9 candidates but does not yet claim that H9 is supported. The registered families are probability temperature scaling, class-prior blending, posterior-temperature soft gating, global-regime shrinkage, and score-threshold control. Candidate parameters must be selected only on inner chronological validation inside each outer fold. Phase 40 outer-test metrics and repaired statistical outputs are explicitly forbidden as selection inputs. Score-threshold control is registered as execution-control infrastructure but deferred from the Phase 41B probability-calibration/soft-gating run.
 
-Phase 41B adds the first implementation scaffold for H9 on the global/classical ladder. It supports a fast global-only smoke and an explicit longer global/classical run. Smoke outputs are not hypothesis evidence.
+Phase 41B adds and completes the first full H9 implementation on the global/classical ladder for probability calibration and soft gating. Candidate parameters are selected only by inner validation across all 16 folds. H9 is not supported by this first run: corrected IC/Sharpe dominance remains unsupported, and the repaired alpha conclusion remains weak/negative. This does not close all possible calibration or execution-control research, but it blocks any claim that the first bounded calibration/soft-gating pass fixed the project's alpha problem.
 
 ## Claim Language
 

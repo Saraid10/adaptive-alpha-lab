@@ -145,11 +145,12 @@ def build_candidate_registry(config: dict) -> pd.DataFrame:
         Candidate(
             "p41_score_threshold",
             "execution_control",
-            "Pre-specified score threshold grid to reduce weak low-confidence trades.",
+            "Pre-specified score threshold grid to reduce weak low-confidence trades; registered for a later execution-focused run.",
             "inner_validation_only",
             f"score_threshold={grids['score_threshold']}",
             "inner_validation_nll_then_turnover",
             "Threshold selection must not use Phase 40 Sharpe or outer-test returns.",
+            "registered_deferred",
         ),
     ]
     return pd.DataFrame([candidate.__dict__ for candidate in candidates])
@@ -212,6 +213,8 @@ The current data role remains `{config['data_role']}`. Candidate selection is re
 ## Why This Phase Exists
 
 Phase 40 found no corrected IC/Sharpe superiority claim and showed weak probability/portfolio behavior. The right response is not to search the already-inspected outer-test table for a nicer result. The right response is to define bounded candidates, select them inside each outer fold using inner validation, and then evaluate the frozen choices once on the outer fold.
+
+Execution-control score-threshold candidates are registered but deferred. They are not part of the Phase 41B probability-calibration/soft-gating run because they alter trade execution signals rather than probability calibration; they require a separate execution-focused protocol.
 
 ## Forbidden Selection Inputs
 

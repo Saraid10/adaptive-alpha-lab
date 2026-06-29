@@ -20,7 +20,7 @@ The honest Phase 39R/40 result is:
 
 This makes the project more scientifically defensible, not less. The current claim is no longer “our model beats HMM.” The current claim is: **strict financial validation exposes that structural regime learning can look meaningful while downstream alpha remains weak, noisy, and method-sensitive.**
 
-Phase 41 now registers bounded calibration and soft-gating candidates. It is a control/protocol phase, not a performance claim: candidate parameters must be selected only inside each outer fold using inner chronological validation, never from Phase 40 outer-test results.
+Phase 41 registers bounded calibration, soft-gating, and execution-control candidates. Phase 41B then runs the first full inner-validation-selected global/classical candidate experiment for the probability-calibration and soft-gating subset only; score-threshold execution control is registered but deferred. It is a controlled negative/diagnostic result: candidate selection stays inside each outer fold, but the run does not improve the repaired alpha conclusion or support corrected IC/Sharpe dominance.
 
 ## Research Question
 
@@ -252,9 +252,12 @@ python -m pip install -r requirements-research.txt
 | `models/crypto20_repaired_fold_local_statistical_method_summary.csv` | Phase 40 repaired fold-level statistical summary |
 | `models/crypto20_repaired_fold_local_statistical_claims.csv` | Phase 40 corrected claim statuses for repaired outputs |
 | `reports/phase41_bounded_improvement_protocol.md` | Phase 41 bounded calibration and soft-gating protocol |
-| `models/phase41_candidate_registry.csv` | Registered Phase 41 candidate families and grids |
+| `models/phase41_candidate_registry.csv` | Registered Phase 41 candidate families, including deferred score-threshold execution control |
 | `models/phase41_selection_rules.csv` | Mandatory inner-validation selection and guardrail rules |
-| `src/phase41_inner_validation_candidates.py` | Phase 41B inner-validation candidate runner for the global/classical ladder |
+| `src/phase41_inner_validation_candidates.py` | Phase 41B inner-validation candidate runner for the global/classical probability-calibration/soft-gating ladder |
+| `reports/phase41_inner_validation_candidate_run.md` | Phase 41B full global/classical candidate findings |
+| `models/phase41_classical_experiment_results.csv` | Phase 41B full global/classical candidate method summary |
+| `models/phase41_classical_statistical_claims.csv` | Phase 41B corrected statistical claim statuses |
 | `models/research_grade_check_report.csv` | Latest automated artifact/full research-grade check result |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
@@ -872,5 +875,11 @@ Phase 39R completed artifacts include:
 
 ## Current Status
 
-The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41 has registered bounded calibration and soft-gating candidates with explicit inner-validation-only selection rules. The research-grade regression gate passes.
+The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred for a separate execution-focused phase. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. The research-grade regression gate passes.
+
+Use the frozen-universe calendar audit command, not the bare default command:
+
+```powershell
+.\env\Scripts\python.exe src\fold_local_encoder_walkforward.py --universe crypto20 --calendar-audit-only
+```
 

@@ -1,6 +1,6 @@
 # Research Grade Check Report
 
-- Checks: 69
+- Checks: 88
 - Failures: 0
 - Warnings: 0
 
@@ -53,7 +53,7 @@
 | phase41_candidate_registry_readable | PASS | rows=5 columns=8 |
 | phase41_selection_rules_exists | PASS | models\phase41_selection_rules.csv |
 | phase41_selection_rules_readable | PASS | rows=5 columns=4 |
-| phase41_candidate_registry_guardrails | PASS | families=['execution_control', 'probability_calibration', 'soft_regime_gating']; scopes=['inner_validation_only'] |
+| phase41_candidate_registry_guardrails | PASS | families=['execution_control', 'probability_calibration', 'soft_regime_gating']; scopes=['inner_validation_only']; threshold_deferred=True |
 | phase41_selection_rules_guardrails | PASS | mandatory Phase 41 rules present |
 | phase41_report_exists | PASS | reports\phase41_bounded_improvement_protocol.md |
 | phase41_report_guardrails | PASS | Phase 41 report guardrails present |
@@ -61,6 +61,25 @@
 | phase41b_runner_tests_exist | PASS | tests\test_phase41_inner_validation_candidates.py |
 | phase41b_runner_ps1_exists | PASS | run_phase41_inner_validation_candidates.ps1 |
 | phase41b_runner_sh_exists | PASS | run_phase41_inner_validation_candidates.sh |
+| phase41b_full_experiment_results_exists | PASS | models\phase41_classical_experiment_results.csv |
+| phase41b_full_experiment_results_readable | PASS | rows=4 columns=23 |
+| phase41b_full_fold_metrics_exists | PASS | models\phase41_classical_fold_metrics.csv |
+| phase41b_full_fold_metrics_readable | PASS | rows=64 columns=24 |
+| phase41b_full_selected_candidates_exists | PASS | models\phase41_classical_selected_candidates.csv |
+| phase41b_full_selected_candidates_readable | PASS | rows=64 columns=9 |
+| phase41b_full_inner_candidate_results_exists | PASS | models\phase41_classical_inner_candidate_results.csv |
+| phase41b_full_inner_candidate_results_readable | PASS | rows=1024 columns=9 |
+| phase41b_full_statistical_claims_exists | PASS | models\phase41_classical_statistical_claims.csv |
+| phase41b_full_statistical_claims_readable | PASS | rows=18 columns=15 |
+| phase41b_full_statistical_method_summary_exists | PASS | models\phase41_classical_statistical_method_summary.csv |
+| phase41b_full_statistical_method_summary_readable | PASS | rows=4 columns=28 |
+| phase41b_full_summary_invariants | PASS | methods=['global_lgbm', 'regime_lgbm_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket']; bad_rows={} |
+| phase41b_full_fold_coverage | PASS | folds={'global_lgbm': 16, 'regime_lgbm_hmm': 16, 'regime_lgbm_kmeans': 16, 'regime_lgbm_vol_bucket': 16} |
+| phase41b_no_corrected_alpha_claim | PASS | corrected_ic_sharpe_claims=0 |
+| phase41b_candidate_scope_guardrail | PASS | unexpected=[]; deferred_present=False |
+| phase41b_statistical_methods | PASS | methods=['global_lgbm', 'regime_lgbm_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket'] |
+| phase41b_full_report_exists | PASS | reports\phase41_inner_validation_candidate_run.md |
+| phase41b_full_report_guardrails | PASS | Phase 41B full report guardrails present |
 | phase39r_neural_full_v1_run_state_exists | PASS | .tmp\phase39_fold_local\phase39r_neural_full_v1\run_state.json |
 | phase39r_neural_full_v1_checkpoint_count | PASS | 16/16 |
 | phase39r_neural_full_v1_checkpoint_methods | PASS | observed=['global_lgbm', 'regime_lgbm_contrastive', 'regime_lgbm_contrastive_hmm', 'regime_lgbm_hmm', 'regime_lgbm_hmm_guided_gmm', 'regime_lgbm_hmm_guided_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket'] |

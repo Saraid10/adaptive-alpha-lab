@@ -124,6 +124,22 @@ models/*.csv
 !models/crypto20_repaired_fold_local_statistical_sharpe_diagnostics.png
 !models/phase41_candidate_registry.csv
 !models/phase41_selection_rules.csv
+!models/phase41_classical_experiment_results.csv
+!models/phase41_classical_fold_metrics.csv
+!models/phase41_classical_inner_candidate_results.csv
+!models/phase41_classical_selected_candidates.csv
+!models/phase41_classical_statistical_fold_metrics.csv
+!models/phase41_classical_statistical_asset_metrics.csv
+!models/phase41_classical_statistical_method_summary.csv
+!models/phase41_classical_statistical_pairwise_tests.csv
+!models/phase41_classical_statistical_asset_pairwise_tests.csv
+!models/phase41_classical_statistical_test_summary.csv
+!models/phase41_classical_statistical_multiple_testing.csv
+!models/phase41_classical_statistical_claims.csv
+!models/phase41_classical_statistical_sharpe_diagnostics.csv
+!models/phase41_classical_statistical_ic_confidence_intervals.png
+!models/phase41_classical_statistical_multiple_testing.png
+!models/phase41_classical_statistical_sharpe_diagnostics.png
 
 # Keep compact Crypto-20 regime summaries, not row-level assignments.
 models/crypto20_regime_assignments.csv

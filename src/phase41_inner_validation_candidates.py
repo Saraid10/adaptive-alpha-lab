@@ -42,6 +42,16 @@ EXPECTED_METHODS = {
     "regime_lgbm_kmeans",
     "regime_lgbm_vol_bucket",
 }
+PHASE41B_EXECUTED_CANDIDATES = {
+    "baseline",
+    "p41_prob_temperature",
+    "p41_prior_blend",
+    "p41_posterior_temperature",
+    "p41_global_regime_shrinkage",
+}
+PHASE41B_DEFERRED_CANDIDATES = {
+    "p41_score_threshold",
+}
 
 
 @dataclass
@@ -489,6 +499,14 @@ def report_text(results: pd.DataFrame, selected: pd.DataFrame, folds: int, max_f
         f"| `{row.method}` | `{row.candidate_id}` | `{row.candidate_params}` | {int(row.folds)} |"
         for row in selected_counts.itertuples(index=False)
     )
+    interpretation = (
+        "This run is not a performance claim. Its purpose is to evaluate whether "
+        "Phase 41 candidates selected only on inner validation improve the repaired "
+        "global/classical development ladder. Statistical adjudication is required "
+        "before making any development-level comparison."
+        if not (max_folds and max_folds < 16)
+        else "This run is not a performance claim. Its purpose is to verify that Phase 41 candidate selection can be performed without using outer-test results for tuning. A full 16-fold development run is required before making any development-level comparison."
+    )
     return f"""# Phase 41B Inner-Validation Candidate Run
 
 ## Status
@@ -499,9 +517,15 @@ This is a **{status}**. Candidate parameters are selected on inner chronological
 
 - Folds evaluated: {folds}
 - Methods: global LightGBM, raw HMM, KMeans, volatility buckets
+- Executed candidate families: probability calibration and soft regime gating
+- Deferred registered candidates: score-threshold execution control (`p41_score_threshold`)
 - Neural/guided candidates: deferred until this classical/global calibration layer is verified
 - Selection input: inner validation only
 - Forbidden input: Phase 40 outer-test statistical results
+
+Score-threshold candidates are registered but deferred in this Phase 41B run. They change trade execution/signals rather than probability calibration, so they require a separate execution-focused run instead of being mixed into this probability/NLL adjudication.
+
+The v1 grid also contains baseline-equivalent no-op values such as temperature `1.0`, prior blend `0.0`, shrinkage `0.0`, and posterior temperature `1.0`. These are retained as explicit controls for the recorded Phase 41B run; a future v2 registration should remove duplicate no-op variants before any new full run.
 
 ## Outer-Fold Diagnostic Results
 
@@ -517,7 +541,7 @@ This is a **{status}**. Candidate parameters are selected on inner chronological
 
 ## Interpretation
 
-This run is not a performance claim. Its purpose is to verify that Phase 41 candidate selection can be performed without using outer-test results for tuning. A full 16-fold development run is required before making any development-level comparison.
+{interpretation}
 """
 
 
