@@ -6,7 +6,12 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from phase41_inner_validation_candidates import candidate_frames, split_inner_validation
+from phase41_inner_validation_candidates import (
+    PHASE41B_DEFERRED_CANDIDATES,
+    PHASE41B_EXECUTED_CANDIDATES,
+    candidate_frames,
+    split_inner_validation,
+)
 
 
 class Phase41InnerValidationCandidateTests(unittest.TestCase):
@@ -58,6 +63,33 @@ class Phase41InnerValidationCandidateTests(unittest.TestCase):
         shrink = [frame for cid, params, frame in frames if cid == "p41_global_regime_shrinkage"][0]
         self.assertEqual(shrink.loc[0, "prob_down"], 1.0)
         self.assertEqual(shrink.loc[1, "prob_up"], 1.0)
+
+    def test_phase41b_candidate_scope_is_explicit(self):
+        base = pd.DataFrame(
+            {
+                "row_id": [1],
+                "prob_down": [0.2],
+                "prob_neutral": [0.5],
+                "prob_up": [0.3],
+                "score": [0.1],
+                "pred_label": [0],
+                "signal": [0],
+            }
+        )
+        config = {
+            "candidate_grids": {
+                "probability_temperature": [1.0],
+                "prior_blend_weight": [0.0],
+                "global_regime_shrinkage": [0.0],
+                "score_threshold": [0.05],
+            }
+        }
+        frames = candidate_frames(base, prior=[1 / 3, 1 / 3, 1 / 3], config=config, global_reference=base)
+        observed = {candidate_id for candidate_id, _, _ in frames}
+
+        self.assertTrue(observed.issubset(PHASE41B_EXECUTED_CANDIDATES))
+        self.assertTrue(PHASE41B_DEFERRED_CANDIDATES.isdisjoint(observed))
+        self.assertIn("p41_score_threshold", PHASE41B_DEFERRED_CANDIDATES)
 
 
 if __name__ == "__main__":

@@ -311,6 +311,13 @@ def check_phase41_artifacts(results: list[CheckResult]) -> None:
     runner_test_path = BASE_DIR / "tests" / "test_phase41_inner_validation_candidates.py"
     runner_ps1_path = BASE_DIR / "run_phase41_inner_validation_candidates.ps1"
     runner_sh_path = BASE_DIR / "run_phase41_inner_validation_candidates.sh"
+    full_summary_path = BASE_DIR / "models" / "phase41_classical_experiment_results.csv"
+    full_fold_path = BASE_DIR / "models" / "phase41_classical_fold_metrics.csv"
+    full_selected_path = BASE_DIR / "models" / "phase41_classical_selected_candidates.csv"
+    full_candidates_path = BASE_DIR / "models" / "phase41_classical_inner_candidate_results.csv"
+    full_claims_path = BASE_DIR / "models" / "phase41_classical_statistical_claims.csv"
+    full_stats_path = BASE_DIR / "models" / "phase41_classical_statistical_method_summary.csv"
+    full_report_path = BASE_DIR / "reports" / "phase41_inner_validation_candidate_run.md"
 
     if require_file(results, config_path, "phase41_config_exists"):
         config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -335,11 +342,17 @@ def check_phase41_artifacts(results: list[CheckResult]) -> None:
         families = set(registry["family"].astype(str)) if "family" in registry else set()
         scopes = set(registry["selection_scope"].astype(str)) if "selection_scope" in registry else set()
         expected = {"probability_calibration", "soft_regime_gating", "execution_control"}
+        threshold = registry[registry["candidate_id"] == "p41_score_threshold"] if "candidate_id" in registry else pd.DataFrame()
+        threshold_deferred = (
+            not threshold.empty
+            and "status" in threshold
+            and set(threshold["status"].astype(str)) == {"registered_deferred"}
+        )
         add(
             results,
             "phase41_candidate_registry_guardrails",
-            PASS if expected.issubset(families) and scopes == {"inner_validation_only"} else FAIL,
-            f"families={sorted(families)}; scopes={sorted(scopes)}",
+            PASS if expected.issubset(families) and scopes == {"inner_validation_only"} and threshold_deferred else FAIL,
+            f"families={sorted(families)}; scopes={sorted(scopes)}; threshold_deferred={threshold_deferred}",
         )
     if rules is not None:
         rule_text = " ".join(rules.astype(str).agg(" ".join, axis=1).tolist())
@@ -376,6 +389,86 @@ def check_phase41_artifacts(results: list[CheckResult]) -> None:
         (runner_sh_path, "phase41b_runner_sh_exists"),
     ]:
         require_file(results, path, check)
+
+    summary = read_csv_checked(results, full_summary_path, "phase41b_full_experiment_results")
+    fold_metrics = read_csv_checked(results, full_fold_path, "phase41b_full_fold_metrics")
+    selected = read_csv_checked(results, full_selected_path, "phase41b_full_selected_candidates")
+    candidates = read_csv_checked(results, full_candidates_path, "phase41b_full_inner_candidate_results")
+    claims = read_csv_checked(results, full_claims_path, "phase41b_full_statistical_claims")
+    stats = read_csv_checked(results, full_stats_path, "phase41b_full_statistical_method_summary")
+    if summary is not None:
+        methods = set(summary["method"].astype(str)) if "method" in summary else set()
+        rows = summary.set_index("method")["n_test_rows"].to_dict() if {"method", "n_test_rows"}.issubset(summary.columns) else {}
+        expected = {"global_lgbm", "regime_lgbm_hmm", "regime_lgbm_kmeans", "regime_lgbm_vol_bucket"}
+        bad_rows = {method: value for method, value in rows.items() if int(value) != 230_400}
+        add(
+            results,
+            "phase41b_full_summary_invariants",
+            FAIL if methods != expected or bad_rows else PASS,
+            f"methods={sorted(methods)}; bad_rows={bad_rows}",
+        )
+    if fold_metrics is not None:
+        folds = fold_metrics.groupby("method")["fold"].nunique().to_dict() if {"method", "fold"}.issubset(fold_metrics.columns) else {}
+        bad_folds = {method: value for method, value in folds.items() if int(value) != 16}
+        add(
+            results,
+            "phase41b_full_fold_coverage",
+            FAIL if bad_folds or len(folds) != 4 else PASS,
+            f"folds={folds}",
+        )
+    if claims is not None:
+        alpha_claims = claims[
+            claims["metric"].isin(["IC", "Sharpe"])
+            & claims["claim_status"].astype(str).str.contains("survives", case=False, na=False)
+        ] if {"metric", "claim_status"}.issubset(claims.columns) else pd.DataFrame()
+        add(
+            results,
+            "phase41b_no_corrected_alpha_claim",
+            FAIL if not alpha_claims.empty else PASS,
+            f"corrected_ic_sharpe_claims={len(alpha_claims)}",
+        )
+    if candidates is not None and selected is not None:
+        expected_candidate_ids = {
+            "baseline",
+            "p41_prob_temperature",
+            "p41_prior_blend",
+            "p41_posterior_temperature",
+            "p41_global_regime_shrinkage",
+        }
+        observed_candidates = set(candidates["candidate_id"].astype(str)) if "candidate_id" in candidates else set()
+        observed_selected = set(selected["candidate_id"].astype(str)) if "candidate_id" in selected else set()
+        deferred_present = "p41_score_threshold" in observed_candidates or "p41_score_threshold" in observed_selected
+        unexpected = sorted((observed_candidates | observed_selected) - expected_candidate_ids)
+        add(
+            results,
+            "phase41b_candidate_scope_guardrail",
+            FAIL if deferred_present or unexpected else PASS,
+            f"unexpected={unexpected}; deferred_present={deferred_present}",
+        )
+    if stats is not None:
+        methods = set(stats["method"].astype(str)) if "method" in stats else set()
+        add(
+            results,
+            "phase41b_statistical_methods",
+            PASS if methods == {"global_lgbm", "regime_lgbm_hmm", "regime_lgbm_kmeans", "regime_lgbm_vol_bucket"} else FAIL,
+            f"methods={sorted(methods)}",
+        )
+    if require_file(results, full_report_path, "phase41b_full_report_exists"):
+        text = full_report_path.read_text(encoding="utf-8")
+        required = [
+            "full development-observed run",
+            "Corrected IC/Sharpe claims",
+            "Controlled negative result",
+            "Score-threshold candidates are registered but deferred",
+            "Forbidden wording",
+        ]
+        missing = [phrase for phrase in required if phrase not in text]
+        add(
+            results,
+            "phase41b_full_report_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 41B full report guardrails present",
+        )
 
 
 def check_classical_artifacts(results: list[CheckResult]) -> None:
