@@ -263,6 +263,10 @@ python -m pip install -r requirements-research.txt
 | `models/phase42_regime_transition_diagnostics.csv` | Phase 42 regime switch-rate, duration, confidence, and balance diagnostics |
 | `models/phase42_cross_asset_alpha_diagnostics.csv` | Phase 42 per-asset alpha fragility summary |
 | `models/phase42_feature_family_diagnostics.csv` | Phase 42 feature-family target-alignment diagnostics |
+| `reports/phase43_locked_holdout_freeze.md` | Phase 43A final candidate, holdout-rule, and claim-rule freeze before locked evaluation |
+| `models/phase43_locked_candidate_manifest.csv` | Frozen final guided-HMM candidate, references, exclusions, and support-artifact hashes |
+| `models/phase43_locked_claim_rules.csv` | Locked-holdout success, failure, allowed-claim, and forbidden-claim rules |
+| `models/phase43_locked_holdout_rules.csv` | External/future holdout selection and no-retuning rules |
 | `models/research_grade_check_report.csv` | Latest automated artifact/full research-grade check result |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
@@ -880,7 +884,7 @@ Phase 39R completed artifacts include:
 
 ## Current Status
 
-The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred for a separate execution-focused phase. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. Phase 42 now explains the weak result through execution sensitivity, regime-transition behavior, cross-asset fragility, and feature-family target alignment without making a tradability claim. The research-grade regression gate passes.
+The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred and is excluded from the final locked candidate. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. Phase 42 explains the weak result through execution sensitivity, regime-transition behavior, cross-asset fragility, and feature-family target alignment without making a tradability claim. Phase 43A freezes `regime_lgbm_hmm_guided_hmm` as the single final guided-HMM mechanism candidate before any locked-holdout outcome is inspected. The research-grade regression gate passes.
 
 Use the frozen-universe calendar audit command, not the bare default command:
 

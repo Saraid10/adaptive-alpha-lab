@@ -1,6 +1,6 @@
 # Research Grade Check Report
 
-- Checks: 114
+- Checks: 133
 - Failures: 0
 - Warnings: 0
 
@@ -104,6 +104,23 @@
 | phase42_feature_family_guardrail | PASS | families=['distribution_shape', 'liquidity_volume', 'microstructure', 'momentum', 'technical_state', 'volatility'] |
 | phase42_report_exists | PASS | reports\phase42_interpretation_execution_hardening.md |
 | phase42_report_guardrails | PASS | Phase 42 report guardrails present |
+| phase43a_config_exists | PASS | configs\phase43_locked_holdout_freeze_v1.json |
+| phase43a_runner_exists | PASS | src\phase43_locked_holdout_freeze.py |
+| phase43a_tests_exist | PASS | tests\test_phase43_locked_holdout_freeze.py |
+| phase43a_runner_ps1_exists | PASS | run_phase43_locked_holdout_freeze.ps1 |
+| phase43a_runner_sh_exists | PASS | run_phase43_locked_holdout_freeze.sh |
+| phase43a_locked_candidate_manifest_exists | PASS | models\phase43_locked_candidate_manifest.csv |
+| phase43a_locked_candidate_manifest_readable | PASS | rows=20 columns=6 |
+| phase43a_locked_claim_rules_exists | PASS | models\phase43_locked_claim_rules.csv |
+| phase43a_locked_claim_rules_readable | PASS | rows=9 columns=4 |
+| phase43a_locked_holdout_rules_exists | PASS | models\phase43_locked_holdout_rules.csv |
+| phase43a_locked_holdout_rules_readable | PASS | rows=17 columns=4 |
+| phase43a_config_guardrails | PASS | locked holdout freeze config guardrails present |
+| phase43a_manifest_guardrails | PASS | final_rows=1; exclusions=['new_architecture_search', 'new_feature_selection', 'new_label_or_horizon_selection', 'phase41b_probability_calibration', 'phase41b_soft_gating', 'score_threshold_execution_control']; support_hashes=8 |
+| phase43a_claim_rules_guardrails | PASS | locked claim rules present |
+| phase43a_holdout_rules_guardrails | PASS | rules={'preferred_holdout': 'external_asset_holdout', 'source_universe': 'configs/crypto_universe_candidates.csv', 'selection_rule': 'Select the next pre-ranked quality-eligible USDT spot assets not included in asset_universe_crypto20.csv after ingestion and quality checks, without inspecting model outcomes.', 'minimum_assets': '10', 'fallback_holdout': 'future_temporal_holdout_strictly_after_crypto20_development_endpoint', 'fallback_rule': 'Use only data strictly after 2026-06-15 02:30 Asia/Kolkata, collected and hashed before any model outcome inspection.', 'minimum_hourly_bars': '12000', 'maximum_gap_hours': '6', 'stable_or_synthetic_assets_forbidden': 'True', 'coverage_and_hash_manifest_required': 'True', 'validation': 'same repaired common-calendar purged walk-forward protocol', 'target': 'tb_label_8h', 'horizon_hours': '8', 'transaction_cost_bps': '10', 'candidate_selection_on_holdout': 'forbidden', 'threshold_selection_on_holdout': 'forbidden', 'rerun_after_failure': 'forbidden'} |
+| phase43a_report_exists | PASS | reports\phase43_locked_holdout_freeze.md |
+| phase43a_report_guardrails | PASS | Phase 43A report guardrails present |
 | phase39r_neural_full_v1_run_state_exists | PASS | .tmp\phase39_fold_local\phase39r_neural_full_v1\run_state.json |
 | phase39r_neural_full_v1_checkpoint_count | PASS | 16/16 |
 | phase39r_neural_full_v1_checkpoint_methods | PASS | observed=['global_lgbm', 'regime_lgbm_contrastive', 'regime_lgbm_contrastive_hmm', 'regime_lgbm_hmm', 'regime_lgbm_hmm_guided_gmm', 'regime_lgbm_hmm_guided_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket'] |
@@ -117,6 +134,8 @@
 | phase41_bounded_improvement_protocol_claim_control | PASS | required claim-control phrases present |
 | phase42_interpretation_execution_hardening_exists | PASS | reports\phase42_interpretation_execution_hardening.md |
 | phase42_interpretation_execution_hardening_claim_control | PASS | required claim-control phrases present |
+| phase43_locked_holdout_freeze_exists | PASS | reports\phase43_locked_holdout_freeze.md |
+| phase43_locked_holdout_freeze_claim_control | PASS | required claim-control phrases present |
 | freeze_verify_command | PASS | returncode=0; last_output=OK: crypto20-development-v1 matches its configuration, database, symbol manifest, and fold calendar. |
 | unit_tests_command | PASS | returncode=0; last_output=OK |
 | calendar_audit_command | PASS | returncode=0; last_output=OK: 20 symbols share one calendar index and all 16 folds have strict global train/test separation under crypto20-development-v1. |
