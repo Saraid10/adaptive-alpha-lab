@@ -471,6 +471,121 @@ def check_phase41_artifacts(results: list[CheckResult]) -> None:
         )
 
 
+def check_phase42_artifacts(results: list[CheckResult]) -> None:
+    models = BASE_DIR / "models"
+    stress_path = models / "phase42_execution_stress_results.csv"
+    stress_summary_path = models / "phase42_execution_stress_summary.csv"
+    transition_path = models / "phase42_regime_transition_diagnostics.csv"
+    stable_path = models / "phase42_stable_transition_alpha.csv"
+    alpha_path = models / "phase42_cross_asset_alpha_diagnostics.csv"
+    feature_path = models / "phase42_feature_family_diagnostics.csv"
+    report_path = BASE_DIR / "reports" / "phase42_interpretation_execution_hardening.md"
+    runner_path = BASE_DIR / "src" / "phase42_interpretation_execution.py"
+    test_path = BASE_DIR / "tests" / "test_phase42_interpretation_execution.py"
+    ps1_path = BASE_DIR / "run_phase42_interpretation_execution.ps1"
+    sh_path = BASE_DIR / "run_phase42_interpretation_execution.sh"
+
+    for path, check in [
+        (runner_path, "phase42_runner_exists"),
+        (test_path, "phase42_tests_exist"),
+        (ps1_path, "phase42_runner_ps1_exists"),
+        (sh_path, "phase42_runner_sh_exists"),
+    ]:
+        require_file(results, path, check)
+
+    stress = read_csv_checked(results, stress_path, "phase42_execution_stress_results")
+    stress_summary = read_csv_checked(results, stress_summary_path, "phase42_execution_stress_summary")
+    transition = read_csv_checked(results, transition_path, "phase42_regime_transition_diagnostics")
+    stable = read_csv_checked(results, stable_path, "phase42_stable_transition_alpha")
+    alpha = read_csv_checked(results, alpha_path, "phase42_cross_asset_alpha_diagnostics")
+    features = read_csv_checked(results, feature_path, "phase42_feature_family_diagnostics")
+
+    if stress is not None:
+        expected_benchmarks = {"phase39r_repaired_neural", "phase41b_classical_candidates"}
+        benchmarks = set(stress["benchmark"].astype(str)) if "benchmark" in stress else set()
+        methods_by_benchmark = (
+            stress.groupby("benchmark")["method"].nunique().to_dict()
+            if {"benchmark", "method"}.issubset(stress.columns)
+            else {}
+        )
+        cells = (
+            stress.groupby(["benchmark", "method"]).size().to_dict()
+            if {"benchmark", "method"}.issubset(stress.columns)
+            else {}
+        )
+        bad_cells = {key: value for key, value in cells.items() if int(value) != 16}
+        add(
+            results,
+            "phase42_execution_stress_coverage",
+            PASS if benchmarks == expected_benchmarks and not bad_cells else FAIL,
+            f"benchmarks={sorted(benchmarks)}; methods_by_benchmark={methods_by_benchmark}; bad_cells={bad_cells}",
+        )
+    if stress_summary is not None:
+        positive = int((pd.to_numeric(stress_summary.get("positive_return_cells", pd.Series(dtype=float)), errors="coerce") > 0).sum())
+        add(
+            results,
+            "phase42_execution_summary_guardrail",
+            PASS if len(stress_summary) == 12 and positive >= 1 else FAIL,
+            f"rows={len(stress_summary)}; methods_with_positive_stress_cells={positive}",
+        )
+    if transition is not None:
+        expected_regimes = {"contrastive", "contrastive_hmm", "hmm", "hmm_guided_gmm", "hmm_guided_hmm", "kmeans", "vol_bucket"}
+        methods = set(transition["regime_method"].astype(str)) if "regime_method" in transition else set()
+        valid_rates = (
+            pd.to_numeric(transition["switch_rate"], errors="coerce").between(0, 1).all()
+            and pd.to_numeric(transition["regime_balance_entropy"], errors="coerce").between(0, 1).all()
+            if {"switch_rate", "regime_balance_entropy"}.issubset(transition.columns)
+            else False
+        )
+        add(
+            results,
+            "phase42_transition_diagnostics_guardrail",
+            PASS if methods == expected_regimes and valid_rates else FAIL,
+            f"methods={sorted(methods)}; valid_rates={valid_rates}",
+        )
+    if stable is not None:
+        buckets = set(stable["state_bucket"].astype(str)) if "state_bucket" in stable else set()
+        add(
+            results,
+            "phase42_stable_transition_alpha_guardrail",
+            PASS if {"stable", "transition"}.issubset(buckets) and len(stable) >= 10 else FAIL,
+            f"buckets={sorted(buckets)}; rows={len(stable)}",
+        )
+    if alpha is not None:
+        benchmarks = set(alpha["benchmark"].astype(str)) if "benchmark" in alpha else set()
+        add(
+            results,
+            "phase42_cross_asset_alpha_guardrail",
+            PASS if benchmarks == {"phase39r_repaired_neural", "phase41b_classical_candidates"} and len(alpha) == 12 else FAIL,
+            f"benchmarks={sorted(benchmarks)}; rows={len(alpha)}",
+        )
+    if features is not None:
+        families = set(features["feature_family"].astype(str)) if "feature_family" in features else set()
+        add(
+            results,
+            "phase42_feature_family_guardrail",
+            PASS if len(families) >= 5 and len(features) >= 5 else FAIL,
+            f"families={sorted(families)}",
+        )
+    if require_file(results, report_path, "phase42_report_exists"):
+        text = report_path.read_text(encoding="utf-8")
+        required = [
+            "development-observed diagnostic phase",
+            "does not tune models",
+            "Execution Stress Summary",
+            "Regime Transition Diagnostics",
+            "Feature-Family Target Alignment",
+            "Forbidden wording",
+        ]
+        missing = [phrase for phrase in required if phrase not in text]
+        add(
+            results,
+            "phase42_report_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 42 report guardrails present",
+        )
+
+
 def check_classical_artifacts(results: list[CheckResult]) -> None:
     models = BASE_DIR / "models"
     summary = read_csv_checked(
@@ -526,6 +641,11 @@ def check_claim_control_docs(results: list[CheckResult]) -> None:
             "does **not** tune against Phase 40 outer-test results",
             "Forbidden Selection Inputs",
             "not a performance claim",
+        ],
+        BASE_DIR / "reports" / "phase42_interpretation_execution_hardening.md": [
+            "development-observed diagnostic phase",
+            "does not tune models",
+            "Phase 42 proves the strategy is tradable",
         ],
     }
     for path, phrases in required_phrases.items():
@@ -593,6 +713,7 @@ def main() -> int:
     )
     check_statistical_artifacts(results)
     check_phase41_artifacts(results)
+    check_phase42_artifacts(results)
     check_checkpoint_run(
         results,
         "phase39r_neural_full_v1",

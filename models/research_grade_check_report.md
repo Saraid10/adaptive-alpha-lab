@@ -1,6 +1,6 @@
 # Research Grade Check Report
 
-- Checks: 88
+- Checks: 114
 - Failures: 0
 - Warnings: 0
 
@@ -80,6 +80,30 @@
 | phase41b_statistical_methods | PASS | methods=['global_lgbm', 'regime_lgbm_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket'] |
 | phase41b_full_report_exists | PASS | reports\phase41_inner_validation_candidate_run.md |
 | phase41b_full_report_guardrails | PASS | Phase 41B full report guardrails present |
+| phase42_runner_exists | PASS | src\phase42_interpretation_execution.py |
+| phase42_tests_exist | PASS | tests\test_phase42_interpretation_execution.py |
+| phase42_runner_ps1_exists | PASS | run_phase42_interpretation_execution.ps1 |
+| phase42_runner_sh_exists | PASS | run_phase42_interpretation_execution.sh |
+| phase42_execution_stress_results_exists | PASS | models\phase42_execution_stress_results.csv |
+| phase42_execution_stress_results_readable | PASS | rows=192 columns=13 |
+| phase42_execution_stress_summary_exists | PASS | models\phase42_execution_stress_summary.csv |
+| phase42_execution_stress_summary_readable | PASS | rows=12 columns=13 |
+| phase42_regime_transition_diagnostics_exists | PASS | models\phase42_regime_transition_diagnostics.csv |
+| phase42_regime_transition_diagnostics_readable | PASS | rows=7 columns=10 |
+| phase42_stable_transition_alpha_exists | PASS | models\phase42_stable_transition_alpha.csv |
+| phase42_stable_transition_alpha_readable | PASS | rows=14 columns=8 |
+| phase42_cross_asset_alpha_diagnostics_exists | PASS | models\phase42_cross_asset_alpha_diagnostics.csv |
+| phase42_cross_asset_alpha_diagnostics_readable | PASS | rows=12 columns=9 |
+| phase42_feature_family_diagnostics_exists | PASS | models\phase42_feature_family_diagnostics.csv |
+| phase42_feature_family_diagnostics_readable | PASS | rows=6 columns=8 |
+| phase42_execution_stress_coverage | PASS | benchmarks=['phase39r_repaired_neural', 'phase41b_classical_candidates']; methods_by_benchmark={'phase39r_repaired_neural': 8, 'phase41b_classical_candidates': 4}; bad_cells={} |
+| phase42_execution_summary_guardrail | PASS | rows=12; methods_with_positive_stress_cells=9 |
+| phase42_transition_diagnostics_guardrail | PASS | methods=['contrastive', 'contrastive_hmm', 'hmm', 'hmm_guided_gmm', 'hmm_guided_hmm', 'kmeans', 'vol_bucket']; valid_rates=True |
+| phase42_stable_transition_alpha_guardrail | PASS | buckets=['stable', 'transition']; rows=14 |
+| phase42_cross_asset_alpha_guardrail | PASS | benchmarks=['phase39r_repaired_neural', 'phase41b_classical_candidates']; rows=12 |
+| phase42_feature_family_guardrail | PASS | families=['distribution_shape', 'liquidity_volume', 'microstructure', 'momentum', 'technical_state', 'volatility'] |
+| phase42_report_exists | PASS | reports\phase42_interpretation_execution_hardening.md |
+| phase42_report_guardrails | PASS | Phase 42 report guardrails present |
 | phase39r_neural_full_v1_run_state_exists | PASS | .tmp\phase39_fold_local\phase39r_neural_full_v1\run_state.json |
 | phase39r_neural_full_v1_checkpoint_count | PASS | 16/16 |
 | phase39r_neural_full_v1_checkpoint_methods | PASS | observed=['global_lgbm', 'regime_lgbm_contrastive', 'regime_lgbm_contrastive_hmm', 'regime_lgbm_hmm', 'regime_lgbm_hmm_guided_gmm', 'regime_lgbm_hmm_guided_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket'] |
@@ -91,6 +115,8 @@
 | phase40_repaired_statistical_adjudication_claim_control | PASS | required claim-control phrases present |
 | phase41_bounded_improvement_protocol_exists | PASS | reports\phase41_bounded_improvement_protocol.md |
 | phase41_bounded_improvement_protocol_claim_control | PASS | required claim-control phrases present |
+| phase42_interpretation_execution_hardening_exists | PASS | reports\phase42_interpretation_execution_hardening.md |
+| phase42_interpretation_execution_hardening_claim_control | PASS | required claim-control phrases present |
 | freeze_verify_command | PASS | returncode=0; last_output=OK: crypto20-development-v1 matches its configuration, database, symbol manifest, and fold calendar. |
 | unit_tests_command | PASS | returncode=0; last_output=OK |
 | calendar_audit_command | PASS | returncode=0; last_output=OK: 20 symbols share one calendar index and all 16 folds have strict global train/test separation under crypto20-development-v1. |
