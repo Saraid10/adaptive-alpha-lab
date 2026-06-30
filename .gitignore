@@ -140,6 +140,12 @@ models/*.csv
 !models/phase41_classical_statistical_ic_confidence_intervals.png
 !models/phase41_classical_statistical_multiple_testing.png
 !models/phase41_classical_statistical_sharpe_diagnostics.png
+!models/phase42_execution_stress_results.csv
+!models/phase42_execution_stress_summary.csv
+!models/phase42_regime_transition_diagnostics.csv
+!models/phase42_stable_transition_alpha.csv
+!models/phase42_cross_asset_alpha_diagnostics.csv
+!models/phase42_feature_family_diagnostics.csv
 
 # Keep compact Crypto-20 regime summaries, not row-level assignments.
 models/crypto20_regime_assignments.csv

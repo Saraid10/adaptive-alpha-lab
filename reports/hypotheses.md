@@ -67,6 +67,10 @@ Phase 41 registers H9 candidates but does not yet claim that H9 is supported. Th
 
 Phase 41B adds and completes the first full H9 implementation on the global/classical ladder for probability calibration and soft gating. Candidate parameters are selected only by inner validation across all 16 folds. H9 is not supported by this first run: corrected IC/Sharpe dominance remains unsupported, and the repaired alpha conclusion remains weak/negative. This does not close all possible calibration or execution-control research, but it blocks any claim that the first bounded calibration/soft-gating pass fixed the project's alpha problem.
 
+## Phase 42 Status Update
+
+Phase 42 does not introduce a new model hypothesis. It explains the weak repaired-alpha result using development-observed diagnostics: execution-cost sensitivity, threshold sensitivity, regime transition behavior, cross-asset fragility, and feature-family target alignment. The result supports a diagnostic interpretation: the current alpha weakness is not a single calibration bug, and it should not be converted into a tradability claim.
+
 ## Claim Language
 
 Use:

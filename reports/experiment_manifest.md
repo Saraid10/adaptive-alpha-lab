@@ -49,13 +49,14 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Bounded calibration and soft-gating protocol | 41 | Register probability calibration, prior blending, posterior-temperature, shrinkage, and score-threshold candidates with inner-validation-only selection rules | `phase41_candidate_registry.csv`, `phase41_selection_rules.csv`, `phase41_bounded_improvement_protocol.md` | Improvement infrastructure only; score-threshold execution control is registered but deferred; no performance claim and no Phase 40 outer-test tuning |
 | Inner-validation candidate runner | 41B scaffold | Implement the global/classical candidate runner with inner-validation selection and outer-fold evaluation | `phase41_inner_validation_candidates.py`, `run_phase41_inner_validation_candidates.ps1`, `test_phase41_inner_validation_candidates.py` | Code scaffold and smoke check only |
 | Full inner-validation global/classical candidate run | 41B full | Run bounded probability-calibration and soft-gating candidates selected only by inner validation across all 16 folds; deferred score-threshold candidates are not included | `phase41_classical_experiment_results.csv`, `phase41_classical_statistical_claims.csv`, `phase41_inner_validation_candidate_run.md` | Controlled negative result; no corrected IC/Sharpe dominance or positive-alpha claim is supported |
+| Cross-asset interpretation and execution hardening | 42 | Diagnose why repaired alpha remains weak using execution stress, transition/stable alpha, cross-asset fragility, and feature-family target alignment | `phase42_execution_stress_summary.csv`, `phase42_regime_transition_diagnostics.csv`, `phase42_cross_asset_alpha_diagnostics.csv`, `phase42_interpretation_execution_hardening.md` | Diagnostic explanation only; no tuning, no locked-test claim, and no tradability claim |
 
 ## Future Experiment Queue
 
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
 | 1 | 38 | Research-control reset | Required before new model development | `phase38_master_protocol.md`, `data_role_registry.csv`, `experiment_ledger.csv`, `publication_acceptance_gates.md` |
-| 2 | 42 | Cross-asset interpretation and execution hardening | Phase 41B full run complete; improvement candidates did not repair alpha | fold-local attribution, transition diagnostics, and execution stress results |
+| 2 | 42B | Execution-threshold protocol, if used | Phase 42 shows execution sensitivity; must be selected inside development only | registered threshold-only protocol or explicit decision to skip |
 | 3 | 43 | Locked external evaluation | One frozen candidate evaluated once | registered holdout, immutable predictions, final comparison |
 | 4 | 44 | Final statistical adjudication | Required before final claim language | dependence-aware final claim table |
 | 5 | 45 | ICAIF-format paper package | Required before external submission | anonymous eight-page ACM paper and citation/claim audits |

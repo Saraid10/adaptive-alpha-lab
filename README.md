@@ -258,6 +258,11 @@ python -m pip install -r requirements-research.txt
 | `reports/phase41_inner_validation_candidate_run.md` | Phase 41B full global/classical candidate findings |
 | `models/phase41_classical_experiment_results.csv` | Phase 41B full global/classical candidate method summary |
 | `models/phase41_classical_statistical_claims.csv` | Phase 41B corrected statistical claim statuses |
+| `reports/phase42_interpretation_execution_hardening.md` | Phase 42 explanation of weak repaired alpha via execution, transition, cross-asset, and feature diagnostics |
+| `models/phase42_execution_stress_summary.csv` | Phase 42 transaction-cost and score-threshold sensitivity summary |
+| `models/phase42_regime_transition_diagnostics.csv` | Phase 42 regime switch-rate, duration, confidence, and balance diagnostics |
+| `models/phase42_cross_asset_alpha_diagnostics.csv` | Phase 42 per-asset alpha fragility summary |
+| `models/phase42_feature_family_diagnostics.csv` | Phase 42 feature-family target-alignment diagnostics |
 | `models/research_grade_check_report.csv` | Latest automated artifact/full research-grade check result |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
@@ -875,7 +880,7 @@ Phase 39R completed artifacts include:
 
 ## Current Status
 
-The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred for a separate execution-focused phase. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. The research-grade regression gate passes.
+The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred for a separate execution-focused phase. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. Phase 42 now explains the weak result through execution sensitivity, regime-transition behavior, cross-asset fragility, and feature-family target alignment without making a tradability claim. The research-grade regression gate passes.
 
 Use the frozen-universe calendar audit command, not the bare default command:
 
