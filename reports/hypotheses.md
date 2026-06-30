@@ -71,6 +71,10 @@ Phase 41B adds and completes the first full H9 implementation on the global/clas
 
 Phase 42 does not introduce a new model hypothesis. It explains the weak repaired-alpha result using development-observed diagnostics: execution-cost sensitivity, threshold sensitivity, regime transition behavior, cross-asset fragility, and feature-family target alignment. The result supports a diagnostic interpretation: the current alpha weakness is not a single calibration bug, and it should not be converted into a tradability claim.
 
+## Phase 43A Status Update
+
+Phase 43A freezes H10 before any locked outcome is inspected. The final candidate is `regime_lgbm_hmm_guided_hmm`, compared primarily against `global_lgbm` and `regime_lgbm_hmm`. Phase 41B calibration, soft-gating, score-threshold control, new model search, new feature selection, and new label/horizon selection are excluded. The next step is a single locked holdout evaluation; success or failure must be reported without same-holdout retuning.
+
 ## Claim Language
 
 Use:

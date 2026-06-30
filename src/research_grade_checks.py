@@ -586,6 +586,113 @@ def check_phase42_artifacts(results: list[CheckResult]) -> None:
         )
 
 
+def check_phase43a_artifacts(results: list[CheckResult]) -> None:
+    models = BASE_DIR / "models"
+    config_path = BASE_DIR / "configs" / "phase43_locked_holdout_freeze_v1.json"
+    runner_path = BASE_DIR / "src" / "phase43_locked_holdout_freeze.py"
+    test_path = BASE_DIR / "tests" / "test_phase43_locked_holdout_freeze.py"
+    ps1_path = BASE_DIR / "run_phase43_locked_holdout_freeze.ps1"
+    sh_path = BASE_DIR / "run_phase43_locked_holdout_freeze.sh"
+    manifest_path = models / "phase43_locked_candidate_manifest.csv"
+    claims_path = models / "phase43_locked_claim_rules.csv"
+    holdout_path = models / "phase43_locked_holdout_rules.csv"
+    report_path = BASE_DIR / "reports" / "phase43_locked_holdout_freeze.md"
+
+    for path, check in [
+        (config_path, "phase43a_config_exists"),
+        (runner_path, "phase43a_runner_exists"),
+        (test_path, "phase43a_tests_exist"),
+        (ps1_path, "phase43a_runner_ps1_exists"),
+        (sh_path, "phase43a_runner_sh_exists"),
+    ]:
+        require_file(results, path, check)
+
+    manifest = read_csv_checked(results, manifest_path, "phase43a_locked_candidate_manifest")
+    claims = read_csv_checked(results, claims_path, "phase43a_locked_claim_rules")
+    holdout = read_csv_checked(results, holdout_path, "phase43a_locked_holdout_rules")
+
+    if config_path.exists():
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        failures = []
+        if config.get("data_role") != "locked_unobserved_until_phase43b":
+            failures.append("data_role")
+        if config.get("final_candidate", {}).get("method") != "regime_lgbm_hmm_guided_hmm":
+            failures.append("final_candidate")
+        excluded = set(config.get("excluded_from_final_candidate", []))
+        required_exclusions = {
+            "phase41b_probability_calibration",
+            "phase41b_soft_gating",
+            "score_threshold_execution_control",
+        }
+        if not required_exclusions.issubset(excluded):
+            failures.append("excluded_rescue_paths")
+        add(
+            results,
+            "phase43a_config_guardrails",
+            FAIL if failures else PASS,
+            f"failed={failures}" if failures else "locked holdout freeze config guardrails present",
+        )
+    if manifest is not None:
+        final = manifest[
+            (manifest["item_type"] == "final_candidate")
+            & (manifest["name"] == "regime_lgbm_hmm_guided_hmm")
+            & (manifest["status"] == "frozen")
+        ] if {"item_type", "name", "status"}.issubset(manifest.columns) else pd.DataFrame()
+        exclusions = set(
+            manifest.loc[manifest["item_type"] == "excluded_rescue_path", "name"].astype(str)
+        ) if {"item_type", "name"}.issubset(manifest.columns) else set()
+        hashes = int((manifest["item_type"] == "support_artifact_hash").sum()) if "item_type" in manifest else 0
+        add(
+            results,
+            "phase43a_manifest_guardrails",
+            PASS if len(final) == 1 and {"phase41b_probability_calibration", "score_threshold_execution_control"}.issubset(exclusions) and hashes >= 5 else FAIL,
+            f"final_rows={len(final)}; exclusions={sorted(exclusions)}; support_hashes={hashes}",
+        )
+    if claims is not None:
+        text = " ".join(claims.astype(str).agg(" ".join, axis=1).tolist())
+        required = [
+            "failed locked confirmation",
+            "tradable strategy",
+            "threshold tuning rescued the model",
+        ]
+        missing = [phrase for phrase in required if phrase not in text]
+        add(
+            results,
+            "phase43a_claim_rules_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "locked claim rules present",
+        )
+    if holdout is not None:
+        rules = holdout.set_index("rule_id")["rule_value"].astype(str).to_dict() if {"rule_id", "rule_value"}.issubset(holdout.columns) else {}
+        ok = (
+            rules.get("preferred_holdout") == "external_asset_holdout"
+            and rules.get("candidate_selection_on_holdout") == "forbidden"
+            and rules.get("threshold_selection_on_holdout") == "forbidden"
+            and rules.get("rerun_after_failure") == "forbidden"
+        )
+        add(
+            results,
+            "phase43a_holdout_rules_guardrails",
+            PASS if ok else FAIL,
+            f"rules={rules}",
+        )
+    if require_file(results, report_path, "phase43a_report_exists"):
+        text = report_path.read_text(encoding="utf-8")
+        required = [
+            "before any locked-holdout outcome is inspected",
+            "No locked/final data is evaluated in Phase 43A",
+            "Phase 43A proves the model generalizes",
+            "threshold tuning after holdout inspection",
+        ]
+        missing = [phrase for phrase in required if phrase not in text]
+        add(
+            results,
+            "phase43a_report_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 43A report guardrails present",
+        )
+
+
 def check_classical_artifacts(results: list[CheckResult]) -> None:
     models = BASE_DIR / "models"
     summary = read_csv_checked(
@@ -646,6 +753,11 @@ def check_claim_control_docs(results: list[CheckResult]) -> None:
             "development-observed diagnostic phase",
             "does not tune models",
             "Phase 42 proves the strategy is tradable",
+        ],
+        BASE_DIR / "reports" / "phase43_locked_holdout_freeze.md": [
+            "before any locked-holdout outcome is inspected",
+            "No locked/final data is evaluated in Phase 43A",
+            "Phase 43A proves the model generalizes",
         ],
     }
     for path, phrases in required_phrases.items():
@@ -714,6 +826,7 @@ def main() -> int:
     check_statistical_artifacts(results)
     check_phase41_artifacts(results)
     check_phase42_artifacts(results)
+    check_phase43a_artifacts(results)
     check_checkpoint_run(
         results,
         "phase39r_neural_full_v1",

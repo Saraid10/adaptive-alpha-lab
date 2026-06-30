@@ -46,6 +46,7 @@ This registry separates allowed paper claims from claims that are not supported 
 | Phase 41B runner is implementation infrastructure, not a result. | Diagnostic | `src/phase41_inner_validation_candidates.py`, `tests/test_phase41_inner_validation_candidates.py` | The Phase 41B runner supports inner-validation-selected probability-calibration and soft-gating candidate experiments for the global/classical ladder. Score-threshold execution control is registered but deferred. Smoke outputs are engineering diagnostics only; a full development run is required before comparing candidates. |
 | Phase 41B full global/classical candidate run does not improve the alpha conclusion. | Diagnostic | `models/phase41_classical_experiment_results.csv`, `models/phase41_classical_statistical_claims.csv`, `reports/phase41_inner_validation_candidate_run.md` | The full Phase 41B run shows that bounded inner-validation-selected calibration/soft-gating candidates do not support corrected IC/Sharpe dominance or positive-alpha claims on the repaired development panel. |
 | Phase 42 explains the weak repaired-alpha result without rescuing it. | Diagnostic | `models/phase42_execution_stress_summary.csv`, `models/phase42_regime_transition_diagnostics.csv`, `models/phase42_cross_asset_alpha_diagnostics.csv`, `reports/phase42_interpretation_execution_hardening.md` | Phase 42 shows execution sensitivity, regime-transition effects, cross-asset fragility, and weak feature-target alignment on the development panel. It is explanatory evidence only, not a tradability or model-improvement claim. |
+| Phase 43A freezes the final locked-holdout protocol. | Diagnostic / protocol freeze | `configs/phase43_locked_holdout_freeze_v1.json`, `models/phase43_locked_candidate_manifest.csv`, `models/phase43_locked_claim_rules.csv`, `reports/phase43_locked_holdout_freeze.md` | The guided-HMM mechanism path is frozen before locked evaluation. Phase 41B calibration, soft-gating, threshold control, and new model search are excluded from the final candidate. No locked outcome has been inspected. |
 
 ## Open Claims
 
@@ -91,6 +92,8 @@ The repaired classical full run, repaired neural/guided full run, and Phase 40 r
 The Phase 41B global/classical candidate run is also complete and valid as a development-observed benchmark. It is a controlled negative result: bounded inner-validation calibration and soft-gating candidates do not currently support a robust positive-alpha or dominance claim. Score-threshold execution-control candidates remain deferred and cannot be claimed as tested by Phase 41B.
 
 Phase 42 is complete as a diagnostic explanation layer. It may be used to explain why alpha is weak, but it must not be used to tune directly against development outer-fold outcomes or to claim tradability.
+
+Phase 43A freezes `regime_lgbm_hmm_guided_hmm` as the final locked-holdout mechanism candidate. This is not a result. It only authorizes a future single locked evaluation under the written rules.
 
 Future improvement phases must not tune directly against Phase 40 outer-test outcomes or Phase 41B outer-fold outcomes. Candidate selection must remain inside training/inner-validation windows, and Existing Crypto-20 results are an untouched final test only for claims that were fixed before those results were inspected.
 

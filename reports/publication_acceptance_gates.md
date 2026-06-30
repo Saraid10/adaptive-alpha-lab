@@ -99,13 +99,13 @@ Failure action: treat the repository as a research prototype rather than a compl
 
 ## Current Gate State
 
-| Gate | State after Phase 37 | Phase 38 action |
+| Gate | Current state | Current action |
 |---|---|---|
-| 0 Evidence Freeze | Nearly complete | Enforce registries and immutable interpretation |
-| 1 Fold-Local Validity | Open | Make fold-local encoder the next critical implementation |
-| 2 Baseline Completeness | Open | Add dense vanilla Crypto-20 learned baselines |
-| 3 Candidate Selection | Blocked | Wait for Gates 1 and 2 |
-| 4 Locked Evaluation | Blocked | Define holdout now; execute after model freeze |
+| 0 Evidence Freeze | Complete | Keep invalidated and repaired evidence separated |
+| 1 Fold-Local Validity | Complete | Preserve repaired common-calendar fold-local protocol |
+| 2 Baseline Completeness | Complete | Preserve equal method coverage and repaired statistical adjudication |
+| 3 Candidate Selection | Complete via Phase 43A | Frozen candidate is `regime_lgbm_hmm_guided_hmm`; no calibration/threshold rescue tuning |
+| 4 Locked Evaluation | Blocked | Register and hash holdout membership before one execution |
 | 5 Statistical Adjudication | Development version complete | Extend only after locked evaluation |
-| 6 Paper Readiness | Open | Refresh literature and produce eight-page ACM paper later |
-| 7 BTech Project Readiness | Open | Productize after research model freeze |
+| 6 Paper Readiness | Open | Draft paper around repaired benchmark, negative result, and locked-evaluation outcome |
+| 7 BTech Project Readiness | Open | Package after research model freeze and locked-evaluation decision |
