@@ -964,6 +964,163 @@ def check_phase43b_locked_eval_artifacts(results: list[CheckResult]) -> None:
         )
 
 
+def check_phase44_paper_package(results: list[CheckResult]) -> None:
+    models = BASE_DIR / "models"
+    report_path = BASE_DIR / "reports" / "phase44_paper_readiness_package.md"
+    reviewer_brief_path = BASE_DIR / "reports" / "phase44_reviewer_brief.md"
+    hardening_audit_path = BASE_DIR / "reports" / "phase44_prepush_hardening_audit.md"
+    paper_path = BASE_DIR / "paper" / "main.md"
+    protocol_path = BASE_DIR / "reports" / "paper_protocol.md"
+    checklist_path = BASE_DIR / "reports" / "paper_submission_checklist.md"
+    readme_path = BASE_DIR / "README.md"
+    artifact_map_path = BASE_DIR / "reports" / "paper_artifact_map.csv"
+    runner_path = BASE_DIR / "src" / "phase44_paper_readiness_package.py"
+    test_path = BASE_DIR / "tests" / "test_phase44_paper_readiness_package.py"
+    ps1_path = BASE_DIR / "run_phase44_paper_readiness_package.ps1"
+    sh_path = BASE_DIR / "run_phase44_paper_readiness_package.sh"
+    evidence_path = models / "phase44_paper_evidence_matrix.csv"
+    risk_path = models / "phase44_submission_risk_register.csv"
+
+    for path, check in [
+        (runner_path, "phase44_runner_exists"),
+        (test_path, "phase44_tests_exist"),
+        (ps1_path, "phase44_runner_ps1_exists"),
+        (sh_path, "phase44_runner_sh_exists"),
+        (report_path, "phase44_report_exists"),
+        (reviewer_brief_path, "phase44_reviewer_brief_exists"),
+        (hardening_audit_path, "phase44_prepush_hardening_audit_exists"),
+        (paper_path, "phase44_paper_draft_exists"),
+        (protocol_path, "phase44_paper_protocol_exists"),
+        (checklist_path, "phase44_submission_checklist_exists"),
+        (readme_path, "phase44_readme_exists"),
+    ]:
+        require_file(results, path, check)
+
+    evidence = read_csv_checked(results, evidence_path, "phase44_paper_evidence_matrix")
+    risk = read_csv_checked(results, risk_path, "phase44_submission_risk_register")
+    artifact_map = read_csv_checked(results, artifact_map_path, "phase44_paper_artifact_map")
+
+    if evidence is not None:
+        required_blocks = {
+            "validation_repair",
+            "repaired_crypto20_development",
+            "development_statistical_adjudication",
+            "execution_and_mechanism_diagnostics",
+            "locked_external_holdout",
+        }
+        blocks = set(evidence["evidence_block"].astype(str)) if "evidence_block" in evidence.columns else set()
+        data_roles = set(evidence["data_role"].astype(str)) if "data_role" in evidence.columns else set()
+        text = " ".join(evidence.astype(str).agg(" ".join, axis=1).tolist())
+        ok = (
+            required_blocks.issubset(blocks)
+            and {"development_observed", "locked_registered_unobserved"}.issubset(data_roles)
+            and "Tradable-alpha claim is not_supported" in text
+            and "no candidate switching" in text
+        )
+        add(
+            results,
+            "phase44_evidence_matrix_guardrails",
+            PASS if ok else FAIL,
+            f"blocks={sorted(blocks)}; data_roles={sorted(data_roles)}",
+        )
+
+    if risk is not None:
+        text = " ".join(risk.astype(str).agg(" ".join, axis=1).tolist())
+        missing = [
+            phrase
+            for phrase in [
+                "Overclaiming profitability",
+                "Candidate switching after holdout is forbidden",
+                "Reintroducing calendar leakage",
+            ]
+            if phrase not in text
+        ]
+        add(
+            results,
+            "phase44_risk_register_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 44 risk register covers critical paper risks",
+        )
+
+    if artifact_map is not None:
+        required_columns = {"paper_section", "artifact_type", "artifact", "paper_role"}
+        missing_cols = sorted(required_columns - set(artifact_map.columns))
+        text = " ".join(artifact_map.astype(str).agg(" ".join, axis=1).tolist())
+        missing_phrases = [
+            phrase
+            for phrase in [
+                "Locked external holdout",
+                "Reviewer brief",
+                "Pre-push hardening",
+                "Submission risk",
+                "Reproducibility",
+            ]
+            if phrase not in text
+        ]
+        add(
+            results,
+            "phase44_artifact_map_guardrails",
+            FAIL if missing_cols or missing_phrases else PASS,
+            f"missing_cols={missing_cols}; missing_phrases={missing_phrases}",
+        )
+
+    required_text = {
+        report_path: [
+            "does **not** tune models",
+            "does not establish positive tradable alpha",
+            "Do not switch the final candidate after seeing the locked holdout",
+        ],
+        reviewer_brief_path: [
+            "validation-and-mechanism paper",
+            "No. The locked candidate has negative Sharpe",
+            "Candidate switching after locked evaluation is forbidden",
+        ],
+        hardening_audit_path: [
+            "stale paper claims",
+            "Phase 44 fails if the locked primary comparison",
+            "zero failures and zero warnings",
+        ],
+        paper_path: [
+            "Phase 44 paper-readiness draft",
+            "the paper does not claim a tradable strategy",
+            "may not switch to a secondary diagnostic method",
+            "The same locked holdout cannot be reused for model rescue",
+        ],
+        protocol_path: [
+            "Protocol version: Phase 44",
+            "limited locked relative support, not a profitable-alpha paper",
+            "same-holdout rescue tuning remain blocked",
+        ],
+        checklist_path: [
+            "The next work is paper packaging, not model rescue",
+            "Positive tradable-alpha claim is explicitly blocked",
+            "Do not switch from the frozen guided-HMM final candidate",
+        ],
+        readme_path: [
+            "Current Research Finding After Phase 44",
+            "How To Read The Historical Phase Notes",
+            "Those sections are preserved for audit history, but they are not the current paper claim",
+            "## Phase 40 Repaired Statistical Adjudication",
+            "## Phase 41 And 41B Bounded Improvement Protocol",
+            "## Phase 42 Interpretation And Execution Hardening",
+            "## Phase 43A Final Candidate And Locked-Holdout Freeze",
+            "## Phase 43B Locked External Holdout Evaluation",
+            "## Phase 44 Paper-Readiness Evidence Package",
+        ],
+    }
+    for path, phrases in required_text.items():
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        missing = [phrase for phrase in phrases if phrase not in text]
+        add(
+            results,
+            f"{path.stem}_phase44_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 44 claim-control wording present",
+        )
+
+
 def check_classical_artifacts(results: list[CheckResult]) -> None:
     models = BASE_DIR / "models"
     summary = read_csv_checked(
@@ -1040,6 +1197,16 @@ def check_claim_control_docs(results: list[CheckResult]) -> None:
             "cannot replace the final candidate after locked evaluation",
             "The locked holdout proves a tradable strategy",
         ],
+        BASE_DIR / "reports" / "phase44_paper_readiness_package.md": [
+            "does **not** tune models",
+            "does not establish positive tradable alpha",
+            "Do not switch the final candidate after seeing the locked holdout",
+        ],
+        BASE_DIR / "paper" / "main.md": [
+            "Phase 44 paper-readiness draft",
+            "the paper does not claim a tradable strategy",
+            "may not switch to a secondary diagnostic method",
+        ],
     }
     for path, phrases in required_phrases.items():
         if not require_file(results, path, f"{path.stem}_exists"):
@@ -1110,6 +1277,7 @@ def main() -> int:
     check_phase43a_artifacts(results)
     check_phase43b_registration_artifacts(results)
     check_phase43b_locked_eval_artifacts(results)
+    check_phase44_paper_package(results)
     check_checkpoint_run(
         results,
         "phase39r_neural_full_v1",

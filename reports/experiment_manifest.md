@@ -53,13 +53,14 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Locked holdout freeze | 43A | Freeze exactly one final guided-HMM mechanism candidate, holdout selection rule, claim rules, and no-retuning policy before any locked outcome is inspected | `phase43_locked_candidate_manifest.csv`, `phase43_locked_claim_rules.csv`, `phase43_locked_holdout_rules.csv`, `phase43_locked_holdout_freeze.md` | Candidate-freeze gate complete; locked evaluation itself is still not run |
 | Locked holdout registration | 43B-register | Register locked external holdout membership readiness using only quality/coverage checks before any model outcome is evaluated | `phase43b_holdout_candidate_quality.csv`, `phase43b_registered_holdout_symbols.csv`, `phase43b_locked_holdout_registration_manifest.csv`, `phase43b_locked_holdout_registration.md` | Complete; 10 external assets registered before model evaluation |
 | Locked external holdout evaluation | 43B-eval | Evaluate the Phase 43A frozen candidate and references once on the registered external holdout | `phase43b_locked_external_experiment_results.csv`, `phase43b_locked_external_fold_metrics.csv`, `phase43b_locked_external_adjudication.md` | Complete; frozen relative IC/Sharpe rule is satisfied, but profitable/tradable alpha is not supported |
+| Paper-readiness evidence package | 44 | Convert the repaired and locked evidence into paper-facing claims, risks, reviewer responses, and manuscript prose without model rescue | `phase44_paper_evidence_matrix.csv`, `phase44_submission_risk_register.csv`, `phase44_paper_readiness_package.md`, `phase44_reviewer_brief.md`, `paper/main.md` | Complete; paper path is limited locked relative support plus no tradable-alpha claim |
 
 ## Future Experiment Queue
 
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
 | 1 | 38 | Research-control reset | Required before new model development | `phase38_master_protocol.md`, `data_role_registry.csv`, `experiment_ledger.csv`, `publication_acceptance_gates.md` |
-| 2 | 44 | Manuscript result package | Phase 43B locked result is complete and adjudicated | paper-ready tables, claim language, and limitations |
+| 2 | 44 | Manuscript result package | Phase 43B locked result is complete and adjudicated | Complete; next step is venue template conversion and final citation/figure work |
 | 3 | 44 | Final statistical adjudication | Required before final claim language | dependence-aware final claim table |
 | 4 | 45 | ICAIF-format paper package | Required before external submission | anonymous eight-page ACM paper and citation/claim audits |
 

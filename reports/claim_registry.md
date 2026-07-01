@@ -101,6 +101,8 @@ Phase 43B registration is a readiness gate, not a result. It can authorize locke
 
 Phase 43B locked evaluation is now complete. The paper may say the frozen guided-HMM mechanism receives limited relative support on the pre-specified locked IC/Sharpe rule. The paper must not say it proves a profitable trading strategy, and it must not switch to a non-frozen method after seeing the locked result.
 
+Phase 44 is a paper-readiness and claim-packaging phase, not a model-improvement phase. It converts the repaired development evidence and the locked external holdout into a manuscript draft, evidence matrix, and risk register. It does not authorize new tuning, candidate switching, or reuse of the same locked holdout for model rescue.
+
 Future improvement phases must not tune directly against Phase 40 outer-test outcomes or Phase 41B outer-fold outcomes. Candidate selection must remain inside training/inner-validation windows, and Existing Crypto-20 results are an untouched final test only for claims that were fixed before those results were inspected.
 
 ## Resume-Safe Language

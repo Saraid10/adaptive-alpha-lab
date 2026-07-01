@@ -4,9 +4,9 @@
 
 **Live Demo:** [adaptive-alpha-engine.streamlit.app](https://adaptive-alpha-engine.streamlit.app/)
 
-## Current Research Finding After Phase 39R
+## Current Research Finding After Phase 44
 
-Phase 39R is the current scientific checkpoint for the Crypto-20 track. It repaired a serious validation weakness in the earlier Crypto-20 fold-local experiment: the original per-symbol positional folds overlapped in calendar time when assets were pooled. That earlier Phase 39 run is therefore kept only as audit history, not as predictive evidence.
+Phase 44 is the current paper-readiness checkpoint. Phase 39R repaired a serious validation weakness in the earlier Crypto-20 fold-local experiment: the original per-symbol positional folds overlapped in calendar time when assets were pooled. That earlier Phase 39 run is therefore kept only as audit history, not as predictive evidence.
 
 Under the repaired `crypto20-development-v1` protocol, every method is evaluated on the same globally separated calendar folds, with a frozen development dataset, fold-local fitting, equal coverage, mean per-asset IC as the primary ranking metric, and a non-overlapping transaction-cost-aware portfolio diagnostic.
 
@@ -21,6 +21,22 @@ The honest Phase 39R/40 result is:
 This makes the project more scientifically defensible, not less. The current claim is no longer “our model beats HMM.” The current claim is: **strict financial validation exposes that structural regime learning can look meaningful while downstream alpha remains weak, noisy, and method-sensitive.**
 
 Phase 41 registers bounded calibration, soft-gating, and execution-control candidates. Phase 41B then runs the first full inner-validation-selected global/classical candidate experiment for the probability-calibration and soft-gating subset only; score-threshold execution control is registered but deferred. It is a controlled negative/diagnostic result: candidate selection stays inside each outer fold, but the run does not improve the repaired alpha conclusion or support corrected IC/Sharpe dominance.
+
+Phase 43B completes the one-shot locked external holdout. The frozen final candidate, `regime_lgbm_hmm_guided_hmm`, satisfies the prewritten relative IC/Sharpe rule versus `global_lgbm` and `regime_lgbm_hmm`, but its locked Sharpe and total return are still negative. Therefore the paper may claim limited locked relative support, but it must not claim a profitable, deployable, or broadly dominant trading strategy.
+
+Phase 44 converts this into a paper-facing evidence package, reviewer brief, and submission risk register. It is a packaging and claim-control phase, not a model-rescue phase.
+
+## How To Read The Historical Phase Notes
+
+The phase-by-phase sections below are a chronological engineering and research log. Some older sections describe positive-looking development results from before the Phase 39R repair and Phase 43B locked holdout. Those sections are preserved for audit history, but they are not the current paper claim.
+
+For the current scientific interpretation, prefer:
+
+- `paper/main.md`
+- `reports/phase44_paper_readiness_package.md`
+- `reports/phase44_reviewer_brief.md`
+- `reports/claim_registry.md`
+- `models/research_grade_check_report.md`
 
 ## Research Question
 
@@ -107,6 +123,8 @@ Binance OHLCV
 - Phase 39 fold-local benchmark engineering plus a calendar-leakage repair: the original positional Crypto-20 run is retained as invalidated development evidence, while the repaired pipeline enforces one shared timestamp index and strict pooled train/test separation.
 - Repaired evaluation protocol with mean per-asset IC as the primary ranking metric, separate cross-sectional and pooled IC diagnostics, and a pre-specified non-overlapping eight-hour portfolio grid with fold-boundary position resets.
 - Completed repaired Crypto-20 classical and fold-local neural/guided development benchmarks. Under the repaired protocol, downstream alpha remains weak/inconclusive rather than a positive trading result.
+- Completed Phase 43B locked external holdout: limited prewritten relative support is satisfied, but tradable positive alpha is not supported.
+- Phase 44 paper-readiness package with evidence matrix, reviewer brief, submission risk register, and updated manuscript draft.
 - Research-grade regression gate for future feature changes: artifact checks validate frozen data, method coverage, completed checkpoints, repaired outputs, and claim-control docs; full checks additionally rerun freeze verification, unit tests, and the calendar audit.
 - Transaction-cost-aware experiment result table.
 - Streamlit dashboard shell and research note.
@@ -277,6 +295,11 @@ python -m pip install -r requirements-research.txt
 | `models/phase43b_locked_external_experiment_results.csv` | Locked external method summary across 18 folds |
 | `models/phase43b_locked_external_primary_comparison.csv` | Frozen final candidate versus primary references under the Phase 43A rule |
 | `models/phase43b_locked_external_claims.csv` | Locked claim adjudication, including no tradable-positive claim |
+| `reports/phase44_paper_readiness_package.md` | Paper-facing evidence package after the locked holdout |
+| `reports/phase44_reviewer_brief.md` | Short reviewer-response brief for claim boundaries and likely objections |
+| `reports/phase44_prepush_hardening_audit.md` | Final pre-push audit of stale claims, reviewer risks, and Phase 44 guardrails |
+| `models/phase44_paper_evidence_matrix.csv` | Reviewer-facing map of evidence blocks, data roles, findings, and claim boundaries |
+| `models/phase44_submission_risk_register.csv` | Submission risk register for overclaiming, candidate switching, leakage, and venue packaging |
 | `models/research_grade_check_report.csv` | Latest automated artifact/full research-grade check result |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
@@ -332,9 +355,9 @@ python -m pip install -r requirements-research.txt
 | `models/paper_claim_tests.csv` | Phase 26 metric-level paper claim tests mapped to the ablation suite |
 | `models/paper_statistical_summary.csv` | Phase 26 paper-facing statistical claim summary |
 | `models/paper_claim_tests.png` | Visual Phase 26 paper claim status summary |
-| `paper/main.md` | Phase 27 generated manuscript skeleton |
-| `reports/paper_artifact_map.csv` | Phase 27 paper section to artifact map |
-| `reports/paper_submission_checklist.md` | Phase 27 submission-readiness checklist |
+| `paper/main.md` | Phase 44 paper-readiness manuscript draft after repaired and locked evidence |
+| `reports/paper_artifact_map.csv` | Phase 44 paper section to artifact map |
+| `reports/paper_submission_checklist.md` | Phase 44 submission-readiness checklist |
 | `models/statistical_multiple_testing.png` | Visual multiple-testing correction summary |
 | `models/statistical_sharpe_diagnostics.png` | Visual PSR diagnostic summary |
 | `runs/run_index.csv` | Versioned run registry |
@@ -892,9 +915,155 @@ Phase 39R completed artifacts include:
 - automated research-grade check reports;
 - claim-control documentation that prevents the invalidated run from being used as evidence.
 
+## Phase 40 Repaired Statistical Adjudication
+
+Phase 40 statistically adjudicates the repaired Phase 39R outputs. Its job is not to rescue a positive result; its job is to decide what the repaired evidence can honestly support.
+
+The result is deliberately conservative:
+
+- repaired development results remain weak/negative;
+- no corrected IC/Sharpe dominance claim is supported;
+- bootstrap intervals and paired fold tests show high uncertainty;
+- development-observed evidence cannot be treated as an untouched final test.
+
+Core artifacts:
+
+- `reports/phase40_repaired_statistical_adjudication.md`
+- `models/crypto20_repaired_fold_local_statistical_method_summary.csv`
+- `models/crypto20_repaired_fold_local_statistical_claims.csv`
+- `models/crypto20_repaired_fold_local_statistical_multiple_testing.csv`
+
+## Phase 41 And 41B Bounded Improvement Protocol
+
+Phase 41 registers a bounded improvement path after the weak repaired result. The key rule is that candidate selection must happen inside each outer fold using inner chronological validation only. It does not authorize tuning on repaired outer-test results.
+
+Phase 41B runs the global/classical probability-calibration and soft-gating subset. Score-threshold execution control is registered but deferred and excluded from the final locked candidate.
+
+The outcome remains negative/diagnostic:
+
+- candidate selection is validation-safe;
+- the run does not improve the repaired alpha conclusion;
+- no corrected IC/Sharpe dominance claim is supported;
+- Phase 41B does not become the final locked method.
+
+Core artifacts:
+
+- `reports/phase41_bounded_improvement_protocol.md`
+- `reports/phase41_inner_validation_candidate_run.md`
+- `models/phase41_candidate_registry.csv`
+- `models/phase41_classical_experiment_results.csv`
+- `models/phase41_classical_statistical_claims.csv`
+
+## Phase 42 Interpretation And Execution Hardening
+
+Phase 42 explains why the repaired alpha result is weak. It is a diagnostic phase, not a new model-search phase.
+
+It checks:
+
+- transaction-cost and score-threshold sensitivity;
+- regime transition behavior;
+- cross-asset alpha fragility;
+- feature-family target alignment.
+
+The main conclusion is that the weak alpha result is not explained away by one simple calibration or execution bug. Execution assumptions, regime transitions, and cross-asset heterogeneity all matter. Phase 42 does not make a tradability claim.
+
+Core artifacts:
+
+- `reports/phase42_interpretation_execution_hardening.md`
+- `models/phase42_execution_stress_summary.csv`
+- `models/phase42_regime_transition_diagnostics.csv`
+- `models/phase42_cross_asset_alpha_diagnostics.csv`
+- `models/phase42_feature_family_diagnostics.csv`
+
+## Phase 43A Final Candidate And Locked-Holdout Freeze
+
+Phase 43A freezes the final candidate before any locked-holdout outcome is inspected.
+
+Frozen final candidate:
+
+```text
+regime_lgbm_hmm_guided_hmm
+```
+
+Primary references:
+
+```text
+global_lgbm
+regime_lgbm_hmm
+```
+
+Excluded after the freeze:
+
+- calibration rescue;
+- soft-gating rescue;
+- score-threshold rescue;
+- new feature selection;
+- new label or horizon selection;
+- new architecture search;
+- switching to another method after locked results are known.
+
+Core artifacts:
+
+- `configs/phase43_locked_holdout_freeze_v1.json`
+- `reports/phase43_locked_holdout_freeze.md`
+- `models/phase43_locked_candidate_manifest.csv`
+- `models/phase43_locked_claim_rules.csv`
+- `models/phase43_locked_holdout_rules.csv`
+
+## Phase 43B Locked External Holdout Evaluation
+
+Phase 43B registers, freezes, evaluates, and adjudicates a 10-asset external locked holdout. The external assets are selected through prewritten coverage and quality rules before model outcomes are inspected.
+
+The one-shot locked evaluation is complete:
+
+- 10 registered external assets;
+- 18 folds;
+- 129,600 out-of-sample rows per method;
+- frozen candidate compared against `global_lgbm` and `regime_lgbm_hmm`;
+- prewritten relative IC/Sharpe rule is satisfied;
+- positive tradable alpha is not supported because locked Sharpe and total return remain negative.
+
+The allowed paper claim is narrow: the frozen guided-HMM candidate receives limited locked relative support. The paper must not claim a profitable/deployable strategy, broad dominance, or permission to retune on the same locked holdout.
+
+Core artifacts:
+
+- `reports/phase43b_locked_holdout_registration.md`
+- `reports/phase43b_locked_holdout_data_freeze.md`
+- `reports/phase43b_locked_external_evaluation.md`
+- `reports/phase43b_locked_external_adjudication.md`
+- `models/phase43b_locked_external_experiment_results.csv`
+- `models/phase43b_locked_external_primary_comparison.csv`
+- `models/phase43b_locked_external_claims.csv`
+
+## Phase 44 Paper-Readiness Evidence Package
+
+Phase 44 turns the repaired development evidence and locked external holdout into a paper-facing package. It does not tune models, change labels, change candidate choice, or touch final/locked evaluation data.
+
+Phase 44 adds:
+
+- a manuscript draft synchronized to the repaired and locked evidence;
+- a paper evidence matrix separating development-observed and locked evidence;
+- a submission risk register;
+- a reviewer brief with safe answers to likely objections;
+- a pre-push hardening audit;
+- automated research-grade checks for Phase 44 claim-control wording.
+
+Current paper story:
+
+> HMM-guided contrastive regimes receive limited locked-holdout relative support, but the evidence does not support a profitable or deployable trading strategy. The main contribution is the validation repair, benchmark discipline, locked-holdout adjudication, and mechanism boundary.
+
+Core artifacts:
+
+- `paper/main.md`
+- `reports/phase44_paper_readiness_package.md`
+- `reports/phase44_reviewer_brief.md`
+- `reports/phase44_prepush_hardening_audit.md`
+- `models/phase44_paper_evidence_matrix.csv`
+- `models/phase44_submission_risk_register.csv`
+
 ## Current Status
 
-The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred and is excluded from the final locked candidate. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. Phase 42 explains the weak result through execution sensitivity, regime-transition behavior, cross-asset fragility, and feature-family target alignment without making a tradability claim. Phase 43A freezes `regime_lgbm_hmm_guided_hmm` as the single final guided-HMM mechanism candidate before any locked-holdout outcome is inspected. Phase 43B registers and freezes a 10-asset external locked holdout, runs the one-shot 18-fold locked evaluation, and adjudicates the result: the frozen guided-HMM candidate satisfies the prewritten relative IC/Sharpe rule versus the two primary references, but negative Sharpe and total return mean no tradable-positive strategy claim is supported. The research-grade regression gate passes.
+The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred and is excluded from the final locked candidate. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. Phase 42 explains the weak result through execution sensitivity, regime-transition behavior, cross-asset fragility, and feature-family target alignment without making a tradability claim. Phase 43A freezes `regime_lgbm_hmm_guided_hmm` as the single final guided-HMM mechanism candidate before any locked-holdout outcome is inspected. Phase 43B registers and freezes a 10-asset external locked holdout, runs the one-shot 18-fold locked evaluation, and adjudicates the result: the frozen guided-HMM candidate satisfies the prewritten relative IC/Sharpe rule versus the two primary references, but negative Sharpe and total return mean no tradable-positive strategy claim is supported. Phase 44 converts this into a paper-ready evidence package, risk register, and updated manuscript draft. The research-grade regression gate passes.
 
 Use the frozen-universe calendar audit command, not the bare default command:
 

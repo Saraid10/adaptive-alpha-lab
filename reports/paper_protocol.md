@@ -2,9 +2,9 @@
 
 ## Protocol Status
 
-This document began as the paper-facing protocol after Phase 23 and is synchronized in Phase 38 with the completed Crypto-20 evidence. Future experiments should change it only through a named protocol phase, not casually while running models.
+This document began as the paper-facing protocol after Phase 23 and is synchronized in Phase 44 with the repaired development benchmark and the completed locked external holdout. Future experiments should change it only through a named protocol phase, not casually while running models.
 
-Protocol version: Phase 38
+Protocol version: Phase 44
 
 Primary working title:
 
@@ -25,8 +25,8 @@ The contribution is a controlled empirical benchmark and model-side intervention
 1. A fair regime-conditioned alpha benchmark using common financial labels, common folds, common transaction costs, and common test rows.
 2. Evidence that vanilla contrastive regimes are structurally stable but weakly aligned with classical sequential regimes and downstream alpha usefulness.
 3. An HMM-guided contrastive training objective that uses classical state sequences as weak supervision while still treating them as proxy states, not ground truth.
-4. A downstream fold-local test showing that guided embeddings plus HMM assignment become the strongest current point-estimate alpha method, while statistical dominance remains inconclusive.
-5. Robustness, statistical, and interpretability artifacts that make the finding auditable rather than purely anecdotal.
+4. A repaired downstream fold-local test showing that guided embeddings plus HMM assignment do not currently support robust positive alpha, while the later locked holdout gives limited relative IC/Sharpe support under a prewritten rule.
+5. Robustness, statistical, interpretability, and locked-holdout artifacts that make the finding auditable rather than purely anecdotal.
 
 ## Dataset Freeze
 
@@ -151,10 +151,10 @@ The paper may claim:
 1. Vanilla contrastive regimes underperform raw-feature HMM regimes in the current benchmark.
 2. Sequential assignment matters: HMM assignment is more useful than GMM assignment on learned embeddings.
 3. HMM-guided weak supervision strongly improves structural agreement with the raw-feature HMM reference.
-4. Guided embeddings plus HMM assignment produce the strongest current point estimates on the primary BTC+ETH 8h benchmark.
-5. Guided-HMM is stress-robust on the primary BTC+ETH 8h prediction file.
+4. The frozen guided-HMM candidate satisfies the Phase 43B locked relative IC/Sharpe rule against the registered global LightGBM and raw-feature HMM references.
+5. The repaired and locked evidence does not support a profitable or deployable strategy.
 6. Fold-local interpretability indicates economically plausible drivers dominated by volatility state, momentum/autocorrelation, and distribution shape.
-7. Crypto-20 structural diagnostics show that the HMM-guided objective transfers to a pre-specified broader crypto universe, while downstream alpha generalization remains untested until the fold-local Crypto-20 alpha retest.
+7. Crypto-20 structural diagnostics and repaired fold-local alpha results must be separated: structural transfer is useful, but repaired downstream alpha remains weak/negative.
 
 ## Forbidden Claims
 
@@ -171,33 +171,34 @@ The paper must not claim:
 
 Phase 25 ablations and Phase 26 paper claim tests are mandatory before paper submission. Both are now complete in the current protocol.
 
-Phase 27 drafts the paper skeleton before additional scope expansion. Multi-asset expansion is conditional. Proceed only if Phase 25/26 shows either:
+Historical Phase 27/29 draft work created the paper skeleton before the later validation repair. The current Phase 44 draft supersedes the earlier positive-leaning skeleton and must be treated as the active paper path.
 
-1. a statistically meaningful guided-HMM improvement over raw-feature HMM, or
-2. a robust enough stress/interpretable result that a generalization appendix is worth the compute.
-
-The historical Phase 26 read did not show statistically decisive guided-HMM dominance over raw-feature HMM. Phases 36 and 37 have now completed the first Crypto-20 predictive test and confirm that structural transfer does not establish predictive, calibration, or portfolio dominance. The default paper is therefore a controlled crypto benchmark and mechanism study unless later fully fold-local and locked evidence changes that conclusion.
+The historical Phase 26 read did not show statistically decisive guided-HMM dominance over raw-feature HMM. Phases 36 and 37 completed the first Crypto-20 predictive test and confirmed that structural transfer does not establish predictive, calibration, or portfolio dominance. Phase 39R/40 repaired the calendar-overlap issue and produced a weak/negative development benchmark. Phase 43B then completed a single locked external holdout: the frozen guided-HMM candidate satisfies the prewritten relative IC/Sharpe rule, but negative Sharpe and total return block any tradable-strategy claim. The default paper is therefore a validation-and-mechanism paper with limited locked relative support, not a profitable-alpha paper.
 
 The multi-asset gate is a downstream alpha-claim gate. It does not prohibit structural generalization experiments that test whether the representation-learning objective transfers to a pre-specified wider universe. Those experiments must be labeled as structural diagnostics, must not be used as evidence of predictive alpha improvement, and must still be followed by a fold-local downstream alpha benchmark before the paper can claim multi-asset alpha generalization.
 
-Phase 27 is represented by `paper/main.md`, `reports/paper_artifact_map.csv`, and `reports/paper_submission_checklist.md`. Phase 28 is represented by `reproduce.ps1`, `reports/environment.md`, `reports/artifact_manifest.md`, and `reports/reproduction_checklist.md`.
+Phase 44 is represented by `paper/main.md`, `reports/phase44_paper_readiness_package.md`, `models/phase44_paper_evidence_matrix.csv`, `models/phase44_submission_risk_register.csv`, `reports/paper_artifact_map.csv`, and `reports/paper_submission_checklist.md`.
 
-Phase 29 turns the scaffold into manuscript-style prose while preserving the claim registry. The next default step is venue formatting and citation cleanup, not broad experiment expansion.
+The next default step is venue formatting and citation cleanup, not broad experiment expansion.
 
 Reviewer-facing caveats must stay explicit in the paper draft:
 
-1. BTC/ETH is a controlled crypto setting, not a broad asset-class generalization claim.
-2. Eighteen walk-forward folds limit statistical power, but are more defensible than row-level independence over overlapping labels.
-3. The `p=0.801` guided-HMM versus raw-feature HMM IC result prevents a statistical dominance claim; the main contribution is the sequential-assignment mechanism.
-4. Phase 35 is a structural Crypto-20 generalization result, not a Crypto-20 alpha result.
+1. Development-observed evidence and locked-holdout evidence have different claim rights.
+2. The locked holdout is already spent once and cannot be reused for model rescue.
+3. The frozen guided-HMM candidate has negative locked Sharpe and negative locked total return.
+4. A secondary diagnostic method cannot replace the frozen final candidate after locked-holdout inspection.
 
 ## Phase 38 Evidence And Data-Role Reset
 
-Phases 36 and 37 complete the first Crypto-20 downstream and statistical evaluation. Guided-HMM has the highest mean fold IC, but its edge over raw-feature HMM is non-significant (`p=0.840`), its risk-adjusted portfolio behavior is not dominant, and its multiclass NLL is worse than global LightGBM after correction. The multi-asset result is therefore structural transfer plus weak directional ranking evidence, not predictive or calibration superiority.
+Phases 36 and 37 completed the first Crypto-20 downstream and statistical evaluation, but those inspected results later became development-observed audit history. The repaired Phase 39R/40 evidence is the valid development benchmark. It is weak/negative and does not support robust guided-method dominance or positive alpha.
 
 All BTC/ETH and Crypto-20 results inspected through Phase 37 are now `development_observed` according to `reports/data_role_registry.csv`. They may support model development and historical comparison, but they may not be described as an untouched final test.
 
-The next critical validity requirement is a fully fold-local learned pipeline. Fold-local regime assignment is not sufficient when the encoder was trained offline. Scaling, HMM guidance, pair mining, encoder fitting, assignment fitting, calibration, threshold selection, and alpha fitting must respect the outer-fold boundary, with model decisions made only through inner chronological validation.
+The fully fold-local learned pipeline and locked external holdout are now complete for the current paper path. Crypto-50 expansion, unrestricted architecture search, product deployment, and same-holdout rescue tuning remain blocked unless a new pre-registered replication protocol is created first.
 
-The authorized next experiment family and its decision rules are defined in `reports/phase38_master_protocol.md` and `reports/publication_acceptance_gates.md`. Crypto-50 expansion, unrestricted architecture search, and product deployment remain blocked until the fold-local validity and baseline-completeness gates pass.
+## Phase 44 Locked-Holdout And Paper Package Update
+
+Phase 44 is the current paper-readiness layer. The allowed locked claim is narrow: on the registered external crypto holdout, the frozen `regime_lgbm_hmm_guided_hmm` candidate satisfies the prewritten relative IC/Sharpe rule against `global_lgbm` and `regime_lgbm_hmm`. The locked result does not support positive tradable alpha, candidate switching, or same-holdout retuning.
+
+The next phase should focus on venue formatting, citations, figure/table cleanup, and reproducibility appendix work. It should not run new model search unless a new pre-registered external dataset or replication protocol is created first.
 
