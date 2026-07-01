@@ -8,7 +8,11 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from freeze_development_dataset import canonical_hash, load_config
+from freeze_development_dataset import (
+    canonical_hash,
+    comparable_summary_for_verification,
+    load_config,
+)
 from fold_local_encoder_walkforward import verify_frozen_dataset
 
 
@@ -28,6 +32,30 @@ class DevelopmentFreezeTests(unittest.TestCase):
         config = load_config(path)
         self.assertLess(config["feature_context_start"], config["prediction_start"])
         self.assertLess(config["prediction_start"], config["prediction_end"])
+
+    def test_verification_ignores_only_database_file_hash_provenance(self):
+        original = {
+            "freeze_id": "crypto20-development-v1",
+            "experiment_data_sha256": "stable-data",
+            "symbol_manifest_sha256": "stable-symbols",
+            "database_sha256": "old-shared-db-file",
+        }
+        expanded_database = {
+            **original,
+            "database_sha256": "new-shared-db-file",
+        }
+        changed_data = {
+            **original,
+            "experiment_data_sha256": "changed-data",
+        }
+        self.assertEqual(
+            comparable_summary_for_verification(original),
+            comparable_summary_for_verification(expanded_database),
+        )
+        self.assertNotEqual(
+            comparable_summary_for_verification(original),
+            comparable_summary_for_verification(changed_data),
+        )
 
     def test_training_rejects_frozen_data_hash_drift(self):
         manifest = {

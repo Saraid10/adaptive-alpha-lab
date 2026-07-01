@@ -267,6 +267,16 @@ python -m pip install -r requirements-research.txt
 | `models/phase43_locked_candidate_manifest.csv` | Frozen final guided-HMM candidate, references, exclusions, and support-artifact hashes |
 | `models/phase43_locked_claim_rules.csv` | Locked-holdout success, failure, allowed-claim, and forbidden-claim rules |
 | `models/phase43_locked_holdout_rules.csv` | External/future holdout selection and no-retuning rules |
+| `reports/phase43b_locked_holdout_registration.md` | Phase 43B locked-holdout registration/readiness gate before model evaluation |
+| `models/phase43b_locked_holdout_registration_manifest.csv` | Registration status, selected-count, symbol hash, and forbidden-input confirmation |
+| `models/phase43b_holdout_candidate_quality.csv` | Pre-outcome quality table for candidate external holdout assets |
+| `models/phase43b_registered_holdout_symbols.csv` | Registered Phase 43B external locked-holdout symbols |
+| `reports/phase43b_locked_holdout_data_freeze.md` | Frozen locked-holdout data hash, symbols, and fold calendar |
+| `reports/phase43b_locked_external_evaluation.md` | One-shot locked external evaluation report |
+| `reports/phase43b_locked_external_adjudication.md` | Paper-safe locked result interpretation and forbidden claims |
+| `models/phase43b_locked_external_experiment_results.csv` | Locked external method summary across 18 folds |
+| `models/phase43b_locked_external_primary_comparison.csv` | Frozen final candidate versus primary references under the Phase 43A rule |
+| `models/phase43b_locked_external_claims.csv` | Locked claim adjudication, including no tradable-positive claim |
 | `models/research_grade_check_report.csv` | Latest automated artifact/full research-grade check result |
 | `models/regime_assignments.csv` | Aligned regime labels/posteriors for all methods |
 | `models/regime_benchmark_summary.csv` | Regime-level comparison table |
@@ -884,7 +894,7 @@ Phase 39R completed artifacts include:
 
 ## Current Status
 
-The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred and is excluded from the final locked candidate. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. Phase 42 explains the weak result through execution sensitivity, regime-transition behavior, cross-asset fragility, and feature-family target alignment without making a tradability claim. Phase 43A freezes `regime_lgbm_hmm_guided_hmm` as the single final guided-HMM mechanism candidate before any locked-holdout outcome is inspected. The research-grade regression gate passes.
+The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred and is excluded from the final locked candidate. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. Phase 42 explains the weak result through execution sensitivity, regime-transition behavior, cross-asset fragility, and feature-family target alignment without making a tradability claim. Phase 43A freezes `regime_lgbm_hmm_guided_hmm` as the single final guided-HMM mechanism candidate before any locked-holdout outcome is inspected. Phase 43B registers and freezes a 10-asset external locked holdout, runs the one-shot 18-fold locked evaluation, and adjudicates the result: the frozen guided-HMM candidate satisfies the prewritten relative IC/Sharpe rule versus the two primary references, but negative Sharpe and total return mean no tradable-positive strategy claim is supported. The research-grade regression gate passes.
 
 Use the frozen-universe calendar audit command, not the bare default command:
 

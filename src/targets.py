@@ -177,10 +177,35 @@ def save_distribution_plot(dist: pd.DataFrame) -> None:
     plt.close(fig)
 
 
-def save_targets(con: duckdb.DuckDBPyConnection, targets: pd.DataFrame) -> None:
+def table_exists(con: duckdb.DuckDBPyConnection, table_name: str) -> bool:
+    return bool(
+        con.execute(
+            """
+            SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_name = ?
+            """,
+            [table_name],
+        ).fetchone()[0]
+    )
+
+
+def save_targets(
+    con: duckdb.DuckDBPyConnection,
+    targets: pd.DataFrame,
+    symbols: list[str],
+    append: bool = False,
+) -> None:
     con.register("target_data", targets)
-    con.execute("DROP TABLE IF EXISTS targets")
-    con.execute("CREATE TABLE targets AS SELECT * FROM target_data")
+    if append and table_exists(con, "targets"):
+        con.execute(
+            f"DELETE FROM targets WHERE symbol IN ({','.join(['?'] * len(symbols))})",
+            symbols,
+        )
+        con.execute("INSERT INTO targets SELECT * FROM target_data")
+    else:
+        con.execute("DROP TABLE IF EXISTS targets")
+        con.execute("CREATE TABLE targets AS SELECT * FROM target_data")
     con.unregister("target_data")
 
 
@@ -191,6 +216,11 @@ def main() -> None:
         "--artifact-prefix",
         default="",
         help="Optional prefix for target diagnostic artifacts, e.g. crypto20_.",
+    )
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Replace targets only for selected symbols instead of rebuilding the whole targets table.",
     )
     args = parser.parse_args()
     symbols = resolve_symbols(args)
@@ -215,7 +245,7 @@ def main() -> None:
         raise RuntimeError("No targets were built. Run ingestion.py and features.py first.")
 
     targets = pd.concat(frames, ignore_index=True)
-    save_targets(con, targets)
+    save_targets(con, targets, symbols, append=args.append)
     con.close()
 
     dist = target_distribution(targets, HORIZONS)

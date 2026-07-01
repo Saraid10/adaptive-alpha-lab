@@ -24,4 +24,4 @@ Existing manually ranked Crypto-20 design universe; frozen without using repaire
 - Symbol-manifest SHA-256: `900cea1ce14f332abb7e52b652a3b885335a582f6b4a6026dcf45ca6154d7313`
 - Fold-calendar SHA-256: `7e438324746b11037df960c9c0a7fdaa183657154eb41ab899446c6895dde57a`
 
-Any asset, timestamp, row-count, protocol, database, or hash change creates a different dataset version and must not be silently resumed under this freeze ID.
+The database SHA-256 is file-level provenance for the original freeze moment. In later phases the shared local database may contain additional data roles, so verification enforces the frozen experiment-data, symbol, fold, universe, protocol, and configuration hashes rather than unrelated database-file growth. Any change to the frozen asset slice, timestamp range, row count, protocol, or experiment hash creates a different dataset version and must not be silently resumed under this freeze ID.

@@ -23,5 +23,6 @@ crypto20_statistics,37,Crypto20,"paired folds; time-block NLL; asset heterogenei
 fold_local_encoder_baseline,39,Crypto20,full baseline ladder,development,true,validity repair,complete,preserve full negative/inconclusive result; predictive H8 not supported
 calibrated_soft_gating,40,Crypto20,"calibration; soft gating; pooled experts",development,false,candidate improvement,complete,Phase 41B controlled negative result
 locked_holdout_freeze,43A,Locked_asset_holdout,"frozen guided-HMM candidate; no calibration or threshold rescue",final_locked,false,protocol freeze,complete,ready for holdout registration
-external_asset_confirmation,43B,Locked_asset_holdout,frozen selected candidate,final_locked,false,confirmatory result,blocked,requires registered and hashed holdout data
+locked_holdout_registration,43B-register,Locked_asset_holdout,coverage and hash registration,locked_unobserved,false,data readiness,complete,10 external assets registered before outcome inspection
+external_asset_confirmation,43B-eval,Locked_asset_holdout,frozen selected candidate,final_locked,true,confirmatory result,complete,relative IC/Sharpe support satisfied; tradable positive-alpha claim not supported
 future_temporal_confirmation,journal_extension,Future_data,frozen selected candidate,final_locked,false,temporal generalization,blocked,requires future collection

@@ -105,7 +105,7 @@ Failure action: treat the repository as a research prototype rather than a compl
 | 1 Fold-Local Validity | Complete | Preserve repaired common-calendar fold-local protocol |
 | 2 Baseline Completeness | Complete | Preserve equal method coverage and repaired statistical adjudication |
 | 3 Candidate Selection | Complete via Phase 43A | Frozen candidate is `regime_lgbm_hmm_guided_hmm`; no calibration/threshold rescue tuning |
-| 4 Locked Evaluation | Blocked | Register and hash holdout membership before one execution |
+| 4 Locked Evaluation | Complete | Phase 43B locked external evaluation is complete: frozen guided-HMM satisfies the prewritten relative IC/Sharpe rule, but negative Sharpe/return forbid a tradable-strategy claim |
 | 5 Statistical Adjudication | Development version complete | Extend only after locked evaluation |
-| 6 Paper Readiness | Open | Draft paper around repaired benchmark, negative result, and locked-evaluation outcome |
+| 6 Paper Readiness | Open | Draft paper around repaired benchmark, validation repair, limited locked relative support, and negative tradability result |
 | 7 BTech Project Readiness | Open | Package after research model freeze and locked-evaluation decision |
