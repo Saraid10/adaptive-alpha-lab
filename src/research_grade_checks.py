@@ -693,6 +693,277 @@ def check_phase43a_artifacts(results: list[CheckResult]) -> None:
         )
 
 
+def check_phase43b_registration_artifacts(results: list[CheckResult]) -> None:
+    models = BASE_DIR / "models"
+    config_path = BASE_DIR / "configs" / "phase43b_locked_holdout_registration_v1.json"
+    runner_path = BASE_DIR / "src" / "phase43b_locked_holdout_registration.py"
+    test_path = BASE_DIR / "tests" / "test_phase43b_locked_holdout_registration.py"
+    ps1_path = BASE_DIR / "run_phase43b_locked_holdout_registration.ps1"
+    sh_path = BASE_DIR / "run_phase43b_locked_holdout_registration.sh"
+    quality_path = models / "phase43b_holdout_candidate_quality.csv"
+    symbols_path = models / "phase43b_registered_holdout_symbols.csv"
+    manifest_path = models / "phase43b_locked_holdout_registration_manifest.csv"
+    report_path = BASE_DIR / "reports" / "phase43b_locked_holdout_registration.md"
+
+    for path, check in [
+        (config_path, "phase43b_registration_config_exists"),
+        (runner_path, "phase43b_registration_runner_exists"),
+        (test_path, "phase43b_registration_tests_exist"),
+        (ps1_path, "phase43b_registration_runner_ps1_exists"),
+        (sh_path, "phase43b_registration_runner_sh_exists"),
+    ]:
+        require_file(results, path, check)
+
+    quality = read_csv_checked(results, quality_path, "phase43b_holdout_candidate_quality")
+    symbols = read_csv_checked(results, symbols_path, "phase43b_registered_holdout_symbols")
+    manifest = read_csv_checked(results, manifest_path, "phase43b_locked_holdout_registration_manifest")
+
+    if config_path.exists():
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        forbidden = set(config.get("forbidden_inputs", []))
+        required_forbidden = {
+            "model_predictions",
+            "alpha_metrics",
+            "threshold_search_on_holdout",
+            "candidate_selection_on_holdout",
+            "rerun_after_failure",
+        }
+        failures = []
+        if config.get("data_role") != "locked_unobserved_registration_only":
+            failures.append("data_role")
+        if config.get("parent_freeze_id") != "phase43-locked-holdout-freeze-v1":
+            failures.append("parent_freeze_id")
+        if not required_forbidden.issubset(forbidden):
+            failures.append("forbidden_inputs")
+        add(
+            results,
+            "phase43b_registration_config_guardrails",
+            FAIL if failures else PASS,
+            f"failed={failures}" if failures else "registration-only guardrails present",
+        )
+
+    if quality is not None:
+        required_cols = {
+            "design_rank",
+            "symbol",
+            "external_candidate",
+            "ohlcv_rows",
+            "feature_rows",
+            "target_rows",
+            "max_gap_hours",
+            "holdout_eligible",
+            "failure_reason",
+        }
+        missing_cols = sorted(required_cols - set(quality.columns))
+        development_selected = (
+            quality[
+                quality.get("in_development_universe", pd.Series(False, index=quality.index)).astype(bool)
+                & quality.get("holdout_eligible", pd.Series(False, index=quality.index)).astype(bool)
+            ]
+            if not missing_cols
+            else pd.DataFrame()
+        )
+        add(
+            results,
+            "phase43b_registration_quality_guardrails",
+            FAIL if missing_cols or not development_selected.empty else PASS,
+            f"missing_cols={missing_cols}; development_selected={len(development_selected)}",
+        )
+
+    if manifest is not None:
+        manifest_items = (
+            manifest.set_index("item")["value"].astype(str).to_dict()
+            if {"item", "value"}.issubset(manifest.columns)
+            else {}
+        )
+        status = manifest_items.get("registration_status")
+        selected_count = int(manifest_items.get("selected_asset_count", "0"))
+        final_candidate = manifest_items.get("final_candidate")
+        forbidden_text = manifest_items.get("forbidden_inputs_confirmed", "")
+        ok_status = status in {"registered_ready", "blocked_not_ready"}
+        no_outcome_inputs = "model_predictions" in forbidden_text and "alpha_metrics" in forbidden_text
+        status_consistent = (status == "blocked_not_ready" and selected_count < 10) or (
+            status == "registered_ready" and selected_count >= 10
+        )
+        add(
+            results,
+            "phase43b_registration_manifest_guardrails",
+            PASS if ok_status and status_consistent and final_candidate == "regime_lgbm_hmm_guided_hmm" and no_outcome_inputs else FAIL,
+            f"status={status}; selected_count={selected_count}; final_candidate={final_candidate}",
+        )
+
+    if symbols is not None and manifest is not None:
+        manifest_items = (
+            manifest.set_index("item")["value"].astype(str).to_dict()
+            if {"item", "value"}.issubset(manifest.columns)
+            else {}
+        )
+        selected_count = int(manifest_items.get("selected_asset_count", "0"))
+        symbol_count = len(symbols)
+        add(
+            results,
+            "phase43b_registered_symbol_count",
+            PASS if symbol_count == selected_count else FAIL,
+            f"symbols={symbol_count}; manifest_selected_count={selected_count}",
+        )
+
+    if require_file(results, report_path, "phase43b_registration_report_exists"):
+        text = report_path.read_text(encoding="utf-8")
+        required = [
+            "before any frozen-model outcome is evaluated",
+            "No model predictions, alpha metrics, method rankings",
+            "Phase 43B registration proves generalization",
+            "allows retrying the locked evaluation after failure",
+        ]
+        missing = [phrase for phrase in required if phrase not in text]
+        add(
+            results,
+            "phase43b_registration_report_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 43B registration report guardrails present",
+        )
+
+
+def check_phase43b_locked_eval_artifacts(results: list[CheckResult]) -> None:
+    models = BASE_DIR / "models"
+    freeze_runner = BASE_DIR / "src" / "phase43b_locked_holdout_freeze.py"
+    freeze_test = BASE_DIR / "tests" / "test_phase43b_locked_holdout_freeze.py"
+    adjudication_runner = BASE_DIR / "src" / "phase43b_locked_holdout_adjudication.py"
+    adjudication_test = BASE_DIR / "tests" / "test_phase43b_locked_holdout_adjudication.py"
+    freeze_manifest_path = models / "phase43b_locked_holdout_freeze_manifest.json"
+    symbol_manifest_path = models / "phase43b_locked_holdout_symbol_manifest.csv"
+    fold_calendar_path = models / "phase43b_locked_holdout_fold_calendar.csv"
+    universe_path = models / "phase43b_locked_holdout_universe_frozen.csv"
+    eval_results_path = models / "phase43b_locked_external_experiment_results.csv"
+    eval_fold_path = models / "phase43b_locked_external_fold_metrics.csv"
+    eval_manifest_path = models / "phase43b_locked_external_encoder_manifest.csv"
+    eval_coverage_path = models / "phase43b_locked_external_encoder_coverage.csv"
+    primary_path = models / "phase43b_locked_external_primary_comparison.csv"
+    claims_path = models / "phase43b_locked_external_claims.csv"
+    freeze_report_path = BASE_DIR / "reports" / "phase43b_locked_holdout_data_freeze.md"
+    eval_report_path = BASE_DIR / "reports" / "phase43b_locked_external_evaluation.md"
+    adjudication_report_path = BASE_DIR / "reports" / "phase43b_locked_external_adjudication.md"
+
+    for path, check in [
+        (freeze_runner, "phase43b_freeze_runner_exists"),
+        (freeze_test, "phase43b_freeze_tests_exist"),
+        (adjudication_runner, "phase43b_adjudication_runner_exists"),
+        (adjudication_test, "phase43b_adjudication_tests_exist"),
+        (freeze_report_path, "phase43b_freeze_report_exists"),
+        (eval_report_path, "phase43b_eval_report_exists"),
+        (adjudication_report_path, "phase43b_adjudication_report_exists"),
+    ]:
+        require_file(results, path, check)
+
+    symbol_manifest = read_csv_checked(results, symbol_manifest_path, "phase43b_locked_holdout_symbol_manifest")
+    fold_calendar = read_csv_checked(results, fold_calendar_path, "phase43b_locked_holdout_fold_calendar")
+    read_csv_checked(results, universe_path, "phase43b_locked_holdout_universe_frozen")
+    eval_results = read_csv_checked(results, eval_results_path, "phase43b_locked_external_experiment_results")
+    eval_folds = read_csv_checked(results, eval_fold_path, "phase43b_locked_external_fold_metrics")
+    read_csv_checked(results, eval_manifest_path, "phase43b_locked_external_encoder_manifest")
+    read_csv_checked(results, eval_coverage_path, "phase43b_locked_external_encoder_coverage")
+    primary = read_csv_checked(results, primary_path, "phase43b_locked_external_primary_comparison")
+    claims = read_csv_checked(results, claims_path, "phase43b_locked_external_claims")
+
+    if require_file(results, freeze_manifest_path, "phase43b_locked_holdout_freeze_manifest_exists"):
+        freeze = json.loads(freeze_manifest_path.read_text(encoding="utf-8"))
+        failures = []
+        if freeze.get("freeze_id") != "phase43b-locked-external-holdout-v1":
+            failures.append("freeze_id")
+        if freeze.get("data_role") != "locked_registered_unobserved":
+            failures.append("data_role")
+        if len(freeze.get("symbols", [])) != 10:
+            failures.append("symbol_count")
+        if int(freeze.get("fold_count", -1)) != 18:
+            failures.append("fold_count")
+        if int(freeze.get("prediction_rows", -1)) != 173_770:
+            failures.append("prediction_rows")
+        add(
+            results,
+            "phase43b_locked_holdout_freeze_guardrails",
+            FAIL if failures else PASS,
+            f"failed={failures}" if failures else "locked holdout freeze invariants hold",
+        )
+
+    if symbol_manifest is not None:
+        rows_by_symbol = symbol_manifest.set_index("symbol")["prediction_rows"].to_dict() if {"symbol", "prediction_rows"}.issubset(symbol_manifest.columns) else {}
+        add(
+            results,
+            "phase43b_symbol_manifest_guardrails",
+            PASS if len(rows_by_symbol) == 10 and set(map(int, rows_by_symbol.values())) == {17_377} else FAIL,
+            f"symbols={len(rows_by_symbol)}; prediction_rows={sorted(set(map(int, rows_by_symbol.values()))) if rows_by_symbol else []}",
+        )
+    if fold_calendar is not None:
+        min_gap = pd.to_numeric(fold_calendar.get("calendar_gap_hours", pd.Series(dtype=float)), errors="coerce").min()
+        add(
+            results,
+            "phase43b_fold_calendar_guardrails",
+            PASS if len(fold_calendar) == 18 and min_gap > 0 else FAIL,
+            f"folds={len(fold_calendar)}; min_gap={min_gap}",
+        )
+    if eval_results is not None:
+        methods = set(eval_results["method"].astype(str)) if "method" in eval_results else set()
+        expected = EXPECTED_REPAIRED_NEURAL
+        rows = eval_results.set_index("method")["n_test_rows"].to_dict() if {"method", "n_test_rows"}.issubset(eval_results.columns) else {}
+        equal_rows = set(map(int, rows.values())) == {129_600} if rows else False
+        final_present = "regime_lgbm_hmm_guided_hmm" in methods
+        add(
+            results,
+            "phase43b_locked_eval_result_guardrails",
+            PASS if methods == expected and equal_rows and final_present else FAIL,
+            f"methods={sorted(methods)}; row_counts={rows}",
+        )
+    if eval_folds is not None:
+        folds = eval_folds.groupby("method")["fold"].nunique().to_dict() if {"method", "fold"}.issubset(eval_folds.columns) else {}
+        add(
+            results,
+            "phase43b_locked_eval_fold_guardrails",
+            PASS if set(folds) == EXPECTED_REPAIRED_NEURAL and set(map(int, folds.values())) == {18} else FAIL,
+            f"folds={folds}",
+        )
+    if primary is not None:
+        ok = (
+            len(primary) == 2
+            and set(primary.get("reference_method", pd.Series(dtype=str)).astype(str)) == {"global_lgbm", "regime_lgbm_hmm"}
+            and primary.get("ic_improved", pd.Series(dtype=bool)).astype(bool).all()
+            and primary.get("sharpe_non_worse", pd.Series(dtype=bool)).astype(bool).all()
+            and primary.get("coverage_equal", pd.Series(dtype=bool)).astype(bool).all()
+        )
+        add(
+            results,
+            "phase43b_locked_primary_rule_guardrails",
+            PASS if ok else FAIL,
+            "primary frozen relative rule satisfied" if ok else "primary frozen relative rule not satisfied",
+        )
+    if claims is not None:
+        claim_map = claims.set_index("claim_id")["claim_status"].astype(str).to_dict() if {"claim_id", "claim_status"}.issubset(claims.columns) else {}
+        ok = (
+            claim_map.get("locked_relative_success_rule") == "satisfied"
+            and claim_map.get("positive_tradable_alpha") == "not_supported"
+            and claim_map.get("same_holdout_retuning") == "forbidden"
+        )
+        add(
+            results,
+            "phase43b_locked_claim_guardrails",
+            PASS if ok else FAIL,
+            f"claims={claim_map}",
+        )
+    if adjudication_report_path.exists():
+        text = adjudication_report_path.read_text(encoding="utf-8")
+        required = [
+            "not** a tradable-strategy claim",
+            "cannot replace the final candidate after locked evaluation",
+            "Forbidden wording",
+        ]
+        missing = [phrase for phrase in required if phrase not in text]
+        add(
+            results,
+            "phase43b_locked_adjudication_report_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "locked adjudication report guardrails present",
+        )
+
+
 def check_classical_artifacts(results: list[CheckResult]) -> None:
     models = BASE_DIR / "models"
     summary = read_csv_checked(
@@ -758,6 +1029,16 @@ def check_claim_control_docs(results: list[CheckResult]) -> None:
             "before any locked-holdout outcome is inspected",
             "No locked/final data is evaluated in Phase 43A",
             "Phase 43A proves the model generalizes",
+        ],
+        BASE_DIR / "reports" / "phase43b_locked_holdout_registration.md": [
+            "before any frozen-model outcome is evaluated",
+            "No model predictions, alpha metrics, method rankings",
+            "Phase 43B registration proves generalization",
+        ],
+        BASE_DIR / "reports" / "phase43b_locked_external_adjudication.md": [
+            "not** a tradable-strategy claim",
+            "cannot replace the final candidate after locked evaluation",
+            "The locked holdout proves a tradable strategy",
         ],
     }
     for path, phrases in required_phrases.items():
@@ -827,6 +1108,8 @@ def main() -> int:
     check_phase41_artifacts(results)
     check_phase42_artifacts(results)
     check_phase43a_artifacts(results)
+    check_phase43b_registration_artifacts(results)
+    check_phase43b_locked_eval_artifacts(results)
     check_checkpoint_run(
         results,
         "phase39r_neural_full_v1",

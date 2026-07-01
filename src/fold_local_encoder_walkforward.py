@@ -168,8 +168,9 @@ def verify_frozen_dataset(
         )
     manifest = json.loads(path.read_text(encoding="utf-8"))
     failures = []
-    if manifest.get("data_role") != "development_observed":
-        failures.append("data role is not development_observed")
+    allowed_roles = {"development_observed", "locked_registered_unobserved"}
+    if manifest.get("data_role") not in allowed_roles:
+        failures.append(f"data role is not one of {sorted(allowed_roles)}")
     if manifest.get("symbols") != symbols:
         failures.append("symbol order differs from frozen universe")
     if manifest.get("experiment_data_sha256") != data_hash:
@@ -179,7 +180,7 @@ def verify_frozen_dataset(
     if int(manifest.get("fold_count", -1)) != len(folds):
         failures.append("fold count differs from frozen snapshot")
     if failures:
-        raise RuntimeError("Development dataset freeze verification failed: " + "; ".join(failures))
+        raise RuntimeError("Frozen dataset verification failed: " + "; ".join(failures))
     return manifest
 
 
@@ -357,6 +358,7 @@ def write_results_report(
     folds: int,
     symbols: list[str],
     smoke: bool,
+    data_role: str = "development_observed",
 ) -> None:
     cols = ["method", "IC", "Sharpe", "drawdown", "total_return", "turnover", "n_test_rows"]
     def markdown_table(frame: pd.DataFrame, digits: int = 4) -> str:
@@ -384,12 +386,36 @@ def write_results_report(
     selected = markdown_table(selected_frame)
     window_budget = int(pd.to_numeric(manifest.get("window_cap", pd.Series([0])), errors="coerce").fillna(0).max())
     window_budget_text = "all eligible windows" if window_budget == 0 else f"at most {window_budget:,} deterministic windows per encoder stage"
-    status = "smoke validation only; no performance claim" if smoke else "full development-observed benchmark"
-    text = f"""# Phase 39 Fully Fold-Local Encoder Results
+    if data_role == "locked_registered_unobserved":
+        status = "locked confirmatory evaluation"
+        evidence_sentence = (
+            "This is the frozen locked-holdout evaluation; the result must be reported once "
+            "without same-holdout retuning."
+        )
+        title = "Phase 43B Locked External Holdout Evaluation"
+        interpretation = (
+            "This locked run evaluates the Phase 43A frozen candidate and references on the "
+            "Phase 43B registered external holdout. The result may confirm or fail to confirm "
+            "the guided-HMM mechanism, but it must not be used to tune thresholds, candidates, "
+            "features, labels, or architecture."
+        )
+    else:
+        status = "smoke validation only; no performance claim" if smoke else "full development-observed benchmark"
+        evidence_sentence = (
+            "All outcomes remain development-observed and cannot be used as an untouched final test."
+        )
+        title = "Phase 39 Fully Fold-Local Encoder Results"
+        interpretation = (
+            "A smoke run validates code paths, leakage boundaries, artifacts, and coverage only. "
+            "A full run is still development evidence. Model changes require a new registered "
+            "candidate family, and confirmatory claims require a frozen configuration evaluated "
+            "once on a locked holdout."
+        )
+    text = f"""# {title}
 
 ## Run Status
 
-This is a **{status}** over {folds} fold(s) and {len(symbols)} symbol(s), using {window_budget_text}. All outcomes remain development-observed and cannot be used as an untouched final test.
+This is a **{status}** over {folds} fold(s) and {len(symbols)} symbol(s), using {window_budget_text}. {evidence_sentence}
 
 ## Validity Contract
 
@@ -409,7 +435,7 @@ This is a **{status}** over {folds} fold(s) and {len(symbols)} symbol(s), using 
 
 ## Interpretation Rule
 
-A smoke run validates code paths, leakage boundaries, artifacts, and coverage only. A full run is still development evidence. Model changes require a new registered candidate family, and confirmatory claims require a frozen configuration evaluated once on a locked holdout.
+{interpretation}
 """
     path.write_text(text, encoding="utf-8")
 
@@ -433,6 +459,7 @@ def main() -> None:
             folds,
             symbols,
             smoke=is_smoke_manifest(manifest),
+            data_role="development_observed",
         )
         print("OK: Phase 39 compact report rebuilt from existing artifacts.")
         return
@@ -793,6 +820,7 @@ def main() -> None:
         len(folds),
         symbols,
         smoke=smoke_run,
+        data_role=str(freeze_manifest.get("data_role", "development_observed")),
     )
     run_metadata = {
         "args": vars(args),

@@ -1,6 +1,6 @@
 # Research Grade Check Report
 
-- Checks: 133
+- Checks: 188
 - Failures: 0
 - Warnings: 0
 
@@ -121,6 +121,57 @@
 | phase43a_holdout_rules_guardrails | PASS | rules={'preferred_holdout': 'external_asset_holdout', 'source_universe': 'configs/crypto_universe_candidates.csv', 'selection_rule': 'Select the next pre-ranked quality-eligible USDT spot assets not included in asset_universe_crypto20.csv after ingestion and quality checks, without inspecting model outcomes.', 'minimum_assets': '10', 'fallback_holdout': 'future_temporal_holdout_strictly_after_crypto20_development_endpoint', 'fallback_rule': 'Use only data strictly after 2026-06-15 02:30 Asia/Kolkata, collected and hashed before any model outcome inspection.', 'minimum_hourly_bars': '12000', 'maximum_gap_hours': '6', 'stable_or_synthetic_assets_forbidden': 'True', 'coverage_and_hash_manifest_required': 'True', 'validation': 'same repaired common-calendar purged walk-forward protocol', 'target': 'tb_label_8h', 'horizon_hours': '8', 'transaction_cost_bps': '10', 'candidate_selection_on_holdout': 'forbidden', 'threshold_selection_on_holdout': 'forbidden', 'rerun_after_failure': 'forbidden'} |
 | phase43a_report_exists | PASS | reports\phase43_locked_holdout_freeze.md |
 | phase43a_report_guardrails | PASS | Phase 43A report guardrails present |
+| phase43b_registration_config_exists | PASS | configs\phase43b_locked_holdout_registration_v1.json |
+| phase43b_registration_runner_exists | PASS | src\phase43b_locked_holdout_registration.py |
+| phase43b_registration_tests_exist | PASS | tests\test_phase43b_locked_holdout_registration.py |
+| phase43b_registration_runner_ps1_exists | PASS | run_phase43b_locked_holdout_registration.ps1 |
+| phase43b_registration_runner_sh_exists | PASS | run_phase43b_locked_holdout_registration.sh |
+| phase43b_holdout_candidate_quality_exists | PASS | models\phase43b_holdout_candidate_quality.csv |
+| phase43b_holdout_candidate_quality_readable | PASS | rows=75 columns=27 |
+| phase43b_registered_holdout_symbols_exists | PASS | models\phase43b_registered_holdout_symbols.csv |
+| phase43b_registered_holdout_symbols_readable | PASS | rows=10 columns=14 |
+| phase43b_locked_holdout_registration_manifest_exists | PASS | models\phase43b_locked_holdout_registration_manifest.csv |
+| phase43b_locked_holdout_registration_manifest_readable | PASS | rows=9 columns=5 |
+| phase43b_registration_config_guardrails | PASS | registration-only guardrails present |
+| phase43b_registration_quality_guardrails | PASS | missing_cols=[]; development_selected=0 |
+| phase43b_registration_manifest_guardrails | PASS | status=registered_ready; selected_count=10; final_candidate=regime_lgbm_hmm_guided_hmm |
+| phase43b_registered_symbol_count | PASS | symbols=10; manifest_selected_count=10 |
+| phase43b_registration_report_exists | PASS | reports\phase43b_locked_holdout_registration.md |
+| phase43b_registration_report_guardrails | PASS | Phase 43B registration report guardrails present |
+| phase43b_freeze_runner_exists | PASS | src\phase43b_locked_holdout_freeze.py |
+| phase43b_freeze_tests_exist | PASS | tests\test_phase43b_locked_holdout_freeze.py |
+| phase43b_adjudication_runner_exists | PASS | src\phase43b_locked_holdout_adjudication.py |
+| phase43b_adjudication_tests_exist | PASS | tests\test_phase43b_locked_holdout_adjudication.py |
+| phase43b_freeze_report_exists | PASS | reports\phase43b_locked_holdout_data_freeze.md |
+| phase43b_eval_report_exists | PASS | reports\phase43b_locked_external_evaluation.md |
+| phase43b_adjudication_report_exists | PASS | reports\phase43b_locked_external_adjudication.md |
+| phase43b_locked_holdout_symbol_manifest_exists | PASS | models\phase43b_locked_holdout_symbol_manifest.csv |
+| phase43b_locked_holdout_symbol_manifest_readable | PASS | rows=10 columns=12 |
+| phase43b_locked_holdout_fold_calendar_exists | PASS | models\phase43b_locked_holdout_fold_calendar.csv |
+| phase43b_locked_holdout_fold_calendar_readable | PASS | rows=18 columns=11 |
+| phase43b_locked_holdout_universe_frozen_exists | PASS | models\phase43b_locked_holdout_universe_frozen.csv |
+| phase43b_locked_holdout_universe_frozen_readable | PASS | rows=10 columns=19 |
+| phase43b_locked_external_experiment_results_exists | PASS | models\phase43b_locked_external_experiment_results.csv |
+| phase43b_locked_external_experiment_results_readable | PASS | rows=8 columns=24 |
+| phase43b_locked_external_fold_metrics_exists | PASS | models\phase43b_locked_external_fold_metrics.csv |
+| phase43b_locked_external_fold_metrics_readable | PASS | rows=144 columns=25 |
+| phase43b_locked_external_encoder_manifest_exists | PASS | models\phase43b_locked_external_encoder_manifest.csv |
+| phase43b_locked_external_encoder_manifest_readable | PASS | rows=36 columns=27 |
+| phase43b_locked_external_encoder_coverage_exists | PASS | models\phase43b_locked_external_encoder_coverage.csv |
+| phase43b_locked_external_encoder_coverage_readable | PASS | rows=144 columns=5 |
+| phase43b_locked_external_primary_comparison_exists | PASS | models\phase43b_locked_external_primary_comparison.csv |
+| phase43b_locked_external_primary_comparison_readable | PASS | rows=2 columns=17 |
+| phase43b_locked_external_claims_exists | PASS | models\phase43b_locked_external_claims.csv |
+| phase43b_locked_external_claims_readable | PASS | rows=4 columns=4 |
+| phase43b_locked_holdout_freeze_manifest_exists | PASS | models\phase43b_locked_holdout_freeze_manifest.json |
+| phase43b_locked_holdout_freeze_guardrails | PASS | locked holdout freeze invariants hold |
+| phase43b_symbol_manifest_guardrails | PASS | symbols=10; prediction_rows=[17377] |
+| phase43b_fold_calendar_guardrails | PASS | folds=18; min_gap=121.0 |
+| phase43b_locked_eval_result_guardrails | PASS | methods=['global_lgbm', 'regime_lgbm_contrastive', 'regime_lgbm_contrastive_hmm', 'regime_lgbm_hmm', 'regime_lgbm_hmm_guided_gmm', 'regime_lgbm_hmm_guided_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket']; row_counts={'global_lgbm': 129600, 'regime_lgbm_contrastive': 129600, 'regime_lgbm_contrastive_hmm': 129600, 'regime_lgbm_hmm': 129600, 'regime_lgbm_hmm_guided_gmm': 129600, 'regime_lgbm_hmm_guided_hmm': 129600, 'regime_lgbm_kmeans': 129600, 'regime_lgbm_vol_bucket': 129600} |
+| phase43b_locked_eval_fold_guardrails | PASS | folds={'global_lgbm': 18, 'regime_lgbm_contrastive': 18, 'regime_lgbm_contrastive_hmm': 18, 'regime_lgbm_hmm': 18, 'regime_lgbm_hmm_guided_gmm': 18, 'regime_lgbm_hmm_guided_hmm': 18, 'regime_lgbm_kmeans': 18, 'regime_lgbm_vol_bucket': 18} |
+| phase43b_locked_primary_rule_guardrails | PASS | primary frozen relative rule satisfied |
+| phase43b_locked_claim_guardrails | PASS | claims={'locked_relative_success_rule': 'satisfied', 'positive_tradable_alpha': 'not_supported', 'candidate_switching_after_holdout': 'forbidden', 'same_holdout_retuning': 'forbidden'} |
+| phase43b_locked_adjudication_report_guardrails | PASS | locked adjudication report guardrails present |
 | phase39r_neural_full_v1_run_state_exists | PASS | .tmp\phase39_fold_local\phase39r_neural_full_v1\run_state.json |
 | phase39r_neural_full_v1_checkpoint_count | PASS | 16/16 |
 | phase39r_neural_full_v1_checkpoint_methods | PASS | observed=['global_lgbm', 'regime_lgbm_contrastive', 'regime_lgbm_contrastive_hmm', 'regime_lgbm_hmm', 'regime_lgbm_hmm_guided_gmm', 'regime_lgbm_hmm_guided_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket'] |
@@ -136,6 +187,10 @@
 | phase42_interpretation_execution_hardening_claim_control | PASS | required claim-control phrases present |
 | phase43_locked_holdout_freeze_exists | PASS | reports\phase43_locked_holdout_freeze.md |
 | phase43_locked_holdout_freeze_claim_control | PASS | required claim-control phrases present |
+| phase43b_locked_holdout_registration_exists | PASS | reports\phase43b_locked_holdout_registration.md |
+| phase43b_locked_holdout_registration_claim_control | PASS | required claim-control phrases present |
+| phase43b_locked_external_adjudication_exists | PASS | reports\phase43b_locked_external_adjudication.md |
+| phase43b_locked_external_adjudication_claim_control | PASS | required claim-control phrases present |
 | freeze_verify_command | PASS | returncode=0; last_output=OK: crypto20-development-v1 matches its configuration, database, symbol manifest, and fold calendar. |
 | unit_tests_command | PASS | returncode=0; last_output=OK |
 | calendar_audit_command | PASS | returncode=0; last_output=OK: 20 symbols share one calendar index and all 16 folds have strict global train/test separation under crypto20-development-v1. |

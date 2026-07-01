@@ -75,6 +75,14 @@ Phase 42 does not introduce a new model hypothesis. It explains the weak repaire
 
 Phase 43A freezes H10 before any locked outcome is inspected. The final candidate is `regime_lgbm_hmm_guided_hmm`, compared primarily against `global_lgbm` and `regime_lgbm_hmm`. Phase 41B calibration, soft-gating, score-threshold control, new model search, new feature selection, and new label/horizon selection are excluded. The next step is a single locked holdout evaluation; success or failure must be reported without same-holdout retuning.
 
+## Phase 43B Registration Status Update
+
+Phase 43B adds the locked-holdout registration gate. It checks whether the next pre-ranked external assets have enough OHLCV, feature, and target coverage before any frozen-model outcome is evaluated. If the gate is blocked, the hypothesis remains open and the next action is data ingestion/build only, not model tuning.
+
+## Phase 43B Locked Evaluation Status Update
+
+The locked external evaluation is complete. H10 receives limited confirmatory support under the pre-specified relative rule: the frozen `regime_lgbm_hmm_guided_hmm` candidate improves over `global_lgbm` and `regime_lgbm_hmm` on locked mean asset IC and has non-worse Sharpe with equal coverage. The result does not support a profitable/tradable alpha claim because locked Sharpe and total return remain negative.
+
 ## Claim Language
 
 Use:

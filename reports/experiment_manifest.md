@@ -51,13 +51,15 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Full inner-validation global/classical candidate run | 41B full | Run bounded probability-calibration and soft-gating candidates selected only by inner validation across all 16 folds; deferred score-threshold candidates are not included | `phase41_classical_experiment_results.csv`, `phase41_classical_statistical_claims.csv`, `phase41_inner_validation_candidate_run.md` | Controlled negative result; no corrected IC/Sharpe dominance or positive-alpha claim is supported |
 | Cross-asset interpretation and execution hardening | 42 | Diagnose why repaired alpha remains weak using execution stress, transition/stable alpha, cross-asset fragility, and feature-family target alignment | `phase42_execution_stress_summary.csv`, `phase42_regime_transition_diagnostics.csv`, `phase42_cross_asset_alpha_diagnostics.csv`, `phase42_interpretation_execution_hardening.md` | Diagnostic explanation only; no tuning, no locked-test claim, and no tradability claim |
 | Locked holdout freeze | 43A | Freeze exactly one final guided-HMM mechanism candidate, holdout selection rule, claim rules, and no-retuning policy before any locked outcome is inspected | `phase43_locked_candidate_manifest.csv`, `phase43_locked_claim_rules.csv`, `phase43_locked_holdout_rules.csv`, `phase43_locked_holdout_freeze.md` | Candidate-freeze gate complete; locked evaluation itself is still not run |
+| Locked holdout registration | 43B-register | Register locked external holdout membership readiness using only quality/coverage checks before any model outcome is evaluated | `phase43b_holdout_candidate_quality.csv`, `phase43b_registered_holdout_symbols.csv`, `phase43b_locked_holdout_registration_manifest.csv`, `phase43b_locked_holdout_registration.md` | Complete; 10 external assets registered before model evaluation |
+| Locked external holdout evaluation | 43B-eval | Evaluate the Phase 43A frozen candidate and references once on the registered external holdout | `phase43b_locked_external_experiment_results.csv`, `phase43b_locked_external_fold_metrics.csv`, `phase43b_locked_external_adjudication.md` | Complete; frozen relative IC/Sharpe rule is satisfied, but profitable/tradable alpha is not supported |
 
 ## Future Experiment Queue
 
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
 | 1 | 38 | Research-control reset | Required before new model development | `phase38_master_protocol.md`, `data_role_registry.csv`, `experiment_ledger.csv`, `publication_acceptance_gates.md` |
-| 2 | 43B | Locked external evaluation | Phase 43A candidate freeze complete; holdout assets/data must be registered and hashed before execution | immutable locked predictions and final comparison |
+| 2 | 44 | Manuscript result package | Phase 43B locked result is complete and adjudicated | paper-ready tables, claim language, and limitations |
 | 3 | 44 | Final statistical adjudication | Required before final claim language | dependence-aware final claim table |
 | 4 | 45 | ICAIF-format paper package | Required before external submission | anonymous eight-page ACM paper and citation/claim audits |
 

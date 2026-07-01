@@ -149,6 +149,25 @@ models/*.csv
 !models/phase43_locked_candidate_manifest.csv
 !models/phase43_locked_claim_rules.csv
 !models/phase43_locked_holdout_rules.csv
+!models/phase43b_holdout_candidate_quality.csv
+!models/phase43b_registered_holdout_symbols.csv
+!models/phase43b_locked_holdout_registration_manifest.csv
+!models/phase43b_external_target_distribution.csv
+!models/phase43b_external_target_quality.csv
+!models/phase43b_external_target_distribution.png
+!models/phase43b_locked_holdout_symbol_manifest.csv
+!models/phase43b_locked_holdout_fold_calendar.csv
+!models/phase43b_locked_holdout_universe_frozen.csv
+!models/phase43b_locked_external_encoder_manifest.csv
+!models/phase43b_locked_external_encoder_loss.csv
+!models/phase43b_locked_external_encoder_coverage.csv
+!models/phase43b_locked_external_experiment_results.csv
+!models/phase43b_locked_external_fold_metrics.csv
+!models/phase43b_locked_external_method_comparison.csv
+!models/phase43b_locked_external_regime_summary.csv
+!models/phase43b_locked_external_guided_comparison.csv
+!models/phase43b_locked_external_primary_comparison.csv
+!models/phase43b_locked_external_claims.csv
 
 # Keep compact Crypto-20 regime summaries, not row-level assignments.
 models/crypto20_regime_assignments.csv

@@ -34,6 +34,7 @@ FOLD_PATH = Path(SAVE_DIR) / "crypto20_development_fold_calendar.csv"
 UNIVERSE_PATH = Path(SAVE_DIR) / "crypto20_development_universe_frozen.csv"
 REPORT_PATH = Path(BASE_DIR) / "reports" / "crypto20_development_data_freeze.md"
 SOURCE_UNIVERSE_PATH = Path(SAVE_DIR) / "asset_universe_crypto20.csv"
+SUMMARY_DATABASE_PROVENANCE_FIELDS = {"database_sha256"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -277,8 +278,16 @@ def report_text(summary: dict) -> str:
 - Symbol-manifest SHA-256: `{summary['symbol_manifest_sha256']}`
 - Fold-calendar SHA-256: `{summary['fold_calendar_sha256']}`
 
-Any asset, timestamp, row-count, protocol, database, or hash change creates a different dataset version and must not be silently resumed under this freeze ID.
+The database SHA-256 is file-level provenance for the original freeze moment. In later phases the shared local database may contain additional data roles, so verification enforces the frozen experiment-data, symbol, fold, universe, protocol, and configuration hashes rather than unrelated database-file growth. Any change to the frozen asset slice, timestamp range, row count, protocol, or experiment hash creates a different dataset version and must not be silently resumed under this freeze ID.
 """
+
+
+def comparable_summary_for_verification(summary: dict) -> dict:
+    return {
+        key: value
+        for key, value in summary.items()
+        if key not in SUMMARY_DATABASE_PROVENANCE_FIELDS
+    }
 
 
 def verify_existing(
@@ -289,8 +298,14 @@ def verify_existing(
     if missing:
         raise RuntimeError(f"Frozen artifacts are missing: {missing}")
     existing_summary = json.loads(SUMMARY_PATH.read_text(encoding="utf-8"))
-    if existing_summary != summary:
+    if comparable_summary_for_verification(existing_summary) != comparable_summary_for_verification(summary):
         raise RuntimeError("Frozen summary drifted from the current database or configuration.")
+    if existing_summary.get("database_sha256") != summary.get("database_sha256"):
+        print(
+            "NOTE: database_sha256 changed because the shared local database now contains "
+            "additional data roles. Frozen experiment-data, symbol, fold, and universe "
+            "hashes still match."
+        )
     comparisons = [
         (SYMBOL_PATH, symbols),
         (FOLD_PATH, folds),
