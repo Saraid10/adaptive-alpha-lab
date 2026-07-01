@@ -1,6 +1,6 @@
 # Research Grade Check Report
 
-- Checks: 188
+- Checks: 219
 - Failures: 0
 - Warnings: 0
 
@@ -172,6 +172,33 @@
 | phase43b_locked_primary_rule_guardrails | PASS | primary frozen relative rule satisfied |
 | phase43b_locked_claim_guardrails | PASS | claims={'locked_relative_success_rule': 'satisfied', 'positive_tradable_alpha': 'not_supported', 'candidate_switching_after_holdout': 'forbidden', 'same_holdout_retuning': 'forbidden'} |
 | phase43b_locked_adjudication_report_guardrails | PASS | locked adjudication report guardrails present |
+| phase44_runner_exists | PASS | src\phase44_paper_readiness_package.py |
+| phase44_tests_exist | PASS | tests\test_phase44_paper_readiness_package.py |
+| phase44_runner_ps1_exists | PASS | run_phase44_paper_readiness_package.ps1 |
+| phase44_runner_sh_exists | PASS | run_phase44_paper_readiness_package.sh |
+| phase44_report_exists | PASS | reports\phase44_paper_readiness_package.md |
+| phase44_reviewer_brief_exists | PASS | reports\phase44_reviewer_brief.md |
+| phase44_prepush_hardening_audit_exists | PASS | reports\phase44_prepush_hardening_audit.md |
+| phase44_paper_draft_exists | PASS | paper\main.md |
+| phase44_paper_protocol_exists | PASS | reports\paper_protocol.md |
+| phase44_submission_checklist_exists | PASS | reports\paper_submission_checklist.md |
+| phase44_readme_exists | PASS | README.md |
+| phase44_paper_evidence_matrix_exists | PASS | models\phase44_paper_evidence_matrix.csv |
+| phase44_paper_evidence_matrix_readable | PASS | rows=5 columns=6 |
+| phase44_submission_risk_register_exists | PASS | models\phase44_submission_risk_register.csv |
+| phase44_submission_risk_register_readable | PASS | rows=6 columns=4 |
+| phase44_paper_artifact_map_exists | PASS | reports\paper_artifact_map.csv |
+| phase44_paper_artifact_map_readable | PASS | rows=10 columns=4 |
+| phase44_evidence_matrix_guardrails | PASS | blocks=['development_statistical_adjudication', 'execution_and_mechanism_diagnostics', 'locked_external_holdout', 'repaired_crypto20_development', 'validation_repair']; data_roles=['development_observed', 'locked_registered_unobserved'] |
+| phase44_risk_register_guardrails | PASS | Phase 44 risk register covers critical paper risks |
+| phase44_artifact_map_guardrails | PASS | missing_cols=[]; missing_phrases=[] |
+| phase44_paper_readiness_package_phase44_guardrails | PASS | Phase 44 claim-control wording present |
+| phase44_reviewer_brief_phase44_guardrails | PASS | Phase 44 claim-control wording present |
+| phase44_prepush_hardening_audit_phase44_guardrails | PASS | Phase 44 claim-control wording present |
+| main_phase44_guardrails | PASS | Phase 44 claim-control wording present |
+| paper_protocol_phase44_guardrails | PASS | Phase 44 claim-control wording present |
+| paper_submission_checklist_phase44_guardrails | PASS | Phase 44 claim-control wording present |
+| README_phase44_guardrails | PASS | Phase 44 claim-control wording present |
 | phase39r_neural_full_v1_run_state_exists | PASS | .tmp\phase39_fold_local\phase39r_neural_full_v1\run_state.json |
 | phase39r_neural_full_v1_checkpoint_count | PASS | 16/16 |
 | phase39r_neural_full_v1_checkpoint_methods | PASS | observed=['global_lgbm', 'regime_lgbm_contrastive', 'regime_lgbm_contrastive_hmm', 'regime_lgbm_hmm', 'regime_lgbm_hmm_guided_gmm', 'regime_lgbm_hmm_guided_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket'] |
@@ -191,6 +218,10 @@
 | phase43b_locked_holdout_registration_claim_control | PASS | required claim-control phrases present |
 | phase43b_locked_external_adjudication_exists | PASS | reports\phase43b_locked_external_adjudication.md |
 | phase43b_locked_external_adjudication_claim_control | PASS | required claim-control phrases present |
+| phase44_paper_readiness_package_exists | PASS | reports\phase44_paper_readiness_package.md |
+| phase44_paper_readiness_package_claim_control | PASS | required claim-control phrases present |
+| main_exists | PASS | paper\main.md |
+| main_claim_control | PASS | required claim-control phrases present |
 | freeze_verify_command | PASS | returncode=0; last_output=OK: crypto20-development-v1 matches its configuration, database, symbol manifest, and fold calendar. |
 | unit_tests_command | PASS | returncode=0; last_output=OK |
 | calendar_audit_command | PASS | returncode=0; last_output=OK: 20 symbols share one calendar index and all 16 folds have strict global train/test separation under crypto20-development-v1. |

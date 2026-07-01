@@ -17,7 +17,7 @@ This file freezes the paper hypotheses after Phase 23. Every future experiment s
 | H7 | The structural regime-learning mechanism transfers beyond BTC/ETH. | Phase 31-35 support structural transfer. Phase 36/37 give guided-HMM the highest mean fold IC, but its edge over raw HMM is non-significant (`p=0.840`) and its probability calibration is worse than global LightGBM. | Structurally supported, predictive dominance not supported | Discuss structural transfer separately from portfolio-level and calibration claims. |
 | H8 | The structural and assignment-layer findings survive fully fold-local encoder training. | The original Phase 39 run failed the later cross-asset calendar audit. The repaired full development run and Phase 40 adjudication are complete and show weak/inconclusive downstream alpha rather than robust guided-method dominance. | Diagnostic / not supported as an alpha claim | Do not reuse invalidated metrics as evidence; use Phase 41 only for bounded development improvements selected inside training/validation boundaries. |
 | H9 | Validation-only calibration and soft posterior gating improve probability quality without sacrificing ranking IC. | Phase 37 identifies worse guided-HMM NLL despite weak positive IC direction. | Open | Test only after the fold-local baseline passes; select using inner validation. |
-| H10 | The selected conclusion transfers to an untouched asset or temporal holdout. | Existing BTC/ETH and Crypto-20 outcomes have been inspected and are development-observed. | Open | Freeze one candidate and run a single locked external evaluation. |
+| H10 | The selected conclusion transfers to an untouched asset or temporal holdout. | Phase 43B locked external evaluation gives limited relative support to the frozen guided-HMM candidate versus global LightGBM and raw-feature HMM, but locked Sharpe and total return remain negative. | Limited support; no tradable-alpha claim | Use as the final confirmatory evidence for the current paper package; do not retune on the same locked holdout. |
 
 ## Phase 25 Status Update
 
@@ -82,6 +82,10 @@ Phase 43B adds the locked-holdout registration gate. It checks whether the next 
 ## Phase 43B Locked Evaluation Status Update
 
 The locked external evaluation is complete. H10 receives limited confirmatory support under the pre-specified relative rule: the frozen `regime_lgbm_hmm_guided_hmm` candidate improves over `global_lgbm` and `regime_lgbm_hmm` on locked mean asset IC and has non-worse Sharpe with equal coverage. The result does not support a profitable/tradable alpha claim because locked Sharpe and total return remain negative.
+
+## Phase 44 Paper-Readiness Status Update
+
+Phase 44 packages the H10 result for writing. It creates the paper-facing evidence matrix, submission risk register, and updated manuscript draft. It is not a new model-improvement phase and does not authorize candidate switching, threshold rescue, or reuse of the same locked holdout.
 
 ## Claim Language
 

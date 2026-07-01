@@ -1,15 +1,11 @@
 paper_section,artifact_type,artifact,paper_role
-Abstract and contributions,claim control,reports/claim_registry.md,"Prevents unsupported novelty, profitability, and generalization claims."
-Related work,literature,reports/related_work.md; reports/literature_matrix.csv,"Positions the project against regime models, time-series contrastive learning, validation, and alpha modeling."
-Data and labels,data diagnostic,models/target_distribution.csv; models/target_quality.csv,"Documents class balance, neutral share, and horizon-tail loss for financial labels."
-Validation,audit,models/validation_audit.csv; models/fold_audit.csv,"Documents embargo, label-horizon purge, common coverage, and artifact availability."
-Methods,model card,reports/model_card.md; reports/paper_protocol.md,"Records architecture, frozen protocol, methods, metrics, and forbidden claims."
-Main results,result table,models/walkforward_experiment_results.csv; models/guided_alpha_comparison.csv,"Primary fold-local alpha comparison for global, classical, vanilla learned, and guided learned regimes."
-Statistical evidence,statistical test,models/statistical_test_summary.csv; models/paper_statistical_summary.csv,Separates point-estimate wins from fold-level significance and multiple-testing-safe claims.
-Crypto-20 generalization,statistical test,models/crypto20_statistical_method_summary.csv; models/crypto20_statistical_claims.csv; reports/crypto20_statistical_protocol.md,"Separates structural transfer and directional IC from unsupported alpha, calibration, and portfolio-dominance claims."
-Fully fold-local Crypto-20,validity and statistical test,models/crypto20_fold_local_encoder_manifest.csv; models/crypto20_fold_local_statistical_method_summary.csv; models/crypto20_fold_local_statistical_claims.csv; reports/phase39_fold_local_results.md,"Removes offline-encoder leakage concerns and records the negative/inconclusive predictive result without treating development data as locked evidence."
-Mechanism,regime quality,models/regime_quality_summary.csv; models/guided_encoder_comparison.csv,"Measures structural alignment, persistence, entropy, NMI, ARI, and purity."
-Ablations,ablation,models/ablation_summary.csv; models/paper_claim_tests.csv,"Tests objective guidance, assignment layer, augmentation view, and classical-reference comparisons."
-Robustness,stress test,models/robustness_summary.csv; models/robustness_stress_summary.csv,Checks symbol/horizon robustness and cost/threshold/period sensitivity.
-Interpretability,feature attribution,models/feature_importance_by_regime.csv; models/feature_family_summary.csv,Shows fold-local feature drivers by method/regime without making causal claims.
-Reproducibility,reproduction package,reproduce.ps1; reports/environment.md; reports/artifact_manifest.md; reports/reproduction_checklist.md,"Documents smoke/full/dashboard reproduction paths, environment split, and artifact policy."
+Abstract and thesis,claim control,reports/phase44_paper_readiness_package.md,Defines the paper-safe story after locked holdout.
+Reviewer brief,reviewer response,reports/phase44_reviewer_brief.md,Pre-writes safe answers to expected reviewer objections.
+Validation repair,audit,reports/phase39r_neural_fold_local_results.md; models/research_grade_check_report.md,Documents the repaired common-calendar validation protocol.
+Development benchmark,result table,models/crypto20_repaired_fold_local_experiment_results.csv,Shows repaired development-observed alpha behavior.
+Development statistics,statistical test,models/crypto20_repaired_fold_local_statistical_method_summary.csv; reports/phase40_repaired_statistical_adjudication.md,Quantifies uncertainty and prevents corrected dominance claims.
+Mechanism diagnostics,diagnostic,reports/phase42_interpretation_execution_hardening.md; models/phase42_execution_stress_summary.csv,Explains alpha fragility without tuning a new model.
+Locked external holdout,confirmatory result,models/phase43b_locked_external_experiment_results.csv; reports/phase43b_locked_external_adjudication.md,One-shot locked external evaluation of the frozen final candidate.
+Reproducibility,artifact gate,reports/artifact_manifest.md; reports/reproduction_checklist.md; models/research_grade_check_report.md,"Documents what is committed, ignored, and checked."
+Submission risk,risk register,models/phase44_submission_risk_register.csv,Lists reviewer-facing failure modes and mitigations.
+Pre-push hardening,audit,reports/phase44_prepush_hardening_audit.md,"Records stale-claim cleanup, reviewer-risk checks, and final pre-push gates."

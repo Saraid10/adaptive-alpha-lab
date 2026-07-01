@@ -1,46 +1,27 @@
 # Paper Submission Checklist
 
-## Phase 38 Status
+## Phase 44 Status
 
-This checklist tracks what remains after the completed Phase 37 Crypto-20 adjudication. Passing the historical audit does not by itself make the project submission-ready.
+The project has completed the repaired development benchmark and the Phase 43B locked external holdout. The next work is paper packaging, not model rescue.
 
 ## Ready
 
-- Central research question is frozen in `reports/paper_protocol.md`.
-- Claim boundaries are frozen in `reports/claim_registry.md`.
-- Literature positioning exists in `reports/related_work.md` and `reports/literature_matrix.csv`.
-- Main fold-local benchmark artifacts exist.
-- Phase 25 ablations and Phase 26 paper claim tests exist.
-- Phase 29 manuscript prose pass and Phase 37 evidence synchronization are complete.
-- Validation audit has no critical failures.
-- Crypto-20 structural, predictive, calibration, and portfolio outcomes are separated honestly.
-- Phase 38 data roles, experiment ledger, and publication gates are defined.
-
-## Critical Scientific Work
-
-- Retrain the learned encoder fully inside each outer fold.
-- Add the missing vanilla contrastive and contrastive-HMM Crypto-20 baselines.
-- Use inner chronological validation for epochs, calibration, thresholds, and model selection.
-- Freeze exactly one candidate before an untouched external evaluation.
-- Add dependence-aware time-and-asset inference for the final claim table.
-- Harden execution timing, costs, overlapping positions, and exposure accounting.
+- Repaired common-calendar development benchmark is complete.
+- Phase 40 repaired statistical adjudication is complete.
+- Phase 42 interpretation/execution diagnostics are complete.
+- Phase 43A frozen final candidate and holdout rules are complete.
+- Phase 43B locked external holdout is complete.
+- Full research-grade checks pass.
+- Positive tradable-alpha claim is explicitly blocked.
+- Candidate switching after locked evaluation is explicitly blocked.
 
 ## Critical Paper Work
 
-- Refresh related work through the submission year.
-- Replace planning prose with anonymous ACM `sigconf` LaTeX.
-- Fit the complete paper, including figures and references, inside the venue limit.
-- Make the paper self-contained without relying on an appendix.
-- Map every quantitative claim to a generated artifact.
-- Complete anonymity, citation, formatting, and claim audits.
-
-## Explicitly Deferred
-
-- Crypto-50 expansion before fold-local validity is established.
-- Unrestricted architecture or feature search.
-- Full time-frequency training without a reopened written gate.
-- FastAPI, paper trading, and dashboard expansion before model freeze.
-- Any real-money execution.
+- Convert `paper/main.md` into the final venue template.
+- Replace placeholder prose with final citations and related-work positioning.
+- Add final figure and table numbers.
+- Decide whether the target is ICAIF main track, workshop, student research track, or institutional BTech evaluation.
+- Write a reproducibility appendix using the artifact manifest and research-grade gate report.
 
 ## Must Not Claim
 
@@ -48,6 +29,6 @@ This checklist tracks what remains after the completed Phase 37 Crypto-20 adjudi
 - Do not claim a profitable or deployable trading strategy.
 - Do not claim guided-HMM statistically dominates raw-feature HMM at 5%.
 - Do not claim statistically proven Crypto-20 alpha, calibration, or portfolio-performance dominance.
-- Do not treat Phase 35 structural Crypto-20 results as trading or alpha evidence.
-- Do not describe the inspected Phase 36/37 Crypto-20 results as an untouched final test.
-- Do not treat fold-local assignment as sufficient when the learned encoder was trained offline.
+- Do not treat development-observed results as untouched final-test evidence.
+- Do not switch from the frozen guided-HMM final candidate to a secondary diagnostic method after locked-holdout inspection.
+- Do not retune thresholds, labels, features, architecture, or method choice on the same locked holdout.
