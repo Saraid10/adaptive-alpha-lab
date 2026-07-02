@@ -1061,9 +1061,39 @@ Core artifacts:
 - `models/phase44_paper_evidence_matrix.csv`
 - `models/phase44_submission_risk_register.csv`
 
+## Phase 45 Venue-Ready Manuscript Package
+
+Phase 45 is paper packaging, not model rescue. It turns the Phase 44 evidence story into a venue-facing manuscript package while preserving the locked-holdout claim boundaries.
+
+Phase 45 adds:
+
+- a venue-ready structured manuscript source;
+- a table plan for the final paper;
+- a figure plan for the final paper;
+- a claim-to-section map that blocks profitability, dominance, and candidate-switching overclaims;
+- a venue requirement audit for ICAIF/ACM-style page, anonymity, template, self-contained submission, and artifact-availability constraints;
+- a reproducibility appendix;
+- a submission checklist for final formatting and reviewer safety.
+
+The paper claim remains intentionally narrow:
+
+> HMM-guided contrastive regimes receive limited locked relative support under the prewritten Phase 43B rule, but the evidence does not support a profitable or deployable trading strategy.
+
+Core artifacts:
+
+- `paper/phase45_venue_ready_manuscript.md`
+- `reports/phase45_venue_manuscript_package.md`
+- `reports/phase45_reproducibility_appendix.md`
+- `reports/phase45_submission_checklist.md`
+- `reports/phase45_external_research_audit.md`
+- `models/phase45_table_plan.csv`
+- `models/phase45_figure_plan.csv`
+- `models/phase45_claim_to_section_map.csv`
+- `models/phase45_venue_requirement_audit.csv`
+
 ## Current Status
 
-The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred and is excluded from the final locked candidate. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. Phase 42 explains the weak result through execution sensitivity, regime-transition behavior, cross-asset fragility, and feature-family target alignment without making a tradability claim. Phase 43A freezes `regime_lgbm_hmm_guided_hmm` as the single final guided-HMM mechanism candidate before any locked-holdout outcome is inspected. Phase 43B registers and freezes a 10-asset external locked holdout, runs the one-shot 18-fold locked evaluation, and adjudicates the result: the frozen guided-HMM candidate satisfies the prewritten relative IC/Sharpe rule versus the two primary references, but negative Sharpe and total return mean no tradable-positive strategy claim is supported. Phase 44 converts this into a paper-ready evidence package, risk register, and updated manuscript draft. The research-grade regression gate passes.
+The original Phase 39 result table is retained for audit history but is not scientific evidence because its per-symbol positional folds overlapped in calendar time. The repaired calendar-aligned classical and neural/guided benchmarks are complete, all methods have equal coverage, and the repaired Phase 40 statistical adjudication is complete. Phase 41/41B has registered bounded candidates and run the global/classical calibration plus soft-gating subset; score-threshold execution control remains deferred and is excluded from the final locked candidate. The result remains weak/negative; corrected IC/Sharpe dominance is unsupported. Phase 42 explains the weak result through execution sensitivity, regime-transition behavior, cross-asset fragility, and feature-family target alignment without making a tradability claim. Phase 43A freezes `regime_lgbm_hmm_guided_hmm` as the single final guided-HMM mechanism candidate before any locked-holdout outcome is inspected. Phase 43B registers and freezes a 10-asset external locked holdout, runs the one-shot 18-fold locked evaluation, and adjudicates the result: the frozen guided-HMM candidate satisfies the prewritten relative IC/Sharpe rule versus the two primary references, but negative Sharpe and total return mean no tradable-positive strategy claim is supported. Phase 44 converts this into a paper-ready evidence package, risk register, and updated manuscript draft. Phase 45 converts that story into a venue-ready manuscript package, table/figure plan, venue requirement audit, external research audit, reproducibility appendix, and submission checklist while preserving the same claim boundaries. The research-grade regression gate passes.
 
 Use the frozen-universe calendar audit command, not the bare default command:
 

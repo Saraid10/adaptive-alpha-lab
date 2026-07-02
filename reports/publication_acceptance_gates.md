@@ -107,5 +107,5 @@ Failure action: treat the repository as a research prototype rather than a compl
 | 3 Candidate Selection | Complete via Phase 43A | Frozen candidate is `regime_lgbm_hmm_guided_hmm`; no calibration/threshold rescue tuning |
 | 4 Locked Evaluation | Complete | Phase 43B locked external evaluation is complete: frozen guided-HMM satisfies the prewritten relative IC/Sharpe rule, but negative Sharpe/return forbid a tradable-strategy claim |
 | 5 Statistical Adjudication | Complete for current evidence | Development and locked-holdout claims are adjudicated; no same-holdout retuning is authorized |
-| 6 Paper Readiness | Phase 44 complete | Paper draft, evidence matrix, submission risk register, and checklist now reflect repaired evidence plus limited locked relative support/no tradable-alpha claim |
-| 7 BTech Project Readiness | Packaging stage | Project is technically strong; remaining work is final presentation, venue formatting, figures, and citation cleanup |
+| 6 Paper Readiness | Phase 45 complete | Venue-facing manuscript source, table/figure plan, venue requirement audit, reproducibility appendix, and claim-to-section map now reflect repaired evidence plus limited locked relative support/no tradable-alpha claim |
+| 7 BTech Project Readiness | Packaging stage | Project is technically strong; remaining work is final LaTeX/PDF formatting, figure drawing, citations, anonymity audit, artifact archive/DOI decision, presentation, and advisor/reviewer feedback cleanup |

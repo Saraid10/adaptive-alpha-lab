@@ -1121,6 +1121,177 @@ def check_phase44_paper_package(results: list[CheckResult]) -> None:
         )
 
 
+def check_phase45_venue_manuscript_package(results: list[CheckResult]) -> None:
+    models = BASE_DIR / "models"
+    manuscript_path = BASE_DIR / "paper" / "phase45_venue_ready_manuscript.md"
+    package_report_path = BASE_DIR / "reports" / "phase45_venue_manuscript_package.md"
+    repro_appendix_path = BASE_DIR / "reports" / "phase45_reproducibility_appendix.md"
+    checklist_path = BASE_DIR / "reports" / "phase45_submission_checklist.md"
+    external_audit_path = BASE_DIR / "reports" / "phase45_external_research_audit.md"
+    runner_path = BASE_DIR / "src" / "phase45_venue_manuscript_package.py"
+    test_path = BASE_DIR / "tests" / "test_phase45_venue_manuscript_package.py"
+    ps1_path = BASE_DIR / "run_phase45_venue_manuscript_package.ps1"
+    sh_path = BASE_DIR / "run_phase45_venue_manuscript_package.sh"
+    table_plan_path = models / "phase45_table_plan.csv"
+    figure_plan_path = models / "phase45_figure_plan.csv"
+    claim_map_path = models / "phase45_claim_to_section_map.csv"
+    venue_audit_path = models / "phase45_venue_requirement_audit.csv"
+
+    for path, check in [
+        (runner_path, "phase45_runner_exists"),
+        (test_path, "phase45_tests_exist"),
+        (ps1_path, "phase45_runner_ps1_exists"),
+        (sh_path, "phase45_runner_sh_exists"),
+        (manuscript_path, "phase45_manuscript_exists"),
+        (package_report_path, "phase45_package_report_exists"),
+        (repro_appendix_path, "phase45_reproducibility_appendix_exists"),
+        (checklist_path, "phase45_submission_checklist_exists"),
+        (external_audit_path, "phase45_external_research_audit_exists"),
+    ]:
+        require_file(results, path, check)
+
+    table_plan = read_csv_checked(results, table_plan_path, "phase45_table_plan")
+    figure_plan = read_csv_checked(results, figure_plan_path, "phase45_figure_plan")
+    claim_map = read_csv_checked(results, claim_map_path, "phase45_claim_to_section_map")
+    venue_audit = read_csv_checked(results, venue_audit_path, "phase45_venue_requirement_audit")
+
+    if table_plan is not None:
+        text = " ".join(table_plan.astype(str).agg(" ".join, axis=1).tolist())
+        missing = [
+            phrase
+            for phrase in [
+                "Locked external holdout",
+                "Reproducibility appendix",
+                "Claim adjudication",
+                "ready_from_existing_artifacts",
+            ]
+            if phrase not in text
+        ]
+        add(
+            results,
+            "phase45_table_plan_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 45 table plan covers venue evidence",
+        )
+
+    if figure_plan is not None:
+        text = " ".join(figure_plan.astype(str).agg(" ".join, axis=1).tolist())
+        missing = [
+            phrase
+            for phrase in [
+                "Validation protocol",
+                "System overview",
+                "Locked result",
+                "Mechanism boundary",
+            ]
+            if phrase not in text
+        ]
+        add(
+            results,
+            "phase45_figure_plan_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 45 figure plan covers paper story",
+        )
+
+    if claim_map is not None:
+        text = " ".join(claim_map.astype(str).agg(" ".join, axis=1).tolist())
+        missing = [
+            phrase
+            for phrase in [
+                "Do not claim a deployable trading strategy",
+                "Do not tune thresholds, labels, features, architectures",
+                "Do not claim broad method dominance",
+                "invalidated positional-fold results",
+            ]
+            if phrase not in text
+        ]
+        add(
+            results,
+            "phase45_claim_map_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 45 claim map blocks paper overclaiming",
+        )
+
+    if venue_audit is not None:
+        text = " ".join(venue_audit.astype(str).agg(" ".join, axis=1).tolist())
+        missing = [
+            phrase
+            for phrase in [
+                "eight total pages",
+                "double-blind",
+                "sigconf",
+                "documented, consistent, complete enough for review, and exercisable",
+                "public archival repository with a DOI",
+                "cannot be reused for model rescue",
+            ]
+            if phrase not in text
+        ]
+        add(
+            results,
+            "phase45_venue_audit_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 45 venue audit covers ICAIF/ACM constraints",
+        )
+
+    required_text = {
+        manuscript_path: [
+            "does not claim a tradable strategy",
+            "same locked holdout cannot be reused",
+            "frozen final candidate",
+            "limited locked relative support",
+            "validation repair",
+            "self-contained manuscript",
+            "persistent repository",
+        ],
+        package_report_path: [
+            "does not tune models",
+            "not a profitability paper",
+            "Do not reuse the same locked holdout for model rescue",
+            "limited locked relative support",
+            "Venue Requirement Audit",
+            "Do not claim ACM artifact availability until a DOI or persistent archive exists",
+        ],
+        repro_appendix_path: [
+            "without modifying locked final/evaluation data",
+            "same-holdout retuning is forbidden",
+            "Positive tradable alpha is not supported",
+            "documented, consistent, complete enough for review, and exercisable",
+            "persistent archival repository",
+        ],
+        checklist_path: [
+            "The paper does not claim a tradable strategy",
+            "The paper does not switch away from the frozen final candidate",
+            "invalidated positional-fold results are audit history only",
+            "limited locked relative support",
+            "Verify the current ICAIF or target-venue call",
+            "Run an anonymity audit",
+        ],
+        external_audit_path: [
+            "Phase 45 External Research Audit",
+            "does not touch locked/final evaluation data",
+            "self-contained PDF",
+            "should not claim artifact availability until a persistent archived release exists",
+        ],
+        BASE_DIR / "README.md": [
+            "## Phase 45 Venue-Ready Manuscript Package",
+            "Phase 45 is paper packaging, not model rescue",
+            "limited locked relative support",
+            "venue requirement audit",
+        ],
+    }
+    for path, phrases in required_text.items():
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        missing = [phrase for phrase in phrases if phrase not in text]
+        add(
+            results,
+            f"{path.stem}_phase45_guardrails",
+            FAIL if missing else PASS,
+            f"missing={missing}" if missing else "Phase 45 claim-control wording present",
+        )
+
+
 def check_classical_artifacts(results: list[CheckResult]) -> None:
     models = BASE_DIR / "models"
     summary = read_csv_checked(
@@ -1202,6 +1373,16 @@ def check_claim_control_docs(results: list[CheckResult]) -> None:
             "does not establish positive tradable alpha",
             "Do not switch the final candidate after seeing the locked holdout",
         ],
+        BASE_DIR / "paper" / "phase45_venue_ready_manuscript.md": [
+            "does not claim a tradable strategy",
+            "same locked holdout cannot be reused",
+            "limited locked relative support",
+        ],
+        BASE_DIR / "reports" / "phase45_venue_manuscript_package.md": [
+            "does not tune models",
+            "not a profitability paper",
+            "Do not reuse the same locked holdout for model rescue",
+        ],
         BASE_DIR / "paper" / "main.md": [
             "Phase 44 paper-readiness draft",
             "the paper does not claim a tradable strategy",
@@ -1278,6 +1459,7 @@ def main() -> int:
     check_phase43b_registration_artifacts(results)
     check_phase43b_locked_eval_artifacts(results)
     check_phase44_paper_package(results)
+    check_phase45_venue_manuscript_package(results)
     check_checkpoint_run(
         results,
         "phase39r_neural_full_v1",
