@@ -87,6 +87,10 @@ The locked external evaluation is complete. H10 receives limited confirmatory su
 
 Phase 44 packages the H10 result for writing. It creates the paper-facing evidence matrix, submission risk register, and updated manuscript draft. It is not a new model-improvement phase and does not authorize candidate switching, threshold rescue, or reuse of the same locked holdout.
 
+## Phase 45 Venue Manuscript Status Update
+
+Phase 45 does not introduce a new hypothesis. It packages the current evidence into a venue-facing manuscript source, table/figure plan, venue requirement audit, external research audit, reproducibility appendix, and claim-to-section map. It preserves the H10 interpretation: limited locked relative support is allowed, but profitable/tradable alpha, candidate switching, and same-holdout retuning remain unsupported or forbidden. It also records that artifact availability should not be claimed before a persistent archive or DOI exists.
+
 ## Claim Language
 
 Use:

@@ -9,3 +9,9 @@ Locked external holdout,confirmatory result,models/phase43b_locked_external_expe
 Reproducibility,artifact gate,reports/artifact_manifest.md; reports/reproduction_checklist.md; models/research_grade_check_report.md,"Documents what is committed, ignored, and checked."
 Submission risk,risk register,models/phase44_submission_risk_register.csv,Lists reviewer-facing failure modes and mitigations.
 Pre-push hardening,audit,reports/phase44_prepush_hardening_audit.md,"Records stale-claim cleanup, reviewer-risk checks, and final pre-push gates."
+Venue manuscript,manuscript source,paper/phase45_venue_ready_manuscript.md,"Structured venue-facing manuscript source with limited locked relative support and no tradable-alpha claim."
+Venue table plan,table plan,models/phase45_table_plan.csv,"Maps final manuscript tables to committed evidence artifacts."
+Venue figure plan,figure plan,models/phase45_figure_plan.csv,"Maps final manuscript figures to existing evidence and drawing needs."
+Venue claim map,claim control,models/phase45_claim_to_section_map.csv,"Pins allowed claims and forbidden extensions to exact manuscript sections."
+Venue requirement audit,venue audit,models/phase45_venue_requirement_audit.csv,"Maps ICAIF/ACM-style submission, template, anonymity, self-contained paper, and artifact-archive constraints to Phase 45/46 actions."
+External research audit,venue audit,reports/phase45_external_research_audit.md,"Summarizes primary-source venue research and reviewer-facing Phase 45 hardening decisions."

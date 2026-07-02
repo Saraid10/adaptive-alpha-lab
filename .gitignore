@@ -170,6 +170,10 @@ models/*.csv
 !models/phase43b_locked_external_claims.csv
 !models/phase44_paper_evidence_matrix.csv
 !models/phase44_submission_risk_register.csv
+!models/phase45_table_plan.csv
+!models/phase45_figure_plan.csv
+!models/phase45_claim_to_section_map.csv
+!models/phase45_venue_requirement_audit.csv
 
 # Keep compact Crypto-20 regime summaries, not row-level assignments.
 models/crypto20_regime_assignments.csv

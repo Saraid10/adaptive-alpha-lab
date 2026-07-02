@@ -54,15 +54,16 @@ This manifest defines the experiments that belong in the paper track after Phase
 | Locked holdout registration | 43B-register | Register locked external holdout membership readiness using only quality/coverage checks before any model outcome is evaluated | `phase43b_holdout_candidate_quality.csv`, `phase43b_registered_holdout_symbols.csv`, `phase43b_locked_holdout_registration_manifest.csv`, `phase43b_locked_holdout_registration.md` | Complete; 10 external assets registered before model evaluation |
 | Locked external holdout evaluation | 43B-eval | Evaluate the Phase 43A frozen candidate and references once on the registered external holdout | `phase43b_locked_external_experiment_results.csv`, `phase43b_locked_external_fold_metrics.csv`, `phase43b_locked_external_adjudication.md` | Complete; frozen relative IC/Sharpe rule is satisfied, but profitable/tradable alpha is not supported |
 | Paper-readiness evidence package | 44 | Convert the repaired and locked evidence into paper-facing claims, risks, reviewer responses, and manuscript prose without model rescue | `phase44_paper_evidence_matrix.csv`, `phase44_submission_risk_register.csv`, `phase44_paper_readiness_package.md`, `phase44_reviewer_brief.md`, `paper/main.md` | Complete; paper path is limited locked relative support plus no tradable-alpha claim |
+| Venue-ready manuscript package | 45 | Convert the evidence package into a venue-facing manuscript source, table/figure plan, venue requirement audit, reproducibility appendix, and submission checklist without model rescue | `phase45_venue_ready_manuscript.md`, `phase45_venue_manuscript_package.md`, `phase45_external_research_audit.md`, `phase45_reproducibility_appendix.md`, `phase45_table_plan.csv`, `phase45_claim_to_section_map.csv`, `phase45_venue_requirement_audit.csv` | Complete; next work is final formatting, citations, figures, anonymity audit, artifact archive, and reviewer polish |
 
 ## Future Experiment Queue
 
 | Priority | Phase | Experiment | Gate | Expected Output |
 |---:|---|---|---|---|
 | 1 | 38 | Research-control reset | Required before new model development | `phase38_master_protocol.md`, `data_role_registry.csv`, `experiment_ledger.csv`, `publication_acceptance_gates.md` |
-| 2 | 44 | Manuscript result package | Phase 43B locked result is complete and adjudicated | Complete; next step is venue template conversion and final citation/figure work |
-| 3 | 44 | Final statistical adjudication | Required before final claim language | dependence-aware final claim table |
-| 4 | 45 | ICAIF-format paper package | Required before external submission | anonymous eight-page ACM paper and citation/claim audits |
+| 2 | 44 | Manuscript result package | Phase 43B locked result is complete and adjudicated | Complete; converted into Phase 45 venue package |
+| 3 | 45 | ICAIF/ACM-style venue package | Required before external submission | Complete; manuscript source, table/figure plan, reproducibility appendix, and claim map exist |
+| 4 | 46 | Final paper polish | Required before external submission | final LaTeX/PDF, references, figures, anonymity audit, artifact DOI/archive decision, and advisor/reviewer feedback pass |
 
 ## Minimal Ablation Definition
 

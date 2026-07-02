@@ -1,6 +1,6 @@
 # Research Grade Check Report
 
-- Checks: 219
+- Checks: 250
 - Failures: 0
 - Warnings: 0
 
@@ -188,7 +188,7 @@
 | phase44_submission_risk_register_exists | PASS | models\phase44_submission_risk_register.csv |
 | phase44_submission_risk_register_readable | PASS | rows=6 columns=4 |
 | phase44_paper_artifact_map_exists | PASS | reports\paper_artifact_map.csv |
-| phase44_paper_artifact_map_readable | PASS | rows=10 columns=4 |
+| phase44_paper_artifact_map_readable | PASS | rows=16 columns=4 |
 | phase44_evidence_matrix_guardrails | PASS | blocks=['development_statistical_adjudication', 'execution_and_mechanism_diagnostics', 'locked_external_holdout', 'repaired_crypto20_development', 'validation_repair']; data_roles=['development_observed', 'locked_registered_unobserved'] |
 | phase44_risk_register_guardrails | PASS | Phase 44 risk register covers critical paper risks |
 | phase44_artifact_map_guardrails | PASS | missing_cols=[]; missing_phrases=[] |
@@ -199,6 +199,33 @@
 | paper_protocol_phase44_guardrails | PASS | Phase 44 claim-control wording present |
 | paper_submission_checklist_phase44_guardrails | PASS | Phase 44 claim-control wording present |
 | README_phase44_guardrails | PASS | Phase 44 claim-control wording present |
+| phase45_runner_exists | PASS | src\phase45_venue_manuscript_package.py |
+| phase45_tests_exist | PASS | tests\test_phase45_venue_manuscript_package.py |
+| phase45_runner_ps1_exists | PASS | run_phase45_venue_manuscript_package.ps1 |
+| phase45_runner_sh_exists | PASS | run_phase45_venue_manuscript_package.sh |
+| phase45_manuscript_exists | PASS | paper\phase45_venue_ready_manuscript.md |
+| phase45_package_report_exists | PASS | reports\phase45_venue_manuscript_package.md |
+| phase45_reproducibility_appendix_exists | PASS | reports\phase45_reproducibility_appendix.md |
+| phase45_submission_checklist_exists | PASS | reports\phase45_submission_checklist.md |
+| phase45_external_research_audit_exists | PASS | reports\phase45_external_research_audit.md |
+| phase45_table_plan_exists | PASS | models\phase45_table_plan.csv |
+| phase45_table_plan_readable | PASS | rows=6 columns=5 |
+| phase45_figure_plan_exists | PASS | models\phase45_figure_plan.csv |
+| phase45_figure_plan_readable | PASS | rows=4 columns=5 |
+| phase45_claim_to_section_map_exists | PASS | models\phase45_claim_to_section_map.csv |
+| phase45_claim_to_section_map_readable | PASS | rows=5 columns=5 |
+| phase45_venue_requirement_audit_exists | PASS | models\phase45_venue_requirement_audit.csv |
+| phase45_venue_requirement_audit_readable | PASS | rows=7 columns=6 |
+| phase45_table_plan_guardrails | PASS | Phase 45 table plan covers venue evidence |
+| phase45_figure_plan_guardrails | PASS | Phase 45 figure plan covers paper story |
+| phase45_claim_map_guardrails | PASS | Phase 45 claim map blocks paper overclaiming |
+| phase45_venue_audit_guardrails | PASS | Phase 45 venue audit covers ICAIF/ACM constraints |
+| phase45_venue_ready_manuscript_phase45_guardrails | PASS | Phase 45 claim-control wording present |
+| phase45_venue_manuscript_package_phase45_guardrails | PASS | Phase 45 claim-control wording present |
+| phase45_reproducibility_appendix_phase45_guardrails | PASS | Phase 45 claim-control wording present |
+| phase45_submission_checklist_phase45_guardrails | PASS | Phase 45 claim-control wording present |
+| phase45_external_research_audit_phase45_guardrails | PASS | Phase 45 claim-control wording present |
+| README_phase45_guardrails | PASS | Phase 45 claim-control wording present |
 | phase39r_neural_full_v1_run_state_exists | PASS | .tmp\phase39_fold_local\phase39r_neural_full_v1\run_state.json |
 | phase39r_neural_full_v1_checkpoint_count | PASS | 16/16 |
 | phase39r_neural_full_v1_checkpoint_methods | PASS | observed=['global_lgbm', 'regime_lgbm_contrastive', 'regime_lgbm_contrastive_hmm', 'regime_lgbm_hmm', 'regime_lgbm_hmm_guided_gmm', 'regime_lgbm_hmm_guided_hmm', 'regime_lgbm_kmeans', 'regime_lgbm_vol_bucket'] |
@@ -220,6 +247,10 @@
 | phase43b_locked_external_adjudication_claim_control | PASS | required claim-control phrases present |
 | phase44_paper_readiness_package_exists | PASS | reports\phase44_paper_readiness_package.md |
 | phase44_paper_readiness_package_claim_control | PASS | required claim-control phrases present |
+| phase45_venue_ready_manuscript_exists | PASS | paper\phase45_venue_ready_manuscript.md |
+| phase45_venue_ready_manuscript_claim_control | PASS | required claim-control phrases present |
+| phase45_venue_manuscript_package_exists | PASS | reports\phase45_venue_manuscript_package.md |
+| phase45_venue_manuscript_package_claim_control | PASS | required claim-control phrases present |
 | main_exists | PASS | paper\main.md |
 | main_claim_control | PASS | required claim-control phrases present |
 | freeze_verify_command | PASS | returncode=0; last_output=OK: crypto20-development-v1 matches its configuration, database, symbol manifest, and fold calendar. |

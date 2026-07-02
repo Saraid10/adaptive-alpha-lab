@@ -179,7 +179,9 @@ The multi-asset gate is a downstream alpha-claim gate. It does not prohibit stru
 
 Phase 44 is represented by `paper/main.md`, `reports/phase44_paper_readiness_package.md`, `models/phase44_paper_evidence_matrix.csv`, `models/phase44_submission_risk_register.csv`, `reports/paper_artifact_map.csv`, and `reports/paper_submission_checklist.md`.
 
-The next default step is venue formatting and citation cleanup, not broad experiment expansion.
+Phase 45 is represented by `paper/phase45_venue_ready_manuscript.md`, `reports/phase45_venue_manuscript_package.md`, `reports/phase45_external_research_audit.md`, `reports/phase45_reproducibility_appendix.md`, `reports/phase45_submission_checklist.md`, `models/phase45_table_plan.csv`, `models/phase45_figure_plan.csv`, `models/phase45_claim_to_section_map.csv`, and `models/phase45_venue_requirement_audit.csv`.
+
+The next default step is final LaTeX/PDF formatting, current venue-rule verification, citation cleanup, figure drawing, anonymity audit, artifact archive/DOI decision, and advisor/reviewer feedback, not broad experiment expansion.
 
 Reviewer-facing caveats must stay explicit in the paper draft:
 
@@ -200,5 +202,11 @@ The fully fold-local learned pipeline and locked external holdout are now comple
 
 Phase 44 is the current paper-readiness layer. The allowed locked claim is narrow: on the registered external crypto holdout, the frozen `regime_lgbm_hmm_guided_hmm` candidate satisfies the prewritten relative IC/Sharpe rule against `global_lgbm` and `regime_lgbm_hmm`. The locked result does not support positive tradable alpha, candidate switching, or same-holdout retuning.
 
-The next phase should focus on venue formatting, citations, figure/table cleanup, and reproducibility appendix work. It should not run new model search unless a new pre-registered external dataset or replication protocol is created first.
+## Phase 45 Venue Manuscript Update
+
+Phase 45 converts the Phase 44 evidence into a venue-facing manuscript package. It is still a packaging layer, not a model-improvement layer. The manuscript may use the phrase "limited locked relative support" but must continue to state that the paper does not claim a tradable strategy and that the same locked holdout cannot be reused for model rescue.
+
+The Phase 45 external audit adds conservative ICAIF/ACM-style constraints: compact self-contained paper, double-blind anonymity, official `acmart`/`sigconf` formatting unless the current venue overrides it, and no artifact-availability claim before a persistent archive or DOI exists.
+
+The next phase should focus on final formatting, current venue rule re-check, citations, figure/table cleanup, anonymity audit, artifact archive/DOI decision, and reviewer feedback. It should not run new model search unless a new pre-registered external dataset or replication protocol is created first.
 
